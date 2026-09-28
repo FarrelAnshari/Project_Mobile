@@ -1,14 +1,25 @@
 /**
- * Learn more about light and dark modes:
- * https://docs.expo.dev/guides/color-schemes/
+ * use-theme.ts — Legacy hook stub for PARKIN.
+ * Returns a flat colors object compatible with old themed components.
  */
 
-import { Colors } from '@/constants/theme';
-import { useColorScheme } from '@/hooks/use-color-scheme';
+import { Colors, ThemeColor } from '@/constants/theme';
 
-export function useTheme() {
-  const scheme = useColorScheme();
-  const theme = scheme === 'unspecified' ? 'light' : scheme;
+// A flat color map compatible with legacy themed components
+const themeColors: Record<string, string> = {
+  background: Colors.background,
+  backgroundElement: Colors.borderLight,
+  backgroundSelected: Colors.primary + '20',
+  text: Colors.textPrimary,
+  textSecondary: Colors.textSecondary,
+  border: Colors.border,
+  primary: Colors.primary,
+};
 
-  return Colors[theme];
+export function useTheme(): Record<string, string> {
+  return {
+    ...themeColors,
+    // Additional keys old components may request
+    backgroundSelected: Colors.primary + '20',
+  };
 }
