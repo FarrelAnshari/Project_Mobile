@@ -39,6 +39,8 @@ import {
 } from '../constants/theme';
 import { useResponsive } from '../utils/responsive';
 
+import { useAuth } from '../contexts/AuthContext';
+
 // Simulate small random variance on refresh
 function simulateRefresh(areas: ParkingArea[]): ParkingArea[] {
   return areas.map((area) => {
@@ -57,6 +59,7 @@ function simulateRefresh(areas: ParkingArea[]): ParkingArea[] {
 }
 
 export default function HomeScreen() {
+  const { user } = useAuth();
   const { width, isSmall, horizontalPadding } = useResponsive();
   const [areas, setAreas] = useState<ParkingArea[]>(parkingAreas);
   const [refreshing, setRefreshing] = useState(false);
@@ -99,7 +102,10 @@ export default function HomeScreen() {
         {/* ======== HEADER ======== */}
         <View style={styles.header}>
           <View>
-            <Text style={styles.greeting}>Halo, Mahasiswa 👋</Text>
+            <Text style={styles.appName}>PARKIN</Text>
+            <Text style={styles.greeting}>
+              Halo, {user?.name ? user.name.split(' ')[0] : 'Mahasiswa'}
+            </Text>
             <Text style={styles.tagline}>
               Pantau parkir kampus dengan mudah.
             </Text>
@@ -108,10 +114,10 @@ export default function HomeScreen() {
             style={styles.refreshBtn}
             onPress={onRefresh}
             accessibilityRole="button"
-            accessibilityLabel="Refresh data parkir"
-            accessibilityHint="Memperbarui data kepadatan parkir"
+            accessibilityLabel="Perbarui status parkir"
+            accessibilityHint="Memperbarui data kepadatan seluruh area parkir"
           >
-            <Text style={styles.refreshIcon}>🔄</Text>
+            <Text style={styles.refreshIcon}>↻</Text>
           </TouchableOpacity>
         </View>
 
@@ -141,14 +147,14 @@ export default function HomeScreen() {
 
           <OccupancyBar percent={stats.occupancyPercent} height={10} />
 
-          <Text style={styles.lastUpdated}>⏱ Terakhir diperbarui {lastRefreshed}</Text>
+          <Text style={styles.lastUpdated}>Terakhir diperbarui {lastRefreshed}</Text>
         </View>
 
         {/* ======== ALERT SECTION ======== */}
         {alertAreas.length > 0 && (
           <View style={styles.section}>
             <Text style={styles.sectionTitle} accessibilityRole="header">
-              ⚠️ Peringatan Parkir
+              Peringatan Parkir
             </Text>
             {alertAreas.map((area) => (
               <NotificationCard
@@ -163,7 +169,7 @@ export default function HomeScreen() {
         {/* ======== AREA PARKIR SECTION ======== */}
         <View style={styles.section}>
           <Text style={styles.sectionTitle} accessibilityRole="header">
-            🅿️ Area Parkir
+            Area Parkir
           </Text>
           {areas.map((area) => (
             <ParkingCard key={area.id} area={area} compact={false} />
@@ -174,7 +180,7 @@ export default function HomeScreen() {
         {recommendations.length > 0 && (
           <View style={styles.section}>
             <Text style={styles.sectionTitle} accessibilityRole="header">
-              💡 Rekomendasi Untukmu
+              Rekomendasi
             </Text>
             <RecommendationCard
               recommendation={recommendations[0]}
@@ -185,7 +191,7 @@ export default function HomeScreen() {
         {/* ======== MINI PREDICTION CHART ======== */}
         <View style={styles.section}>
           <Text style={styles.sectionTitle} accessibilityRole="header">
-            📈 Prediksi Hari Ini
+            Prediksi Hari Ini
           </Text>
           <View style={[Shadow.sm, { borderRadius: BorderRadius.lg }]}>
             <PredictionChart
@@ -219,6 +225,13 @@ const styles = StyleSheet.create({
     alignItems: 'flex-start',
     marginBottom: Spacing.lg,
   },
+  appName: {
+    fontSize: FontSize.sm,
+    fontWeight: FontWeight.bold,
+    color: Colors.primary,
+    letterSpacing: 1.5,
+    marginBottom: 2,
+  },
   greeting: {
     fontSize: FontSize.xxl,
     fontWeight: FontWeight.bold,
@@ -236,10 +249,14 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.surface,
     alignItems: 'center',
     justifyContent: 'center',
+    borderWidth: 1,
+    borderColor: Colors.border,
     ...Shadow.sm,
   },
   refreshIcon: {
-    fontSize: 18,
+    fontSize: 20,
+    color: Colors.primary,
+    fontWeight: FontWeight.bold,
   },
   campusCard: {
     backgroundColor: Colors.primary,

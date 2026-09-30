@@ -38,7 +38,7 @@ export default function SearchBar({
         accessibilityElementsHidden
         importantForAccessibility="no"
       >
-        🔍
+        ⌕
       </Text>
       <TextInput
         style={styles.input}

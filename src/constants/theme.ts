@@ -33,32 +33,42 @@ export const Colors = {
   textPrimary: '#0F172A',
   textSecondary: '#475569',
   textTertiary: '#94A3B8',
-  border: '#E2E8F0',
+  border: '#CBD5E1',
   borderLight: '#F1F5F9',
 
-  // Status colors
-  success: '#16A34A',
+  // Semantic status colors
+  success: '#15803D',
   successBg: '#DCFCE7',
   successLight: '#86EFAC',
-  warning: '#F59E0B',
+  warning: '#B45309',
   warningBg: '#FEF3C7',
   warningLight: '#FCD34D',
-  danger: '#DC2626',
+  danger: '#B91C1C',
   dangerBg: '#FEE2E2',
   dangerLight: '#FCA5A5',
-  info: '#0EA5E9',
+  info: '#0369A1',
   infoBg: '#E0F2FE',
 
-  // Parking status colors
-  sepi: '#16A34A',    // Sepi — green
+  // Parking status colors — AVAILABLE / BUSY / NEAR FULL / FULL
+  available: '#15803D',       // AVAILABLE — green
+  availableBg: '#DCFCE7',
+  busy: '#B45309',            // BUSY — amber
+  busyBg: '#FEF3C7',
+  nearFull: '#B91C1C',        // NEAR FULL — red
+  nearFullBg: '#FEE2E2',
+  full: '#7F1D1D',            // FULL — deep red
+  fullBg: '#FEE2E2',
+
+  // Legacy aliases (kept for OccupancyBar color fallback)
+  sepi: '#15803D',
   sepiBg: '#DCFCE7',
-  sedang: '#0EA5E9',  // Sedang — blue
-  sedangBg: '#E0F2FE',
-  ramai: '#F59E0B',   // Ramai — amber
-  ramaiBg: '#FEF3C7',
-  hampirPenuh: '#EA580C', // Hampir Penuh — orange
-  hampirPenuhBg: '#FFF7ED',
-  penuh: '#DC2626',   // Penuh — red
+  sedang: '#B45309',
+  sedangBg: '#FEF3C7',
+  ramai: '#B91C1C',
+  ramaiBg: '#FEE2E2',
+  hampirPenuh: '#7F1D1D',
+  hampirPenuhBg: '#FEE2E2',
+  penuh: '#7F1D1D',
   penuhBg: '#FEE2E2',
 
   shadow: 'rgba(15, 23, 42, 0.08)',

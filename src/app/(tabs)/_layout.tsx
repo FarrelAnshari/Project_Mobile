@@ -4,32 +4,42 @@
  *
  * Uses Expo Router Tabs with custom styling.
  * 5 tabs: Beranda, Parkir, Prediksi, Riwayat, Profil
+ * No emoji icons — uses text-based icon shapes for accessibility.
  */
 
-import { Tabs } from 'expo-router';
+import { Tabs, Redirect } from 'expo-router';
 import { Platform, Text, View, StyleSheet } from 'react-native';
-import { Colors, FontSize, FontWeight } from '../../constants/theme';
+import { Colors, FontSize, FontWeight, BorderRadius } from '../../constants/theme';
+import { useAuth } from '../../contexts/AuthContext';
 
-// Tab icon component using emoji (no external icon library needed)
+/**
+ * TabIcon — text-based icon (no emoji, no external lib needed).
+ * Uses a styled letter/symbol inside a container.
+ * Active state uses background fill + different color (not color-only).
+ */
 function TabIcon({
-  icon,
+  symbol,
   focused,
-  label,
 }: {
-  icon: string;
+  symbol: string;
   focused: boolean;
-  label: string;
 }) {
   return (
-    <View style={styles.tabIconContainer}>
-      <Text style={[styles.tabEmoji, focused && styles.tabEmojiActive]}>
-        {icon}
+    <View style={[styles.tabIconContainer, focused && styles.tabIconContainerActive]}>
+      <Text style={[styles.tabSymbol, focused && styles.tabSymbolActive]}>
+        {symbol}
       </Text>
     </View>
   );
 }
 
 export default function TabLayout() {
+  const { isAuthenticated, isLoading } = useAuth();
+
+  if (!isLoading && !isAuthenticated) {
+    return <Redirect href={'/(auth)/login' as any} />;
+  }
+
   return (
     <Tabs
       screenOptions={{
@@ -46,9 +56,9 @@ export default function TabLayout() {
         options={{
           title: 'Beranda',
           tabBarIcon: ({ focused }) => (
-            <TabIcon icon="🏠" focused={focused} label="Beranda" />
+            <TabIcon symbol="⌂" focused={focused} />
           ),
-          tabBarAccessibilityLabel: 'Tab Beranda — Dashboard kepadatan parkir kampus',
+          tabBarAccessibilityLabel: 'Beranda — Dashboard kepadatan parkir kampus',
         }}
       />
       <Tabs.Screen
@@ -56,9 +66,9 @@ export default function TabLayout() {
         options={{
           title: 'Parkir',
           tabBarIcon: ({ focused }) => (
-            <TabIcon icon="🅿️" focused={focused} label="Parkir" />
+            <TabIcon symbol="P" focused={focused} />
           ),
-          tabBarAccessibilityLabel: 'Tab Parkir — Monitoring seluruh area parkir',
+          tabBarAccessibilityLabel: 'Parkir — Monitoring seluruh area parkir',
         }}
       />
       <Tabs.Screen
@@ -66,9 +76,9 @@ export default function TabLayout() {
         options={{
           title: 'Prediksi',
           tabBarIcon: ({ focused }) => (
-            <TabIcon icon="📈" focused={focused} label="Prediksi" />
+            <TabIcon symbol="↗" focused={focused} />
           ),
-          tabBarAccessibilityLabel: 'Tab Prediksi — Prediksi kepadatan parkir',
+          tabBarAccessibilityLabel: 'Prediksi — Prediksi kepadatan parkir',
         }}
       />
       <Tabs.Screen
@@ -76,9 +86,9 @@ export default function TabLayout() {
         options={{
           title: 'Riwayat',
           tabBarIcon: ({ focused }) => (
-            <TabIcon icon="📊" focused={focused} label="Riwayat" />
+            <TabIcon symbol="≡" focused={focused} />
           ),
-          tabBarAccessibilityLabel: 'Tab Riwayat — Histori kepadatan parkir',
+          tabBarAccessibilityLabel: 'Riwayat — Histori kepadatan parkir',
         }}
       />
       <Tabs.Screen
@@ -86,9 +96,9 @@ export default function TabLayout() {
         options={{
           title: 'Profil',
           tabBarIcon: ({ focused }) => (
-            <TabIcon icon="👤" focused={focused} label="Profil" />
+            <TabIcon symbol="◉" focused={focused} />
           ),
-          tabBarAccessibilityLabel: 'Tab Profil — Pengaturan dan profil pengguna',
+          tabBarAccessibilityLabel: 'Profil — Pengaturan dan profil pengguna',
         }}
       />
     </Tabs>
@@ -100,8 +110,8 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.surface,
     borderTopWidth: 1,
     borderTopColor: Colors.border,
-    height: Platform.OS === 'ios' ? 88 : 64,
-    paddingBottom: Platform.OS === 'ios' ? 24 : 8,
+    height: Platform.OS === 'ios' ? 88 : 68,
+    paddingBottom: Platform.OS === 'ios' ? 24 : 10,
     paddingTop: 8,
     elevation: 8,
     shadowColor: '#000',
@@ -120,15 +130,20 @@ const styles = StyleSheet.create({
   tabIconContainer: {
     alignItems: 'center',
     justifyContent: 'center',
-    width: 32,
+    width: 36,
     height: 28,
+    borderRadius: BorderRadius.sm,
   },
-  tabEmoji: {
-    fontSize: 20,
-    opacity: 0.5,
+  tabIconContainerActive: {
+    backgroundColor: Colors.primary + '15',
   },
-  tabEmojiActive: {
-    opacity: 1,
-    transform: [{ scale: 1.1 }],
+  tabSymbol: {
+    fontSize: 18,
+    color: Colors.textTertiary,
+    lineHeight: 22,
+  },
+  tabSymbolActive: {
+    color: Colors.primary,
+    fontWeight: FontWeight.bold,
   },
 });

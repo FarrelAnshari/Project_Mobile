@@ -2,7 +2,8 @@
  * PARKIN — Smart Campus Parking
  * Component: StatusBadge
  *
- * Accessibility: uses icon + text + color (never color alone)
+ * Accessibility: uses shape + text + color (never color alone)
+ * No emoji icons used.
  */
 
 import React from 'react';
@@ -23,7 +24,7 @@ interface Props {
 export default function StatusBadge({ status, size = 'md' }: Props) {
   const color = getStatusColor(status);
   const bgColor = getStatusBgColor(status);
-  const icon = getStatusIcon(status);
+  const icon = getStatusIcon(status); // Simple text character: ✓ ~ ! ✕
 
   const isSmall = size === 'sm';
   const isLarge = size === 'lg';
@@ -40,9 +41,9 @@ export default function StatusBadge({ status, size = 'md' }: Props) {
       accessibilityRole="text"
       accessibilityLabel={`Status parkir: ${status}`}
     >
-      {/* Icon for non-color users */}
+      {/* Icon shape for non-color users (text character, not emoji) */}
       <Text
-        style={[styles.icon, isSmall && styles.iconSm, isLarge && styles.iconLg]}
+        style={[styles.icon, { color }, isSmall && styles.iconSm, isLarge && styles.iconLg]}
         accessibilityElementsHidden={true}
         importantForAccessibility="no"
       >
@@ -71,7 +72,7 @@ const styles = StyleSheet.create({
     paddingVertical: 4,
     borderRadius: BorderRadius.full,
     borderWidth: 1,
-    gap: 4,
+    gap: 3,
   },
   badgeSm: {
     paddingHorizontal: 6,
@@ -85,6 +86,7 @@ const styles = StyleSheet.create({
   },
   icon: {
     fontSize: FontSize.sm,
+    fontWeight: FontWeight.bold,
   },
   iconSm: {
     fontSize: 10,
@@ -98,7 +100,7 @@ const styles = StyleSheet.create({
     letterSpacing: 0.3,
   },
   labelSm: {
-    fontSize: 11,
+    fontSize: 10,
   },
   labelLg: {
     fontSize: FontSize.md,

@@ -4,9 +4,10 @@
  *
  * Prediksi kepadatan parkir berdasarkan data historis/simulasi.
  * Prototype — siap dihubungkan ke ML API di sprint berikutnya.
+ * Mendukung pemilihan area parkir (PARKIRAN 1–5).
  */
 
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import {
   View,
   Text,
@@ -15,9 +16,9 @@ import {
   StyleSheet,
   SafeAreaView,
 } from 'react-native';
-import { predictionDataToday, predictionDataTomorrow } from '../data/predictionData';
-import { parkingAreas } from '../data/parkingData';
-import { getStatusFromOccupancy, getStatusColor } from '../utils/parkingStatus';
+import { predictionDataToday, predictionDataTomorrow, PredictionPoint } from '../data/predictionData';
+import { parkingAreas, ParkingArea } from '../data/parkingData';
+import { getStatusFromOccupancy, getStatusColor, getOccupancyPercent } from '../utils/parkingStatus';
 import { getRecommendations } from '../utils/recommendation';
 import PredictionChart from '../components/PredictionChart';
 import StatusBadge from '../components/StatusBadge';
@@ -35,28 +36,46 @@ type DayTab = 'today' | 'tomorrow';
 
 export default function PredictionScreen() {
   const { horizontalPadding } = useResponsive();
+  const [selectedAreaId, setSelectedAreaId] = useState<number>(3); // Default PARKIRAN 3 as example
   const [activeDay, setActiveDay] = useState<DayTab>('today');
 
-  const predictionData = activeDay === 'today' ? predictionDataToday : predictionDataTomorrow;
+  const selectedArea = useMemo(
+    () => parkingAreas.find((a) => a.id === selectedAreaId) ?? parkingAreas[0],
+    [selectedAreaId]
+  );
+
+  const baseData = activeDay === 'today' ? predictionDataToday : predictionDataTomorrow;
+
+  // Scale prediction curve proportionally to selected parking area's baseline occupancy
+  const currentOccupancy = getOccupancyPercent(selectedArea.occupied, selectedArea.capacity);
+
+  const predictionData: PredictionPoint[] = useMemo(() => {
+    // Generate scaled prediction relative to selected area's baseline
+    const baseOccupancyAvg = 55;
+    const factor = currentOccupancy / baseOccupancyAvg;
+
+    return baseData.map((point) => {
+      // Adjust occupancy curve based on area
+      const scaled = Math.min(100, Math.max(10, Math.round(point.occupancy * factor)));
+      return {
+        time: point.time,
+        occupancy: scaled,
+        label: getStatusFromOccupancy(scaled),
+      };
+    });
+  }, [baseData, currentOccupancy]);
 
   // Find peak and quietest hours
   const peakPoint = predictionData.reduce((a, b) =>
-    a.occupancy > b.occupancy ? a : b,
+    a.occupancy > b.occupancy ? a : b
   );
   const quietPoint = predictionData.reduce((a, b) =>
-    a.occupancy < b.occupancy ? a : b,
+    a.occupancy < b.occupancy ? a : b
   );
 
-  // Best recommendation for early arrival
-  const recommendation = getRecommendations(parkingAreas, 1)[0];
-
-  // Current hour prediction (approximate)
-  const now = new Date();
-  const currentHour = now.getHours();
-  const currentPrediction = predictionData.find((p) => {
-    const hour = parseInt(p.time.split(':')[0]);
-    return Math.abs(hour - currentHour) < 1;
-  }) ?? predictionData[0];
+  // Best recommendation for alternative
+  const recommendations = getRecommendations(parkingAreas, 2);
+  const altRecommendation = recommendations.find((r) => r.area.id !== selectedArea.id) ?? recommendations[0];
 
   return (
     <SafeAreaView style={styles.safeArea}>
@@ -70,27 +89,111 @@ export default function PredictionScreen() {
       >
         {/* Header */}
         <View style={styles.header}>
-          <Text style={styles.title}>📈 Prediksi Kepadatan</Text>
+          <Text style={styles.title}>Prediksi Kepadatan</Text>
           <Text style={styles.subtitle}>
             Perkiraan kondisi parkir berdasarkan pola waktu dan aktivitas kendaraan.
           </Text>
         </View>
 
-        {/* ML Disclaimer banner */}
+        {/* Prototype Disclaimer Banner */}
         <View style={styles.disclaimerBanner}>
-          <Text style={styles.disclaimerIcon} accessibilityElementsHidden>
-            🤖
-          </Text>
+          <View style={styles.disclaimerIcon}>
+            <Text style={styles.disclaimerIconText}>i</Text>
+          </View>
           <View style={styles.disclaimerTextBlock}>
-            <Text style={styles.disclaimerTitle}>Prediksi Simulasi</Text>
+            <Text style={styles.disclaimerTitle}>Data Simulasi / Historis</Text>
             <Text style={styles.disclaimerBody}>
-              Data ini merupakan estimasi berdasarkan data historis/simulasi.
-              Model machine learning akan diintegrasikan pada sprint berikutnya.
+              Prediksi pada tahap prototype menggunakan data historis/simulasi. Model machine learning akan diintegrasikan pada sprint berikutnya.
             </Text>
           </View>
         </View>
 
-        {/* Day tabs */}
+        {/* Area Parkir Selector (PARKIRAN 1–5) */}
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle} accessibilityRole="header">
+            Pilih Area Parkir
+          </Text>
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={styles.areaChipContainer}
+            accessible={true}
+            accessibilityRole="tablist"
+            accessibilityLabel="Pilihan area parkir untuk prediksi"
+          >
+            {parkingAreas.map((area) => {
+              const isSelected = area.id === selectedArea.id;
+              const areaOccupancy = getOccupancyPercent(area.occupied, area.capacity);
+              return (
+                <TouchableOpacity
+                  key={area.id}
+                  style={[
+                    styles.areaChip,
+                    isSelected && styles.areaChipActive,
+                  ]}
+                  onPress={() => setSelectedAreaId(area.id)}
+                  accessibilityRole="tab"
+                  accessibilityLabel={`${area.name}, ${areaOccupancy} persen terisi, ${area.available} slot tersedia`}
+                  accessibilityState={{ selected: isSelected }}
+                  accessibilityHint={`Menampilkan data prediksi kepadatan untuk ${area.name}`}
+                >
+                  <Text
+                    style={[
+                      styles.areaChipText,
+                      isSelected && styles.areaChipTextActive,
+                    ]}
+                  >
+                    {area.name}
+                  </Text>
+                  <Text
+                    style={[
+                      styles.areaChipSub,
+                      isSelected && styles.areaChipSubActive,
+                    ]}
+                  >
+                    {areaOccupancy}%
+                  </Text>
+                </TouchableOpacity>
+              );
+            })}
+          </ScrollView>
+        </View>
+
+        {/* Selected Area Summary Card */}
+        <View
+          style={[styles.selectedAreaCard, Shadow.sm]}
+          accessible={true}
+          accessibilityLabel={`${selectedArea.name}. Okupansi saat ini ${currentOccupancy} persen. Status: ${selectedArea.status}. Periode puncak diperkirakan pada jam sibuk.`}
+        >
+          <View style={styles.selectedAreaHeader}>
+            <View>
+              <Text style={styles.selectedAreaName}>{selectedArea.name}</Text>
+              <Text style={styles.selectedAreaSub}>
+                {selectedArea.available} slot tersedia dari {selectedArea.capacity} kapasitas
+              </Text>
+            </View>
+            <StatusBadge status={selectedArea.status} size="md" />
+          </View>
+
+          <View style={styles.statsSummaryRow}>
+            <View style={styles.summaryItem}>
+              <Text style={styles.summaryLabel}>Current Occupancy</Text>
+              <Text style={styles.summaryValue}>{currentOccupancy}%</Text>
+            </View>
+            <View style={styles.summaryDivider} />
+            <View style={styles.summaryItem}>
+              <Text style={styles.summaryLabel}>Peak Period</Text>
+              <Text style={styles.summaryValue}>11:00–13:00</Text>
+            </View>
+            <View style={styles.summaryDivider} />
+            <View style={styles.summaryItem}>
+              <Text style={styles.summaryLabel}>Estimated Peak</Text>
+              <Text style={styles.summaryValue}>{peakPoint.occupancy}%</Text>
+            </View>
+          </View>
+        </View>
+
+        {/* Day Tabs (Hari Ini / Besok) */}
         <View style={styles.tabs} accessibilityRole="tablist">
           {[
             { id: 'today' as DayTab, label: 'Hari Ini' },
@@ -104,7 +207,7 @@ export default function PredictionScreen() {
               ]}
               onPress={() => setActiveDay(tab.id)}
               accessibilityRole="tab"
-              accessibilityLabel={tab.label}
+              accessibilityLabel={`Prediksi untuk ${tab.label}`}
               accessibilityState={{ selected: activeDay === tab.id }}
             >
               <Text
@@ -119,53 +222,50 @@ export default function PredictionScreen() {
           ))}
         </View>
 
-        {/* Full prediction chart */}
+        {/* Full Prediction Chart */}
         <View style={[Shadow.sm, styles.chartContainer]}>
           <PredictionChart
             data={predictionData}
+            title={`Prediksi Kepadatan — ${selectedArea.name}`}
             compact={false}
           />
         </View>
 
-        {/* Insight cards */}
+        {/* Insight Cards */}
         <View style={styles.insightRow}>
-          {/* Peak time */}
+          {/* Peak Time */}
           <View
             style={[styles.insightCard, styles.insightPeak, Shadow.sm]}
             accessible={true}
             accessibilityRole="none"
             accessibilityLabel={`Perkiraan paling padat pukul ${peakPoint.time} dengan ${peakPoint.occupancy} persen terisi`}
           >
-            <Text style={styles.insightEmoji} accessibilityElementsHidden>
-              🔴
-            </Text>
-            <Text style={styles.insightLabel}>Paling Padat</Text>
+            <View style={styles.insightDotPeak} />
+            <Text style={styles.insightLabel}>Periode Paling Padat</Text>
             <Text style={styles.insightTime}>{peakPoint.time}</Text>
             <Text style={styles.insightValue}>{peakPoint.occupancy}%</Text>
             <StatusBadge status={getStatusFromOccupancy(peakPoint.occupancy)} size="sm" />
           </View>
 
-          {/* Quiet time */}
+          {/* Quiet Time */}
           <View
             style={[styles.insightCard, styles.insightQuiet, Shadow.sm]}
             accessible={true}
             accessibilityRole="none"
             accessibilityLabel={`Perkiraan paling sepi pukul ${quietPoint.time} dengan ${quietPoint.occupancy} persen terisi`}
           >
-            <Text style={styles.insightEmoji} accessibilityElementsHidden>
-              🟢
-            </Text>
-            <Text style={styles.insightLabel}>Paling Sepi</Text>
+            <View style={styles.insightDotQuiet} />
+            <Text style={styles.insightLabel}>Periode Paling Sepi</Text>
             <Text style={styles.insightTime}>{quietPoint.time}</Text>
             <Text style={styles.insightValue}>{quietPoint.occupancy}%</Text>
             <StatusBadge status={getStatusFromOccupancy(quietPoint.occupancy)} size="sm" />
           </View>
         </View>
 
-        {/* Per-hour details */}
+        {/* Per-hour Details Table */}
         <View style={styles.section}>
           <Text style={styles.sectionTitle} accessibilityRole="header">
-            Rincian Per Jam
+            Rincian Prediksi Per Jam — {selectedArea.name}
           </Text>
           <View style={[styles.hourlyTable, Shadow.sm]}>
             {predictionData.map((point, index) => {
@@ -179,7 +279,7 @@ export default function PredictionScreen() {
                     index < predictionData.length - 1 && styles.hourRowBorder,
                   ]}
                   accessible={true}
-                  accessibilityLabel={`Pukul ${point.time}: ${point.occupancy} persen — ${point.label}`}
+                  accessibilityLabel={`Pukul ${point.time}: ${point.occupancy} persen terisi — Status: ${status}`}
                 >
                   <Text style={styles.hourTime}>{point.time}</Text>
                   <View style={styles.hourBarTrack}>
@@ -203,25 +303,21 @@ export default function PredictionScreen() {
           </View>
         </View>
 
-        {/* Suggestion */}
-        {recommendation && (
+        {/* Recommendation / Alternative Suggestion */}
+        {altRecommendation && (
           <View style={[styles.suggestionCard, Shadow.sm]}>
-            <Text style={styles.suggestionTitle}>💡 Saran</Text>
+            <Text style={styles.suggestionTitle}>Rekomendasi Alternatif</Text>
             <Text style={styles.suggestionBody}>
-              Disarankan datang sebelum{' '}
+              Jika {selectedArea.name} mendekati kapasitas penuh, disarankan memilih{' '}
               <Text style={styles.suggestionHighlight}>
-                {predictionData.find((p) => p.occupancy > 60)?.time ?? '10:00'}
+                {altRecommendation.area.name}
               </Text>{' '}
-              atau memilih{' '}
-              <Text style={styles.suggestionHighlight}>
-                {recommendation.area.name}
-              </Text>
-              .
+              yang saat ini memiliki {altRecommendation.area.available} slot tersedia.
             </Text>
           </View>
         )}
 
-        <View style={{ height: 16 }} />
+        <View style={{ height: 24 }} />
       </ScrollView>
     </SafeAreaView>
   );
@@ -239,7 +335,7 @@ const styles = StyleSheet.create({
     paddingTop: Spacing.lg,
   },
   header: {
-    marginBottom: Spacing.lg,
+    marginBottom: Spacing.md,
   },
   title: {
     fontSize: FontSize.xxl,
@@ -254,41 +350,152 @@ const styles = StyleSheet.create({
   },
   disclaimerBanner: {
     flexDirection: 'row',
+    alignItems: 'flex-start',
     gap: Spacing.sm,
     backgroundColor: Colors.infoBg,
-    borderRadius: BorderRadius.md,
+    borderRadius: BorderRadius.lg,
     padding: Spacing.md,
-    marginBottom: Spacing.lg,
     borderWidth: 1,
-    borderColor: Colors.info + '40',
+    borderColor: Colors.border,
+    marginBottom: Spacing.lg,
   },
   disclaimerIcon: {
-    fontSize: 20,
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    backgroundColor: Colors.info,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginTop: 1,
+  },
+  disclaimerIconText: {
+    fontSize: FontSize.xs,
+    color: Colors.white,
+    fontWeight: FontWeight.bold,
   },
   disclaimerTextBlock: {
     flex: 1,
+    gap: 2,
   },
   disclaimerTitle: {
     fontSize: FontSize.sm,
-    fontWeight: FontWeight.bold,
-    color: Colors.info,
-    marginBottom: 2,
+    fontWeight: FontWeight.semibold,
+    color: Colors.textPrimary,
   },
   disclaimerBody: {
-    fontSize: FontSize.sm,
+    fontSize: FontSize.xs,
     color: Colors.textSecondary,
-    lineHeight: 20,
+    lineHeight: 18,
+  },
+  section: {
+    marginBottom: Spacing.lg,
+  },
+  sectionTitle: {
+    fontSize: FontSize.lg,
+    fontWeight: FontWeight.bold,
+    color: Colors.textPrimary,
+    marginBottom: Spacing.sm,
+  },
+  areaChipContainer: {
+    gap: Spacing.sm,
+    paddingVertical: 2,
+  },
+  areaChip: {
+    paddingHorizontal: Spacing.md,
+    paddingVertical: Spacing.sm,
+    borderRadius: BorderRadius.md,
+    backgroundColor: Colors.surface,
+    borderWidth: 1,
+    borderColor: Colors.border,
+    minHeight: 44,
+    alignItems: 'center',
+    justifyContent: 'center',
+    flexDirection: 'row',
+    gap: 6,
+  },
+  areaChipActive: {
+    backgroundColor: Colors.primary,
+    borderColor: Colors.primary,
+  },
+  areaChipText: {
+    fontSize: FontSize.sm,
+    fontWeight: FontWeight.semibold,
+    color: Colors.textPrimary,
+  },
+  areaChipTextActive: {
+    color: Colors.white,
+  },
+  areaChipSub: {
+    fontSize: FontSize.xs,
+    color: Colors.textTertiary,
+    fontWeight: FontWeight.medium,
+  },
+  areaChipSubActive: {
+    color: Colors.white + 'CC',
+  },
+  selectedAreaCard: {
+    backgroundColor: Colors.surface,
+    borderRadius: BorderRadius.lg,
+    padding: Spacing.md,
+    borderWidth: 1,
+    borderColor: Colors.border,
+    marginBottom: Spacing.lg,
+  },
+  selectedAreaHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: Spacing.md,
+  },
+  selectedAreaName: {
+    fontSize: FontSize.lg,
+    fontWeight: FontWeight.bold,
+    color: Colors.textPrimary,
+  },
+  selectedAreaSub: {
+    fontSize: FontSize.xs,
+    color: Colors.textSecondary,
+    marginTop: 2,
+  },
+  statsSummaryRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    backgroundColor: Colors.background,
+    borderRadius: BorderRadius.md,
+    padding: Spacing.sm,
+    borderWidth: 1,
+    borderColor: Colors.borderLight,
+  },
+  summaryItem: {
+    flex: 1,
+    alignItems: 'center',
+  },
+  summaryLabel: {
+    fontSize: 10,
+    color: Colors.textTertiary,
+    marginBottom: 2,
+    textAlign: 'center',
+  },
+  summaryValue: {
+    fontSize: FontSize.md,
+    fontWeight: FontWeight.bold,
+    color: Colors.textPrimary,
+  },
+  summaryDivider: {
+    width: 1,
+    backgroundColor: Colors.border,
+    marginVertical: 2,
   },
   tabs: {
     flexDirection: 'row',
     backgroundColor: Colors.borderLight,
     borderRadius: BorderRadius.md,
-    padding: 4,
-    marginBottom: Spacing.lg,
+    padding: 3,
+    marginBottom: Spacing.md,
   },
   tab: {
     flex: 1,
-    paddingVertical: Spacing.sm,
+    paddingVertical: 10,
     alignItems: 'center',
     borderRadius: BorderRadius.sm,
     minHeight: 44,
@@ -299,23 +506,21 @@ const styles = StyleSheet.create({
     ...Shadow.sm,
   },
   tabText: {
-    fontSize: FontSize.md,
+    fontSize: FontSize.sm,
     fontWeight: FontWeight.medium,
     color: Colors.textSecondary,
   },
   tabTextActive: {
+    fontWeight: FontWeight.semibold,
     color: Colors.primary,
-    fontWeight: FontWeight.bold,
   },
   chartContainer: {
-    borderRadius: BorderRadius.lg,
     marginBottom: Spacing.lg,
-    overflow: 'hidden',
   },
   insightRow: {
     flexDirection: 'row',
     gap: Spacing.md,
-    marginBottom: Spacing.xl,
+    marginBottom: Spacing.lg,
   },
   insightCard: {
     flex: 1,
@@ -323,7 +528,9 @@ const styles = StyleSheet.create({
     borderRadius: BorderRadius.lg,
     padding: Spacing.md,
     alignItems: 'center',
-    gap: Spacing.xs,
+    gap: 4,
+    borderWidth: 1,
+    borderColor: Colors.border,
   },
   insightPeak: {
     borderTopWidth: 3,
@@ -333,13 +540,24 @@ const styles = StyleSheet.create({
     borderTopWidth: 3,
     borderTopColor: Colors.success,
   },
-  insightEmoji: {
-    fontSize: 20,
+  insightDotPeak: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: Colors.danger,
+    marginBottom: 2,
+  },
+  insightDotQuiet: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: Colors.success,
+    marginBottom: 2,
   },
   insightLabel: {
     fontSize: FontSize.xs,
     color: Colors.textSecondary,
-    fontWeight: FontWeight.medium,
+    textAlign: 'center',
   },
   insightTime: {
     fontSize: FontSize.xl,
@@ -347,29 +565,22 @@ const styles = StyleSheet.create({
     color: Colors.textPrimary,
   },
   insightValue: {
-    fontSize: FontSize.lg,
-    fontWeight: FontWeight.semibold,
-    color: Colors.textSecondary,
-  },
-  section: {
-    marginBottom: Spacing.xl,
-  },
-  sectionTitle: {
-    fontSize: FontSize.lg,
-    fontWeight: FontWeight.bold,
-    color: Colors.textPrimary,
-    marginBottom: Spacing.md,
+    fontSize: FontSize.sm,
+    color: Colors.textTertiary,
+    marginBottom: 4,
   },
   hourlyTable: {
     backgroundColor: Colors.surface,
     borderRadius: BorderRadius.lg,
     overflow: 'hidden',
+    borderWidth: 1,
+    borderColor: Colors.border,
   },
   hourRow: {
     flexDirection: 'row',
     alignItems: 'center',
+    paddingVertical: 12,
     paddingHorizontal: Spacing.md,
-    paddingVertical: Spacing.sm,
     gap: Spacing.sm,
     minHeight: 44,
   },
@@ -378,10 +589,10 @@ const styles = StyleSheet.create({
     borderBottomColor: Colors.borderLight,
   },
   hourTime: {
-    fontSize: FontSize.sm,
-    color: Colors.textSecondary,
-    fontWeight: FontWeight.medium,
     width: 44,
+    fontSize: FontSize.xs,
+    fontWeight: FontWeight.semibold,
+    color: Colors.textSecondary,
   },
   hourBarTrack: {
     flex: 1,
@@ -395,32 +606,33 @@ const styles = StyleSheet.create({
     borderRadius: 4,
   },
   hourValue: {
-    fontSize: FontSize.sm,
-    fontWeight: FontWeight.bold,
     width: 36,
+    fontSize: FontSize.xs,
+    fontWeight: FontWeight.bold,
     textAlign: 'right',
   },
   suggestionCard: {
-    backgroundColor: Colors.primary + '10',
+    backgroundColor: Colors.surface,
     borderRadius: BorderRadius.lg,
-    padding: Spacing.lg,
+    padding: Spacing.md,
+    gap: Spacing.xs,
     borderWidth: 1,
-    borderColor: Colors.primary + '30',
-    marginBottom: Spacing.lg,
+    borderColor: Colors.border,
+    borderLeftWidth: 4,
+    borderLeftColor: Colors.primary,
   },
   suggestionTitle: {
     fontSize: FontSize.md,
-    fontWeight: FontWeight.bold,
+    fontWeight: FontWeight.semibold,
     color: Colors.primary,
-    marginBottom: Spacing.sm,
   },
   suggestionBody: {
-    fontSize: FontSize.md,
+    fontSize: FontSize.sm,
     color: Colors.textSecondary,
-    lineHeight: 22,
+    lineHeight: 20,
   },
   suggestionHighlight: {
     fontWeight: FontWeight.bold,
-    color: Colors.primary,
+    color: Colors.textPrimary,
   },
 });

@@ -2,10 +2,11 @@
  * PARKIN — Smart Campus Parking
  * Screen: Profil
  *
- * User profile, notification preferences, accessibility settings, about.
+ * User profile, local storage preferences (AsyncStorage),
+ * secure token info (SecureStore), and logout flow with confirmation.
  */
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -14,7 +15,17 @@ import {
   Switch,
   StyleSheet,
   SafeAreaView,
+  Modal,
+  ActivityIndicator,
 } from 'react-native';
+import { useRouter } from 'expo-router';
+import { useAuth } from '../contexts/AuthContext';
+import {
+  getUserPreferences,
+  saveUserPreferences,
+  getNotificationSettings,
+  saveNotificationSettings,
+} from '../services/storageService';
 import {
   Colors,
   Spacing,
@@ -25,21 +36,85 @@ import {
 } from '../constants/theme';
 import { useResponsive } from '../utils/responsive';
 
-const MOCK_USER = {
-  name: 'Ahmad Fauzi',
-  nim: '2021310042',
-  prodi: 'Teknik Informatika',
-  angkatan: '2021',
-  avatar: '👤',
-};
-
 export default function ProfileScreen() {
+  const router = useRouter();
+  const { user, logout } = useAuth();
   const { horizontalPadding } = useResponsive();
+
+  // Preferences state (AsyncStorage)
   const [notifAlmostFull, setNotifAlmostFull] = useState(true);
   const [notifFull, setNotifFull] = useState(true);
   const [notifPrediction, setNotifPrediction] = useState(false);
   const [largeText, setLargeText] = useState(false);
   const [highContrast, setHighContrast] = useState(false);
+  const [isLoggingOut, setIsLoggingOut] = useState(false);
+  const [showLogoutModal, setShowLogoutModal] = useState(false);
+
+  // Load preferences from AsyncStorage on mount
+  useEffect(() => {
+    async function loadStoredSettings() {
+      try {
+        const [prefs, notifs] = await Promise.all([
+          getUserPreferences(),
+          getNotificationSettings(),
+        ]);
+        setLargeText(prefs.largeText);
+        setHighContrast(prefs.highContrast);
+        setNotifAlmostFull(notifs.notifAlmostFull);
+        setNotifFull(notifs.notifFull);
+        setNotifPrediction(notifs.notifPrediction);
+      } catch {
+        // Fallback default
+      }
+    }
+    loadStoredSettings();
+  }, []);
+
+  // Update handlers with persistent AsyncStorage write
+  const handleToggleNotifAlmostFull = async (val: boolean) => {
+    setNotifAlmostFull(val);
+    await saveNotificationSettings({ notifAlmostFull: val });
+  };
+
+  const handleToggleNotifFull = async (val: boolean) => {
+    setNotifFull(val);
+    await saveNotificationSettings({ notifFull: val });
+  };
+
+  const handleToggleNotifPrediction = async (val: boolean) => {
+    setNotifPrediction(val);
+    await saveNotificationSettings({ notifPrediction: val });
+  };
+
+  const handleToggleLargeText = async (val: boolean) => {
+    setLargeText(val);
+    await saveUserPreferences({ largeText: val });
+  };
+
+  const handleToggleHighContrast = async (val: boolean) => {
+    setHighContrast(val);
+    await saveUserPreferences({ highContrast: val });
+  };
+
+  const handleConfirmLogout = async () => {
+    setIsLoggingOut(true);
+    try {
+      await logout();
+      setShowLogoutModal(false);
+      router.replace('/(auth)/login' as any);
+    } finally {
+      setIsLoggingOut(false);
+    }
+  };
+
+  const initials = user?.name
+    ? user.name
+        .split(' ')
+        .map((n) => n[0])
+        .join('')
+        .slice(0, 2)
+        .toUpperCase()
+    : 'AF';
 
   return (
     <SafeAreaView style={styles.safeArea}>
@@ -53,79 +128,126 @@ export default function ProfileScreen() {
       >
         {/* Profile header */}
         <View style={[styles.profileCard, Shadow.md]}>
-          <View style={styles.avatarCircle} accessibilityElementsHidden>
-            <Text style={styles.avatarText}>{MOCK_USER.avatar}</Text>
+          <View
+            style={styles.avatarCircle}
+            accessible={false}
+            importantForAccessibility="no"
+          >
+            <Text style={styles.avatarText}>{initials}</Text>
           </View>
           <View style={styles.profileInfo}>
             <Text
               style={styles.profileName}
               accessibilityRole="header"
             >
-              {MOCK_USER.name}
+              {user?.name || 'Ahmad Fauzi'}
             </Text>
-            <Text style={styles.profileNim}>NIM: {MOCK_USER.nim}</Text>
-            <Text style={styles.profileProdi}>{MOCK_USER.prodi}</Text>
+            <Text style={styles.profileEmail}>{user?.email || 'mahasiswa@kampus.ac.id'}</Text>
+            <Text style={styles.profileNim}>NIM: {user?.nim || '2021310042'}</Text>
+            <Text style={styles.profileProdi}>{user?.prodi || 'Teknik Informatika'}</Text>
             <Text style={styles.profileAngkatan}>
-              Angkatan {MOCK_USER.angkatan}
+              Angkatan {user?.angkatan || '2021'}
             </Text>
           </View>
         </View>
 
-        {/* Notification settings */}
+        {/* TASK 02: Storage & Security Architecture Badge Card */}
         <View style={styles.section}>
           <Text style={styles.sectionTitle} accessibilityRole="header">
-            🔔 Preferensi Notifikasi
+            Penyimpanan & Keamanan Data (TASK 02)
+          </Text>
+          <View style={[styles.securityCard, Shadow.sm]}>
+            <View style={styles.securityRow}>
+              <View style={styles.securityDotActive} />
+              <View style={styles.securityTextCol}>
+                <Text style={styles.securityItemTitle}>Token Sesi & Autentikasi</Text>
+                <Text style={styles.securityItemDesc}>
+                  Disimpan terenkripsi di <Text style={styles.highlightText}>Expo SecureStore</Text> (Keystore / Keychain perangkat). Tidak disimpan di AsyncStorage.
+                </Text>
+              </View>
+            </View>
+
+            <View style={styles.securityDivider} />
+
+            <View style={styles.securityRow}>
+              <View style={[styles.securityDotActive, { backgroundColor: Colors.primary }]} />
+              <View style={styles.securityTextCol}>
+                <Text style={styles.securityItemTitle}>Preferensi & Pengaturan Tampilan</Text>
+                <Text style={styles.securityItemDesc}>
+                  Disimpan lokal secara efisien di <Text style={styles.highlightText}>AsyncStorage</Text> (Local Storage non-sensitif).
+                </Text>
+              </View>
+            </View>
+
+            <View style={styles.securityDivider} />
+
+            <View style={styles.securityRow}>
+              <View style={[styles.securityDotActive, { backgroundColor: Colors.textTertiary }]} />
+              <View style={styles.securityTextCol}>
+                <Text style={styles.securityItemTitle}>Privasi Password</Text>
+                <Text style={styles.securityItemDesc}>
+                  Password tidak pernah disimpan dalam bentuk plaintext di media penyimpanan mana pun.
+                </Text>
+              </View>
+            </View>
+          </View>
+        </View>
+
+        {/* Notification settings (AsyncStorage) */}
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle} accessibilityRole="header">
+            Preferensi Notifikasi (Local Storage)
           </Text>
           <View style={[styles.settingsList, Shadow.sm]}>
             <SettingRow
-              label="Hampir Penuh"
-              description="Notifikasi saat area ≥80% terisi"
+              label="Area Hampir Penuh"
+              description="Notifikasi saat area parkir terisi lebih dari 80%"
               value={notifAlmostFull}
-              onValueChange={setNotifAlmostFull}
+              onValueChange={handleToggleNotifAlmostFull}
               accessibilityLabel="Notifikasi area hampir penuh"
             />
             <SettingRow
               label="Area Penuh"
-              description="Notifikasi saat area 100% terisi"
+              description="Notifikasi saat area parkir 100% terisi"
               value={notifFull}
-              onValueChange={setNotifFull}
+              onValueChange={handleToggleNotifFull}
               accessibilityLabel="Notifikasi area penuh"
             />
             <SettingRow
               label="Prediksi Pagi"
-              description="Prediksi kepadatan setiap pagi"
+              description="Prediksi kepadatan parkir setiap pagi hari"
               value={notifPrediction}
-              onValueChange={setNotifPrediction}
+              onValueChange={handleToggleNotifPrediction}
               accessibilityLabel="Notifikasi prediksi kepadatan pagi"
               isLast
             />
           </View>
         </View>
 
-        {/* Accessibility settings */}
+        {/* Accessibility settings (AsyncStorage) */}
         <View style={styles.section}>
           <Text style={styles.sectionTitle} accessibilityRole="header">
-            ♿ Aksesibilitas
+            Aksesibilitas (Local Storage)
           </Text>
           <View style={[styles.settingsList, Shadow.sm]}>
             <SettingRow
               label="Teks Lebih Besar"
-              description="Perbesar ukuran teks untuk keterbacaan"
+              description="Perbesar ukuran teks untuk keterbacaan yang lebih baik"
               value={largeText}
-              onValueChange={setLargeText}
+              onValueChange={handleToggleLargeText}
               accessibilityLabel="Aktifkan teks lebih besar"
             />
             <SettingRow
               label="Kontras Tinggi"
-              description="Tingkatkan kontras warna"
+              description="Tingkatkan kontras warna untuk visibilitas lebih baik"
               value={highContrast}
-              onValueChange={setHighContrast}
+              onValueChange={handleToggleHighContrast}
               accessibilityLabel="Aktifkan mode kontras tinggi"
               isLast
             />
           </View>
           <Text style={styles.a11yNote}>
-            💡 PARKIN dirancang dengan standar aksesibilitas WCAG. Seluruh
+            PARKIN dirancang dengan standar aksesibilitas WCAG. Seluruh
             komponen mendukung screen reader dan navigasi keyboard.
           </Text>
         </View>
@@ -133,42 +255,46 @@ export default function ProfileScreen() {
         {/* About PARKIN */}
         <View style={styles.section}>
           <Text style={styles.sectionTitle} accessibilityRole="header">
-            ℹ️ Tentang PARKIN
+            Tentang PARKIN
           </Text>
           <View style={[styles.aboutCard, Shadow.sm]}>
             <View style={styles.aboutHeader}>
-              <Text style={styles.aboutLogo}>🅿️</Text>
+              <View style={styles.aboutLogoBox}>
+                <Text style={styles.aboutLogoText}>P</Text>
+              </View>
               <View>
                 <Text style={styles.aboutAppName}>PARKIN</Text>
                 <Text style={styles.aboutTagline}>Smart Campus Parking</Text>
               </View>
             </View>
-            <Text style={styles.aboutVersion}>Versi 1.0.0 · Sprint 01</Text>
+            <Text style={styles.aboutVersion}>Versi 1.1.0 · Auth & Storage Flow</Text>
             <Text style={styles.aboutDesc}>
               PARKIN membantu mahasiswa memantau kondisi parkir kampus secara
               efisien, mengurangi waktu mencari tempat parkir, dan meningkatkan
               mobilitas di lingkungan kampus.
             </Text>
             <View style={styles.aboutBadges}>
-              <AboutBadge icon="📱" label="Expo Go" />
-              <AboutBadge icon="⚛️" label="React Native" />
-              <AboutBadge icon="♿" label="Accessible" />
-              <AboutBadge icon="📊" label="Mock Data" />
+              <AboutBadge label="Expo Go" />
+              <AboutBadge label="React Native" />
+              <AboutBadge label="SecureStore" />
+              <AboutBadge label="AsyncStorage" />
             </View>
-            <Text style={styles.aboutDisclaimer}>
-              ⚠️ Data parkir dan prediksi merupakan simulasi/mock data.
-              Integrasi API real-time dan model ML direncanakan pada Sprint 02.
-            </Text>
+            <View style={styles.aboutDisclaimer}>
+              <Text style={styles.aboutDisclaimerTitle}>Catatan Autentikasi</Text>
+              <Text style={styles.aboutDisclaimerText}>
+                Autentikasi saat ini berjalan dalam Mode Prototype Mahasiswa. Token sesi disimpan secara aman menggunakan Expo SecureStore.
+              </Text>
+            </View>
           </View>
         </View>
 
         {/* Menu items */}
         <View style={styles.section}>
           {[
-            { icon: '🔒', label: 'Kebijakan Privasi' },
-            { icon: '📋', label: 'Syarat & Ketentuan' },
-            { icon: '❓', label: 'Bantuan' },
-            { icon: '📧', label: 'Hubungi Kami' },
+            { label: 'Kebijakan Privasi' },
+            { label: 'Syarat & Ketentuan' },
+            { label: 'Bantuan' },
+            { label: 'Hubungi Kami' },
           ].map((item) => (
             <TouchableOpacity
               key={item.label}
@@ -178,19 +304,74 @@ export default function ProfileScreen() {
               accessibilityLabel={item.label}
               accessibilityHint={`Membuka halaman ${item.label}`}
             >
-              <Text style={styles.menuIcon} accessibilityElementsHidden>
-                {item.icon}
-              </Text>
               <Text style={styles.menuLabel}>{item.label}</Text>
-              <Text style={styles.menuArrow} accessibilityElementsHidden>
-                →
-              </Text>
+              <Text style={styles.menuArrow} accessibilityElementsHidden>›</Text>
             </TouchableOpacity>
           ))}
         </View>
 
-        <View style={{ height: 16 }} />
+        {/* Logout Button */}
+        <View style={styles.section}>
+          <TouchableOpacity
+            style={[styles.logoutBtn, Shadow.sm]}
+            onPress={() => setShowLogoutModal(true)}
+            activeOpacity={0.8}
+            accessibilityRole="button"
+            accessibilityLabel="Keluar dari akun PARKIN"
+            accessibilityHint="Membuka dialog konfirmasi untuk keluar dari sesi"
+          >
+            <Text style={styles.logoutBtnText}>Keluar dari Akun</Text>
+          </TouchableOpacity>
+        </View>
+
+        <View style={{ height: 24 }} />
       </ScrollView>
+
+      {/* Logout Confirmation Modal */}
+      <Modal
+        visible={showLogoutModal}
+        transparent={true}
+        animationType="fade"
+        onRequestClose={() => setShowLogoutModal(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={[styles.modalCard, Shadow.md]}>
+            <View style={styles.modalAlertIconBox}>
+              <Text style={styles.modalAlertIcon}>!</Text>
+            </View>
+            <Text style={styles.modalTitle}>Konfirmasi Keluar</Text>
+            <Text style={styles.modalMessage}>
+              Apakah Anda yakin ingin keluar dari akun <Text style={{ fontWeight: 'bold' }}>{user?.name || 'Mahasiswa'}</Text>? Sesi autentikasi Anda akan dihapus secara aman dari perangkat ini.
+            </Text>
+
+            <View style={styles.modalActionRow}>
+              <TouchableOpacity
+                style={styles.modalCancelBtn}
+                onPress={() => setShowLogoutModal(false)}
+                disabled={isLoggingOut}
+                accessibilityRole="button"
+                accessibilityLabel="Batal keluar"
+              >
+                <Text style={styles.modalCancelText}>Batal</Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                style={styles.modalConfirmBtn}
+                onPress={handleConfirmLogout}
+                disabled={isLoggingOut}
+                accessibilityRole="button"
+                accessibilityLabel="Ya, konfirmasi keluar"
+              >
+                {isLoggingOut ? (
+                  <ActivityIndicator color={Colors.white} size="small" />
+                ) : (
+                  <Text style={styles.modalConfirmText}>Ya, Keluar</Text>
+                )}
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
     </SafeAreaView>
   );
 }
@@ -234,16 +415,13 @@ function SettingRow({
 }
 
 // ======== AboutBadge ========
-function AboutBadge({ icon, label }: { icon: string; label: string }) {
+function AboutBadge({ label }: { label: string }) {
   return (
     <View
       style={styles.aboutBadge}
       accessible={true}
       accessibilityLabel={label}
     >
-      <Text style={styles.aboutBadgeIcon} accessibilityElementsHidden>
-        {icon}
-      </Text>
       <Text style={styles.aboutBadgeLabel}>{label}</Text>
     </View>
   );
@@ -268,17 +446,22 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: Spacing.lg,
     marginBottom: Spacing.xl,
+    borderWidth: 1,
+    borderColor: Colors.border,
   },
   avatarCircle: {
     width: 72,
     height: 72,
     borderRadius: 36,
-    backgroundColor: Colors.primary + '15',
+    backgroundColor: Colors.primary,
     alignItems: 'center',
     justifyContent: 'center',
   },
   avatarText: {
-    fontSize: 36,
+    fontSize: FontSize.xxl,
+    fontWeight: FontWeight.bold,
+    color: Colors.white,
+    letterSpacing: 1,
   },
   profileInfo: {
     flex: 1,
@@ -288,6 +471,11 @@ const styles = StyleSheet.create({
     fontSize: FontSize.xl,
     fontWeight: FontWeight.bold,
     color: Colors.textPrimary,
+  },
+  profileEmail: {
+    fontSize: FontSize.xs,
+    color: Colors.textSecondary,
+    marginBottom: 2,
   },
   profileNim: {
     fontSize: FontSize.sm,
@@ -312,10 +500,54 @@ const styles = StyleSheet.create({
     color: Colors.textPrimary,
     marginBottom: Spacing.md,
   },
+  securityCard: {
+    backgroundColor: Colors.surface,
+    borderRadius: BorderRadius.lg,
+    padding: Spacing.lg,
+    borderWidth: 1,
+    borderColor: Colors.border,
+    gap: Spacing.md,
+  },
+  securityRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: Spacing.sm,
+  },
+  securityDotActive: {
+    width: 10,
+    height: 10,
+    borderRadius: 5,
+    backgroundColor: Colors.success,
+    marginTop: 4,
+  },
+  securityTextCol: {
+    flex: 1,
+  },
+  securityItemTitle: {
+    fontSize: FontSize.sm,
+    fontWeight: FontWeight.bold,
+    color: Colors.textPrimary,
+    marginBottom: 2,
+  },
+  securityItemDesc: {
+    fontSize: FontSize.xs,
+    color: Colors.textSecondary,
+    lineHeight: 18,
+  },
+  highlightText: {
+    fontWeight: FontWeight.bold,
+    color: Colors.primary,
+  },
+  securityDivider: {
+    height: 1,
+    backgroundColor: Colors.borderLight,
+  },
   settingsList: {
     backgroundColor: Colors.surface,
     borderRadius: BorderRadius.lg,
     overflow: 'hidden',
+    borderWidth: 1,
+    borderColor: Colors.border,
   },
   settingRow: {
     flexDirection: 'row',
@@ -341,6 +573,7 @@ const styles = StyleSheet.create({
     fontSize: FontSize.sm,
     color: Colors.textSecondary,
     marginTop: 2,
+    lineHeight: 18,
   },
   a11yNote: {
     fontSize: FontSize.sm,
@@ -354,53 +587,58 @@ const styles = StyleSheet.create({
     borderRadius: BorderRadius.lg,
     padding: Spacing.lg,
     gap: Spacing.md,
+    borderWidth: 1,
+    borderColor: Colors.border,
   },
   aboutHeader: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: Spacing.md,
   },
-  aboutLogo: {
-    fontSize: 40,
+  aboutLogoBox: {
+    width: 52,
+    height: 52,
+    borderRadius: BorderRadius.md,
+    backgroundColor: Colors.primary,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  aboutLogoText: {
+    fontSize: FontSize.xxl,
+    fontWeight: FontWeight.extrabold,
+    color: Colors.white,
   },
   aboutAppName: {
     fontSize: FontSize.xxl,
     fontWeight: FontWeight.extrabold,
     color: Colors.primary,
-    letterSpacing: 1,
   },
   aboutTagline: {
     fontSize: FontSize.sm,
     color: Colors.textSecondary,
   },
   aboutVersion: {
-    fontSize: FontSize.sm,
+    fontSize: FontSize.xs,
     color: Colors.textTertiary,
     fontWeight: FontWeight.medium,
   },
   aboutDesc: {
-    fontSize: FontSize.md,
+    fontSize: FontSize.sm,
     color: Colors.textSecondary,
-    lineHeight: 22,
+    lineHeight: 20,
   },
   aboutBadges: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    gap: Spacing.sm,
+    gap: Spacing.xs,
   },
   aboutBadge: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-    backgroundColor: Colors.background,
-    borderRadius: BorderRadius.full,
+    backgroundColor: Colors.borderLight,
     paddingHorizontal: Spacing.sm,
     paddingVertical: 4,
+    borderRadius: BorderRadius.sm,
     borderWidth: 1,
     borderColor: Colors.border,
-  },
-  aboutBadgeIcon: {
-    fontSize: 12,
   },
   aboutBadgeLabel: {
     fontSize: FontSize.xs,
@@ -408,12 +646,22 @@ const styles = StyleSheet.create({
     color: Colors.textSecondary,
   },
   aboutDisclaimer: {
-    fontSize: FontSize.sm,
-    color: Colors.textSecondary,
-    lineHeight: 20,
     backgroundColor: Colors.warningBg,
     borderRadius: BorderRadius.sm,
     padding: Spacing.sm,
+    borderLeftWidth: 3,
+    borderLeftColor: Colors.warning,
+  },
+  aboutDisclaimerTitle: {
+    fontSize: FontSize.sm,
+    fontWeight: FontWeight.bold,
+    color: Colors.warning,
+    marginBottom: 2,
+  },
+  aboutDisclaimerText: {
+    fontSize: FontSize.sm,
+    color: Colors.textSecondary,
+    lineHeight: 20,
   },
   menuItem: {
     flexDirection: 'row',
@@ -425,9 +673,8 @@ const styles = StyleSheet.create({
     marginBottom: Spacing.sm,
     gap: Spacing.md,
     minHeight: 52,
-  },
-  menuIcon: {
-    fontSize: 20,
+    borderWidth: 1,
+    borderColor: Colors.border,
   },
   menuLabel: {
     flex: 1,
@@ -436,7 +683,101 @@ const styles = StyleSheet.create({
     color: Colors.textPrimary,
   },
   menuArrow: {
-    fontSize: FontSize.lg,
+    fontSize: FontSize.xl,
     color: Colors.textTertiary,
+  },
+  logoutBtn: {
+    backgroundColor: Colors.dangerBg,
+    borderWidth: 1,
+    borderColor: Colors.danger,
+    borderRadius: BorderRadius.md,
+    paddingVertical: Spacing.md,
+    alignItems: 'center',
+    justifyContent: 'center',
+    minHeight: 48,
+  },
+  logoutBtnText: {
+    fontSize: FontSize.md,
+    fontWeight: FontWeight.bold,
+    color: Colors.danger,
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(15, 23, 42, 0.65)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: Spacing.xl,
+  },
+  modalCard: {
+    backgroundColor: Colors.surface,
+    borderRadius: BorderRadius.xl,
+    padding: Spacing.xl,
+    width: '100%',
+    maxWidth: 400,
+    alignItems: 'center',
+  },
+  modalAlertIconBox: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    backgroundColor: Colors.dangerBg,
+    borderWidth: 1,
+    borderColor: Colors.danger,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: Spacing.md,
+  },
+  modalAlertIcon: {
+    fontSize: FontSize.xl,
+    color: Colors.danger,
+    fontWeight: FontWeight.bold,
+  },
+  modalTitle: {
+    fontSize: FontSize.xl,
+    fontWeight: FontWeight.bold,
+    color: Colors.textPrimary,
+    marginBottom: Spacing.xs,
+  },
+  modalMessage: {
+    fontSize: FontSize.sm,
+    color: Colors.textSecondary,
+    textAlign: 'center',
+    lineHeight: 20,
+    marginBottom: Spacing.xl,
+  },
+  modalActionRow: {
+    flexDirection: 'row',
+    gap: Spacing.md,
+    width: '100%',
+  },
+  modalCancelBtn: {
+    flex: 1,
+    backgroundColor: Colors.surface,
+    borderWidth: 1,
+    borderColor: Colors.border,
+    borderRadius: BorderRadius.md,
+    paddingVertical: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+    minHeight: 44,
+  },
+  modalCancelText: {
+    fontSize: FontSize.md,
+    fontWeight: FontWeight.semibold,
+    color: Colors.textSecondary,
+  },
+  modalConfirmBtn: {
+    flex: 1,
+    backgroundColor: Colors.danger,
+    borderRadius: BorderRadius.md,
+    paddingVertical: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+    minHeight: 44,
+  },
+  modalConfirmText: {
+    fontSize: FontSize.md,
+    fontWeight: FontWeight.bold,
+    color: Colors.white,
   },
 });

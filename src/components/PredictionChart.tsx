@@ -4,11 +4,11 @@
  *
  * A custom bar chart for occupancy prediction.
  * No external chart library needed — pure React Native View/Text.
- * Label: "Prediksi berdasarkan data historis/simulasi"
+ * Label: "Prediksi pada tahap prototype menggunakan data historis/simulasi"
  */
 
 import React from 'react';
-import { View, Text, StyleSheet, useWindowDimensions } from 'react-native';
+import { View, Text, StyleSheet } from 'react-native';
 import { PredictionPoint } from '../data/predictionData';
 import { getOccupancyBarColor } from '../utils/parkingStatus';
 import {
@@ -30,8 +30,6 @@ export default function PredictionChart({
   title,
   compact = false,
 }: Props) {
-  const { width } = useWindowDimensions();
-  const maxOccupancy = Math.max(...data.map((d) => d.occupancy));
   const barHeight = compact ? 80 : 120;
 
   return (
@@ -47,17 +45,21 @@ export default function PredictionChart({
 
       {/* Simulation disclaimer */}
       <View style={styles.disclaimer}>
-        <Text style={styles.disclaimerText} accessibilityElementsHidden>
-          📊
-        </Text>
         <Text style={styles.disclaimerText}>
-          Prediksi berdasarkan data historis/simulasi
+          Prediksi pada tahap prototype menggunakan data historis/simulasi.
         </Text>
       </View>
 
+      {/* Y-axis indicator */}
+      {!compact && (
+        <View style={styles.axisHeader}>
+          <Text style={styles.axisLabel}>Okupansi (%)</Text>
+        </View>
+      )}
+
       {/* Chart bars */}
       <View
-        style={[styles.chartArea, { height: barHeight + 32 }]}
+        style={[styles.chartArea, { height: barHeight + 36 }]}
         accessibilityElementsHidden={true}
       >
         {data.map((point, index) => {
@@ -89,6 +91,29 @@ export default function PredictionChart({
         })}
       </View>
 
+      {/* X-axis indicator */}
+      {!compact && (
+        <Text style={styles.xAxisLabel}>Waktu (Jam Operasional)</Text>
+      )}
+
+      {/* Legend for non-compact mode */}
+      {!compact && (
+        <View style={styles.legendContainer}>
+          <View style={styles.legendItem}>
+            <View style={[styles.legendDot, { backgroundColor: Colors.success }]} />
+            <Text style={styles.legendText}>AVAILABLE (≤50%)</Text>
+          </View>
+          <View style={styles.legendItem}>
+            <View style={[styles.legendDot, { backgroundColor: Colors.warning }]} />
+            <Text style={styles.legendText}>BUSY (51–80%)</Text>
+          </View>
+          <View style={styles.legendItem}>
+            <View style={[styles.legendDot, { backgroundColor: Colors.danger }]} />
+            <Text style={styles.legendText}>NEAR FULL (&gt;80%)</Text>
+          </View>
+        </View>
+      )}
+
       {/* Accessibility: list of values for screen readers */}
       <View style={styles.srOnly} accessibilityRole="list">
         {data.map((point, index) => (
@@ -110,6 +135,8 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.surface,
     borderRadius: BorderRadius.lg,
     padding: Spacing.md,
+    borderWidth: 1,
+    borderColor: Colors.border,
   },
   chartTitle: {
     fontSize: FontSize.md,
@@ -120,18 +147,28 @@ const styles = StyleSheet.create({
   disclaimer: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: Spacing.xs,
     backgroundColor: Colors.infoBg,
     borderRadius: BorderRadius.sm,
     paddingHorizontal: Spacing.sm,
-    paddingVertical: 4,
+    paddingVertical: 6,
     marginBottom: Spacing.md,
+    borderWidth: 1,
+    borderColor: Colors.border,
   },
   disclaimerText: {
     fontSize: FontSize.xs,
-    color: Colors.info,
+    color: Colors.textSecondary,
     fontWeight: FontWeight.medium,
     flex: 1,
+    lineHeight: 16,
+  },
+  axisHeader: {
+    marginBottom: 4,
+  },
+  axisLabel: {
+    fontSize: FontSize.xs,
+    color: Colors.textTertiary,
+    fontWeight: FontWeight.medium,
   },
   chartArea: {
     flexDirection: 'row',
@@ -166,6 +203,37 @@ const styles = StyleSheet.create({
     color: Colors.textTertiary,
     marginTop: 2,
     textAlign: 'center',
+  },
+  xAxisLabel: {
+    fontSize: FontSize.xs,
+    color: Colors.textTertiary,
+    textAlign: 'center',
+    marginTop: 6,
+    marginBottom: Spacing.sm,
+  },
+  legendContainer: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    justifyContent: 'center',
+    gap: Spacing.md,
+    paddingTop: Spacing.sm,
+    borderTopWidth: 1,
+    borderTopColor: Colors.borderLight,
+  },
+  legendItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
+  legendDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+  },
+  legendText: {
+    fontSize: FontSize.xs,
+    color: Colors.textSecondary,
+    fontWeight: FontWeight.medium,
   },
   // Hidden but accessible to screen readers
   srOnly: {

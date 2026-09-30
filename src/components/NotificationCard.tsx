@@ -50,12 +50,13 @@ export default function NotificationCard({
     >
       {/* Icon + title */}
       <View style={styles.header}>
-        <Text style={styles.alertIcon} accessibilityElementsHidden>
-          ⚠️
-        </Text>
+        {/* Alert indicator — shape + color + text (not color-only) */}
+        <View style={styles.alertIconBox}>
+          <Text style={styles.alertIconText}>!</Text>
+        </View>
         <View style={styles.titleBlock}>
           <Text style={styles.title}>
-            {isFull ? `${area.name} Penuh!` : `${area.name} Hampir Penuh`}
+            {isFull ? `${area.name} Penuh` : `${area.name} Hampir Penuh`}
           </Text>
           <Text style={styles.subtitle}>
             {isFull
@@ -88,9 +89,12 @@ export default function NotificationCard({
             accessibilityLabel={`Lihat alternatif: ${alternativeArea.name} dengan ${alternativeArea.available} slot tersedia`}
             accessibilityHint="Buka detail area parkir alternatif"
           >
-            <Text style={styles.altBtnName}>{alternativeArea.name}</Text>
+            <View>
+              <Text style={styles.altBtnName}>{alternativeArea.name}</Text>
+              <Text style={styles.altBtnStatus}>{alternativeArea.status}</Text>
+            </View>
             <Text style={styles.altBtnSlot}>
-              {alternativeArea.available} slot tersedia →
+              {alternativeArea.available} slot ›
             </Text>
           </TouchableOpacity>
         </View>
@@ -107,15 +111,27 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: Colors.danger + '40',
     marginBottom: Spacing.md,
+    borderLeftWidth: 4,
+    borderLeftColor: Colors.danger,
   },
   header: {
     flexDirection: 'row',
     alignItems: 'flex-start',
     gap: Spacing.sm,
   },
-  alertIcon: {
-    fontSize: 20,
-    marginTop: 2,
+  alertIconBox: {
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    backgroundColor: Colors.danger,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginTop: 1,
+  },
+  alertIconText: {
+    fontSize: FontSize.md,
+    fontWeight: FontWeight.bold,
+    color: Colors.white,
   },
   titleBlock: {
     flex: 1,
@@ -132,8 +148,8 @@ const styles = StyleSheet.create({
   },
   dismissBtn: {
     padding: 4,
-    minWidth: 28,
-    minHeight: 28,
+    minWidth: 44,
+    minHeight: 44,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -169,6 +185,11 @@ const styles = StyleSheet.create({
     fontSize: FontSize.md,
     fontWeight: FontWeight.semibold,
     color: Colors.textPrimary,
+  },
+  altBtnStatus: {
+    fontSize: FontSize.xs,
+    color: Colors.textSecondary,
+    marginTop: 1,
   },
   altBtnSlot: {
     fontSize: FontSize.sm,

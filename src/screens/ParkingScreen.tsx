@@ -38,11 +38,10 @@ import { useResponsive } from '../utils/responsive';
 
 const ALL_STATUSES: (ParkingStatus | 'Semua')[] = [
   'Semua',
-  'Sepi',
-  'Sedang',
-  'Ramai',
-  'Hampir Penuh',
-  'Penuh',
+  'AVAILABLE',
+  'BUSY',
+  'NEAR FULL',
+  'FULL',
 ];
 
 export default function ParkingScreen() {
@@ -78,7 +77,7 @@ export default function ParkingScreen() {
       >
         {/* Header */}
         <View style={styles.header}>
-          <Text style={styles.title}>🅿️ Monitoring Parkir</Text>
+          <Text style={styles.title}>Monitoring Parkir</Text>
           <Text style={styles.subtitle}>
             Status real-time seluruh area parkir kampus
           </Text>
@@ -138,7 +137,7 @@ export default function ParkingScreen() {
           </Text>
           {filteredAreas.length === 0 ? (
             <View style={styles.emptyContainer}>
-              <Text style={styles.emptyText}>🔍 Tidak ada hasil ditemukan.</Text>
+              <Text style={styles.emptyText}>Tidak ada hasil ditemukan.</Text>
             </View>
           ) : (
             filteredAreas.map((area) => (
@@ -234,14 +233,14 @@ function ParkingDetailModal({
         {/* Prediction chart for this area */}
         <View style={styles.detailChartSection}>
           <Text style={styles.detailChartTitle}>
-            📈 Prediksi Kepadatan Hari Ini
+            Prediksi Kepadatan Hari Ini
           </Text>
           <PredictionChart data={predictionDataToday} compact={false} />
         </View>
 
         {/* Last updated */}
         <Text style={styles.detailUpdated}>
-          ⏱ Terakhir diperbarui: {area.lastUpdated}
+          Terakhir diperbarui: {area.lastUpdated}
         </Text>
       </ScrollView>
     </SafeAreaView>
@@ -282,13 +281,14 @@ const styles = StyleSheet.create({
   },
   filterChip: {
     paddingHorizontal: Spacing.md,
-    paddingVertical: 8,
+    paddingVertical: 10,
     borderRadius: BorderRadius.full,
     backgroundColor: Colors.surface,
     borderWidth: 1,
     borderColor: Colors.border,
-    minHeight: 36,
+    minHeight: 44,
     justifyContent: 'center',
+    alignItems: 'center',
   },
   filterChipActive: {
     backgroundColor: Colors.primary,
@@ -301,6 +301,7 @@ const styles = StyleSheet.create({
   },
   filterChipTextActive: {
     color: Colors.white,
+    fontWeight: FontWeight.bold,
   },
   section: {
     marginBottom: Spacing.xl,
@@ -343,13 +344,15 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   closeBtn: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
+    width: 44,
+    height: 44,
+    borderRadius: 22,
     backgroundColor: Colors.borderLight,
     alignItems: 'center',
     justifyContent: 'center',
     marginLeft: Spacing.sm,
+    borderWidth: 1,
+    borderColor: Colors.border,
   },
   closeBtnText: {
     fontSize: FontSize.md,
@@ -374,6 +377,8 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.surface,
     borderRadius: BorderRadius.lg,
     overflow: 'hidden',
+    borderWidth: 1,
+    borderColor: Colors.border,
   },
   statGridItem: {
     width: '50%',

@@ -51,14 +51,15 @@ export default function ParkingCard({ area, onPress, compact = false }: Props) {
       activeOpacity={0.75}
       accessible={true}
       accessibilityRole="button"
-      accessibilityLabel={`${area.name}. ${percent} persen terisi. ${area.available} slot tersedia. Status: ${area.status}.`}
+      accessibilityLabel={`${area.name}, ${percent} persen terisi, ${area.available} slot tersedia, Status: ${area.status}`}
       accessibilityHint="Ketuk untuk melihat detail area parkir ini"
     >
-      {/* Alert strip */}
+      {/* Alert strip — visible text, not color-only */}
       {hasAlert && (
         <View style={styles.alertStrip}>
+          <View style={styles.alertDot} />
           <Text style={styles.alertText} accessibilityElementsHidden>
-            ⚠ {area.status === 'Penuh' ? 'Penuh!' : 'Hampir Penuh!'}
+            {area.status === 'FULL' ? 'Penuh' : 'Hampir Penuh'}
           </Text>
         </View>
       )}
@@ -69,7 +70,7 @@ export default function ParkingCard({ area, onPress, compact = false }: Props) {
           <Text style={styles.name} numberOfLines={1} ellipsizeMode="tail">
             {area.name}
           </Text>
-          <Text style={styles.updated}>{area.lastUpdated}</Text>
+          <Text style={styles.updated}>Diperbarui {area.lastUpdated}</Text>
         </View>
         <StatusBadge status={area.status} size={compact ? 'sm' : 'md'} />
       </View>
@@ -90,7 +91,7 @@ export default function ParkingCard({ area, onPress, compact = false }: Props) {
         <StatItem
           label="Tersedia"
           value={`${area.available}`}
-          highlight={area.available > 0}
+          highlight={area.available > 0 && area.status !== 'FULL'}
         />
         <View style={styles.divider} />
         <StatItem label="Kapasitas" value={`${area.capacity}`} />
@@ -99,17 +100,14 @@ export default function ParkingCard({ area, onPress, compact = false }: Props) {
       {/* Footer */}
       {!compact && (
         <View style={styles.footer}>
-          <TouchableOpacity
+          <View
             style={styles.detailBtn}
-            onPress={() => onPress?.(area)}
-            activeOpacity={0.8}
-            accessibilityRole="button"
-            accessibilityLabel={`Lihat detail ${area.name}`}
-            accessibilityHint="Membuka halaman detail area parkir"
-            hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+            accessibilityElementsHidden
+            importantForAccessibility="no"
           >
-            <Text style={styles.detailBtnText}>Lihat Detail →</Text>
-          </TouchableOpacity>
+            <Text style={styles.detailBtnText}>Lihat Detail</Text>
+            <Text style={styles.detailBtnArrow} accessibilityElementsHidden>›</Text>
+          </View>
         </View>
       )}
     </TouchableOpacity>
@@ -149,6 +147,8 @@ const styles = StyleSheet.create({
     padding: Spacing.lg,
     marginBottom: Spacing.md,
     overflow: 'hidden',
+    borderWidth: 1,
+    borderColor: Colors.border,
   },
   cardCompact: {
     padding: Spacing.md,
@@ -158,7 +158,16 @@ const styles = StyleSheet.create({
     borderLeftColor: Colors.danger,
   },
   alertStrip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.xs,
     marginBottom: Spacing.sm,
+  },
+  alertDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: Colors.danger,
   },
   alertText: {
     fontSize: FontSize.xs,
@@ -233,14 +242,26 @@ const styles = StyleSheet.create({
     alignItems: 'flex-end',
   },
   detailBtn: {
-    paddingVertical: 6,
+    paddingVertical: 8,
     paddingHorizontal: Spacing.sm,
-    minHeight: 44, // minimum touch target
+    minHeight: 44,
     justifyContent: 'center',
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    backgroundColor: Colors.primary + '10',
+    borderRadius: BorderRadius.sm,
+    borderWidth: 1,
+    borderColor: Colors.primary + '30',
   },
   detailBtnText: {
     fontSize: FontSize.sm,
     fontWeight: FontWeight.semibold,
     color: Colors.primary,
+  },
+  detailBtnArrow: {
+    fontSize: FontSize.lg,
+    color: Colors.primary,
+    lineHeight: FontSize.lg + 2,
   },
 });

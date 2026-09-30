@@ -41,12 +41,9 @@ export default function RecommendationCard({ recommendation, onPress }: Props) {
     >
       {/* Header */}
       <View style={styles.header}>
-        <View style={styles.starBadge} accessibilityElementsHidden>
-          <Text style={styles.starIcon}>⭐</Text>
+        <View style={styles.recommendBadge}>
+          <Text style={styles.recommendBadgeText}>REKOMENDASI</Text>
         </View>
-        <Text style={styles.badge} accessibilityElementsHidden>
-          Rekomendasi
-        </Text>
       </View>
 
       {/* Area name */}
@@ -69,13 +66,15 @@ export default function RecommendationCard({ recommendation, onPress }: Props) {
       {/* Stats */}
       <View style={styles.statsRow}>
         <View style={styles.stat}>
-          <Text style={styles.statValue}>{area.available}</Text>
+          <Text style={[styles.statValue, styles.statValueHighlight]}>{area.available}</Text>
           <Text style={styles.statLabel}>Slot Tersedia</Text>
         </View>
+        <View style={styles.statDivider} />
         <View style={styles.stat}>
           <Text style={styles.statValue}>{percent}%</Text>
           <Text style={styles.statLabel}>Terisi</Text>
         </View>
+        <View style={styles.statDivider} />
         <View style={styles.stat}>
           <Text style={styles.statValue}>{area.capacity}</Text>
           <Text style={styles.statLabel}>Kapasitas</Text>
@@ -91,7 +90,8 @@ export default function RecommendationCard({ recommendation, onPress }: Props) {
         accessibilityLabel={`Lihat area ${area.name}`}
         accessibilityHint="Membuka detail area parkir yang direkomendasikan"
       >
-        <Text style={styles.ctaBtnText}>Lihat Area 🗺️</Text>
+        <Text style={styles.ctaBtnText}>Lihat Area</Text>
+        <Text style={styles.ctaBtnArrow} accessibilityElementsHidden>›</Text>
       </TouchableOpacity>
     </View>
   );
@@ -106,30 +106,20 @@ const styles = StyleSheet.create({
     borderColor: Colors.primary + '30',
   },
   header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: Spacing.xs,
     marginBottom: Spacing.sm,
   },
-  starBadge: {
-    width: 28,
-    height: 28,
-    borderRadius: BorderRadius.full,
-    backgroundColor: Colors.warningBg,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  starIcon: {
-    fontSize: 14,
-  },
-  badge: {
-    fontSize: FontSize.xs,
-    fontWeight: FontWeight.semibold,
-    color: Colors.primary,
-    backgroundColor: Colors.infoBg,
+  recommendBadge: {
+    alignSelf: 'flex-start',
+    backgroundColor: Colors.primary,
+    borderRadius: BorderRadius.sm,
     paddingHorizontal: Spacing.sm,
-    paddingVertical: 2,
-    borderRadius: BorderRadius.full,
+    paddingVertical: 3,
+  },
+  recommendBadgeText: {
+    fontSize: 10,
+    fontWeight: FontWeight.bold,
+    color: Colors.white,
+    letterSpacing: 0.8,
   },
   name: {
     fontSize: FontSize.xl,
@@ -153,15 +143,25 @@ const styles = StyleSheet.create({
     paddingVertical: Spacing.md,
     backgroundColor: Colors.background,
     borderRadius: BorderRadius.md,
+    borderWidth: 1,
+    borderColor: Colors.border,
   },
   stat: {
     alignItems: 'center',
     flex: 1,
   },
+  statDivider: {
+    width: 1,
+    backgroundColor: Colors.border,
+    marginVertical: 4,
+  },
   statValue: {
     fontSize: FontSize.lg,
     fontWeight: FontWeight.bold,
     color: Colors.textPrimary,
+  },
+  statValueHighlight: {
+    color: Colors.success,
   },
   statLabel: {
     fontSize: FontSize.xs,
@@ -173,12 +173,18 @@ const styles = StyleSheet.create({
     paddingVertical: Spacing.md,
     borderRadius: BorderRadius.md,
     alignItems: 'center',
-    minHeight: 44, // minimum touch target
+    minHeight: 44,
     justifyContent: 'center',
+    flexDirection: 'row',
+    gap: Spacing.xs,
   },
   ctaBtnText: {
     color: Colors.white,
     fontSize: FontSize.md,
     fontWeight: FontWeight.semibold,
+  },
+  ctaBtnArrow: {
+    color: Colors.white,
+    fontSize: FontSize.lg,
   },
 });
