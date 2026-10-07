@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 /**
  * PARKIN — Smart Campus Parking
  * Initial Route / Auth Gatekeeper
@@ -83,3 +84,11 @@ const styles = StyleSheet.create({
     color: Colors.textTertiary,
   },
 });
+=======
+import { Redirect } from 'expo-router';
+
+export default function Index() {
+  return <Redirect href="/login" />;
+}
+
+>>>>>>> 3f814b0 (Update 2)

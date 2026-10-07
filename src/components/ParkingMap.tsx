@@ -33,8 +33,8 @@ interface Props {
 
 export default function ParkingMap({ areas, onMarkerPress }: Props) {
   const { width } = useWindowDimensions();
-  const mapWidth = width - Spacing.lg * 2;
-  const mapHeight = 220;
+  const mapWidth = Math.min(width - Spacing.lg * 2, 860);
+  const mapHeight = width > 768 ? 260 : 220;
   const [selectedId, setSelectedId] = useState<number | null>(null);
 
   const handleMarkerPress = (area: ParkingArea) => {

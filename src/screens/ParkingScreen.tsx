@@ -14,9 +14,10 @@ import {
   Modal,
   StyleSheet,
   SafeAreaView,
-  FlatList,
-  useWindowDimensions,
+  Linking,
+  Share,
 } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 import { parkingAreas, ParkingArea, ParkingStatus } from '../data/parkingData';
 import { predictionDataToday } from '../data/predictionData';
 import { getOccupancyPercent, getStatusFromOccupancy } from '../utils/parkingStatus';
@@ -45,7 +46,7 @@ const ALL_STATUSES: (ParkingStatus | 'Semua')[] = [
 ];
 
 export default function ParkingScreen() {
-  const { horizontalPadding } = useResponsive();
+  const { horizontalPadding, isWide, cardWidth } = useResponsive();
   const [search, setSearch] = useState('');
   const [filterStatus, setFilterStatus] = useState<ParkingStatus | 'Semua'>('Semua');
   const [selectedArea, setSelectedArea] = useState<ParkingArea | null>(null);
@@ -66,7 +67,20 @@ export default function ParkingScreen() {
   };
 
   return (
-    <SafeAreaView style={styles.safeArea}>
+    <View style={styles.container}>
+      {/* PURPLE HEADER SECTION */}
+      <View style={styles.purpleHeader}>
+        <View style={styles.decorCircle1} />
+        <View style={styles.decorCircle2} />
+        <SafeAreaView>
+          <View style={[styles.headerInner, { paddingHorizontal: horizontalPadding }]}>
+            <View style={styles.headerTop}>
+              <Text style={styles.headerTitle}>Monitoring Parkir</Text>
+            </View>
+          </View>
+        </SafeAreaView>
+      </View>
+
       <ScrollView
         style={styles.scroll}
         contentContainerStyle={[
@@ -75,6 +89,7 @@ export default function ParkingScreen() {
         ]}
         showsVerticalScrollIndicator={false}
       >
+<<<<<<< HEAD
         {/* Header */}
         <View style={styles.header}>
           <Text style={styles.title}>Monitoring Parkir</Text>
@@ -83,8 +98,10 @@ export default function ParkingScreen() {
           </Text>
         </View>
 
+=======
+>>>>>>> 3f814b0 (Update 2)
         {/* Search */}
-        <View style={styles.searchRow}>
+        <View style={styles.overlappingSearch}>
           <SearchBar
             value={search}
             onChangeText={setSearch}
@@ -137,16 +154,23 @@ export default function ParkingScreen() {
           </Text>
           {filteredAreas.length === 0 ? (
             <View style={styles.emptyContainer}>
+<<<<<<< HEAD
+=======
+              <Ionicons name="search-outline" size={36} color={Colors.textTertiary} />
+>>>>>>> 3f814b0 (Update 2)
               <Text style={styles.emptyText}>Tidak ada hasil ditemukan.</Text>
             </View>
           ) : (
-            filteredAreas.map((area) => (
-              <ParkingCard
-                key={area.id}
-                area={area}
-                onPress={handleCardPress}
-              />
-            ))
+            <View style={isWide ? { flexDirection: 'row', flexWrap: 'wrap', gap: 16 } : undefined}>
+              {filteredAreas.map((area) => (
+                <ParkingCard
+                  key={area.id}
+                  area={area}
+                  onPress={handleCardPress}
+                  style={isWide ? { width: cardWidth } : undefined}
+                />
+              ))}
+            </View>
           )}
         </View>
 
@@ -168,7 +192,7 @@ export default function ParkingScreen() {
           />
         )}
       </Modal>
-    </SafeAreaView>
+    </View>
   );
 }
 
@@ -181,6 +205,23 @@ function ParkingDetailModal({
   onClose: () => void;
 }) {
   const percent = getOccupancyPercent(area.occupied, area.capacity);
+  const [isFavorite, setIsFavorite] = useState(false);
+
+  const handleGetDirections = () => {
+    const query = encodeURIComponent(`${area.name} Kampus`);
+    Linking.openURL(`https://www.google.com/maps/search/?api=1&query=${query}`).catch(() => {});
+  };
+
+  const handleShare = async () => {
+    try {
+      await Share.share({
+        message: `Info Parkir PARKIN: ${area.name} saat ini ${area.status}. Tersedia ${area.available} slot dari ${area.capacity}. Kepadatan: ${percent}%.`,
+        title: `Info Parkir ${area.name}`,
+      });
+    } catch {
+      // ignore
+    }
+  };
 
   return (
     <SafeAreaView style={styles.modalSafe}>
@@ -194,7 +235,7 @@ function ParkingDetailModal({
           accessibilityRole="button"
           accessibilityLabel="Tutup detail parkir"
         >
-          <Text style={styles.closeBtnText}>✕</Text>
+          <Ionicons name="close" size={18} color={Colors.textSecondary} />
         </TouchableOpacity>
       </View>
 
@@ -203,11 +244,43 @@ function ParkingDetailModal({
         contentContainerStyle={styles.modalContent}
         showsVerticalScrollIndicator={false}
       >
-        {/* Status */}
-        <StatusBadge status={area.status} size="lg" />
+        {/* Status + Actions Row */}
+        <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
+          <StatusBadge status={area.status} size="lg" />
+          <View style={{ flexDirection: 'row', gap: Spacing.sm }}>
+            <TouchableOpacity
+              style={[styles.modalActionCircleBtn, isFavorite && { backgroundColor: Colors.warning + '20' }]}
+              onPress={() => setIsFavorite(!isFavorite)}
+              accessibilityLabel="Favoritkan area parkir"
+            >
+              <Ionicons
+                name={isFavorite ? 'star' : 'star-outline'}
+                size={20}
+                color={isFavorite ? Colors.warning : Colors.textSecondary}
+              />
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={styles.modalActionCircleBtn}
+              onPress={handleShare}
+              accessibilityLabel="Bagikan status parkir"
+            >
+              <Ionicons name="share-social-outline" size={20} color={Colors.primary} />
+            </TouchableOpacity>
+          </View>
+        </View>
 
         {/* Description */}
         <Text style={styles.detailDesc}>{area.description}</Text>
+
+        {/* Action Buttons: Directions */}
+        <TouchableOpacity
+          style={styles.directionsBtn}
+          onPress={handleGetDirections}
+          activeOpacity={0.8}
+        >
+          <Ionicons name="navigate" size={18} color={Colors.white} />
+          <Text style={styles.directionsBtnText}>Petunjuk Arah (Google Maps)</Text>
+        </TouchableOpacity>
 
         {/* Stats grid */}
         <View style={[styles.statsGrid, Shadow.sm]}>
@@ -231,6 +304,7 @@ function ParkingDetailModal({
         </View>
 
         {/* Prediction chart for this area */}
+<<<<<<< HEAD
         <View style={styles.detailChartSection}>
           <Text style={styles.detailChartTitle}>
             Prediksi Kepadatan Hari Ini
@@ -242,37 +316,104 @@ function ParkingDetailModal({
         <Text style={styles.detailUpdated}>
           Terakhir diperbarui: {area.lastUpdated}
         </Text>
+=======
+        <View style={[styles.detailChartSection, { backgroundColor: Colors.surface, borderRadius: BorderRadius.lg, padding: Spacing.md }]}>
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: Spacing.xs, marginBottom: Spacing.sm }}>
+            <Ionicons name="bar-chart-outline" size={16} color={Colors.primary} />
+            <Text style={styles.detailChartTitle}>
+              Prediksi Kepadatan Hari Ini
+            </Text>
+          </View>
+          <PredictionChart data={predictionDataToday} compact={true} />
+        </View>
+
+        {/* Last updated */}
+        <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 4 }}>
+          <Ionicons name="time-outline" size={12} color={Colors.textTertiary} />
+          <Text style={styles.detailUpdated}>
+            Terakhir diperbarui: {area.lastUpdated}
+          </Text>
+        </View>
+>>>>>>> 3f814b0 (Update 2)
       </ScrollView>
     </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
-  safeArea: {
+  container: {
     flex: 1,
     backgroundColor: Colors.background,
+  },
+  purpleHeader: {
+    backgroundColor: Colors.primary,
+    borderBottomLeftRadius: 28,
+    borderBottomRightRadius: 28,
+    paddingBottom: Spacing.xl,
+    position: 'relative',
+    overflow: 'hidden',
+    shadowColor: Colors.primaryDark,
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.18,
+    shadowRadius: 16,
+    elevation: 6,
+  },
+  decorCircle1: {
+    position: 'absolute',
+    top: -50,
+    right: -30,
+    width: 180,
+    height: 180,
+    borderRadius: 90,
+    backgroundColor: 'rgba(255, 255, 255, 0.08)',
+  },
+  decorCircle2: {
+    position: 'absolute',
+    bottom: -30,
+    left: '15%',
+    width: 120,
+    height: 120,
+    borderRadius: 60,
+    backgroundColor: 'rgba(255, 255, 255, 0.05)',
+  },
+  headerTop: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingTop: 8,
+    paddingBottom: 4,
+  },
+  headerTitle: {
+    fontSize: FontSize.lg,
+    fontWeight: FontWeight.bold,
+    color: Colors.white,
+    letterSpacing: 0.3,
   },
   scroll: {
     flex: 1,
   },
+  headerInner: {
+    maxWidth: 960,
+    width: '100%',
+    alignSelf: 'center',
+  },
   content: {
     paddingTop: Spacing.lg,
+    paddingBottom: 120,
+    maxWidth: 960,
+    width: '100%',
+    alignSelf: 'center',
   },
-  header: {
-    marginBottom: Spacing.lg,
-  },
-  title: {
-    fontSize: FontSize.xxl,
-    fontWeight: FontWeight.bold,
-    color: Colors.textPrimary,
-  },
-  subtitle: {
-    fontSize: FontSize.md,
-    color: Colors.textSecondary,
-    marginTop: 4,
-  },
-  searchRow: {
+  overlappingSearch: {
+    marginTop: 0,
     marginBottom: Spacing.md,
+    borderRadius: BorderRadius.md,
+    backgroundColor: Colors.surface,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.05,
+    shadowRadius: 12,
+    elevation: 3,
   },
   filterRow: {
     gap: Spacing.sm,
@@ -317,6 +458,7 @@ const styles = StyleSheet.create({
   emptyContainer: {
     alignItems: 'center',
     paddingVertical: Spacing.xl,
+    gap: Spacing.sm,
   },
   emptyText: {
     fontSize: FontSize.md,
@@ -336,6 +478,9 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: Colors.border,
     backgroundColor: Colors.surface,
+    maxWidth: 680,
+    width: '100%',
+    alignSelf: 'center',
   },
   modalTitle: {
     fontSize: FontSize.xl,
@@ -344,9 +489,15 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   closeBtn: {
+<<<<<<< HEAD
     width: 44,
     height: 44,
     borderRadius: 22,
+=======
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+>>>>>>> 3f814b0 (Update 2)
     backgroundColor: Colors.borderLight,
     alignItems: 'center',
     justifyContent: 'center',
@@ -354,17 +505,15 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: Colors.border,
   },
-  closeBtnText: {
-    fontSize: FontSize.md,
-    color: Colors.textSecondary,
-    fontWeight: FontWeight.bold,
-  },
   modalScroll: {
     flex: 1,
   },
   modalContent: {
     padding: Spacing.lg,
     gap: Spacing.lg,
+    maxWidth: 680,
+    width: '100%',
+    alignSelf: 'center',
   },
   detailDesc: {
     fontSize: FontSize.md,
@@ -419,5 +568,30 @@ const styles = StyleSheet.create({
     color: Colors.textTertiary,
     textAlign: 'center',
     marginBottom: Spacing.xl,
+  },
+  modalActionCircleBtn: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: Colors.surface,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1,
+    borderColor: Colors.borderLight,
+  },
+  directionsBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: Spacing.sm,
+    backgroundColor: Colors.primary,
+    paddingVertical: Spacing.md,
+    borderRadius: BorderRadius.lg,
+    marginTop: Spacing.xs,
+  },
+  directionsBtnText: {
+    color: Colors.white,
+    fontWeight: FontWeight.bold,
+    fontSize: FontSize.sm,
   },
 });

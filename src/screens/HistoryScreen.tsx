@@ -14,6 +14,7 @@ import {
   StyleSheet,
   SafeAreaView,
 } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 import { historyData, weeklyData, DayHistory } from '../data/predictionData';
 import { parkingAreas, ParkingArea } from '../data/parkingData';
 import { getStatusFromOccupancy, getOccupancyBarColor, getOccupancyPercent } from '../utils/parkingStatus';
@@ -81,7 +82,20 @@ export default function HistoryScreen() {
   const quietPeriodText = '17:00–18:00';
 
   return (
-    <SafeAreaView style={styles.safeArea}>
+    <View style={styles.container}>
+      {/* PURPLE HEADER SECTION */}
+      <View style={styles.purpleHeader}>
+        <View style={styles.decorCircle1} />
+        <View style={styles.decorCircle2} />
+        <SafeAreaView>
+          <View style={[styles.headerInner, { paddingHorizontal: horizontalPadding }]}>
+            <View style={styles.headerTop}>
+              <Text style={styles.headerTitle}>Riwayat Kepadatan</Text>
+            </View>
+          </View>
+        </SafeAreaView>
+      </View>
+
       <ScrollView
         style={styles.scroll}
         contentContainerStyle={[
@@ -90,6 +104,7 @@ export default function HistoryScreen() {
         ]}
         showsVerticalScrollIndicator={false}
       >
+<<<<<<< HEAD
         {/* Header */}
         <View style={styles.header}>
           <Text style={styles.title}>Riwayat Kepadatan</Text>
@@ -147,6 +162,40 @@ export default function HistoryScreen() {
               );
             })}
           </ScrollView>
+=======
+        {/* Filter tabs (Overlapping) */}
+        <View style={styles.overlappingTabs} accessibilityRole="tablist">
+          {[
+            { id: 'hari' as FilterType, label: 'Per Hari', icon: 'calendar-outline' as const },
+            { id: 'minggu' as FilterType, label: 'Per Minggu', icon: 'calendar-number-outline' as const },
+          ].map((f) => (
+            <TouchableOpacity
+              key={f.id}
+              style={[
+                styles.filterTab,
+                filter === f.id && styles.filterTabActive,
+              ]}
+              onPress={() => setFilter(f.id)}
+              accessibilityRole="tab"
+              accessibilityLabel={f.label}
+              accessibilityState={{ selected: filter === f.id }}
+            >
+              <Ionicons 
+                name={f.icon} 
+                size={16} 
+                color={filter === f.id ? Colors.white : Colors.textSecondary} 
+              />
+              <Text
+                style={[
+                  styles.filterTabText,
+                  filter === f.id && styles.filterTabTextActive,
+                ]}
+              >
+                {f.label}
+              </Text>
+            </TouchableOpacity>
+          ))}
+>>>>>>> 3f814b0 (Update 2)
         </View>
 
         {/* Selected Area Card Banner */}
@@ -255,7 +304,36 @@ export default function HistoryScreen() {
               ))}
             </ScrollView>
 
+<<<<<<< HEAD
             {/* Hourly history list */}
+=======
+            {/* Summary cards */}
+            <View style={styles.summaryRow}>
+              <SummaryCard
+                icon="bar-chart-outline"
+                iconColor={Colors.primary}
+                label="Rata-rata"
+                value={`${selectedDay.avgOccupancy}%`}
+                sub="Kepadatan harian"
+              />
+              <SummaryCard
+                icon="trending-up"
+                iconColor={Colors.danger}
+                label="Paling Padat"
+                value={selectedDay.peakTime}
+                sub="Jam tersibuk"
+              />
+              <SummaryCard
+                icon="trending-down"
+                iconColor={Colors.success}
+                label="Paling Sepi"
+                value={selectedDay.quietTime}
+                sub="Jam lengang"
+              />
+            </View>
+
+            {/* Hourly history chart */}
+>>>>>>> 3f814b0 (Update 2)
             <View style={styles.section}>
               <Text style={styles.sectionTitle} accessibilityRole="header">
                 Rincian Per Jam — {selectedArea.name} ({selectedDay.label})
@@ -295,6 +373,27 @@ export default function HistoryScreen() {
                 })}
               </View>
             </View>
+<<<<<<< HEAD
+=======
+
+            {/* Insight */}
+            <View style={[styles.insightBox, Shadow.sm]}>
+              <View style={styles.insightHeader}>
+                <Ionicons name="bulb-outline" size={18} color={Colors.primary} />
+                <Text style={styles.insightTitle}>Insight</Text>
+              </View>
+              <Text style={styles.insightText}>
+                Rata-rata kepadatan tertinggi terjadi pukul{' '}
+                <Text style={styles.insightBold}>{selectedDay.peakTime}</Text>
+                {' '}dengan rata-rata kepadatan{' '}
+                <Text style={styles.insightBold}>{selectedDay.avgOccupancy}%</Text>.
+              </Text>
+              <Text style={styles.insightText}>
+                Waktu paling sepi: pukul{' '}
+                <Text style={styles.insightBold}>{selectedDay.quietTime}</Text>.
+              </Text>
+            </View>
+>>>>>>> 3f814b0 (Update 2)
           </>
         )}
 
@@ -328,13 +427,40 @@ export default function HistoryScreen() {
                   );
                 })}
               </View>
+<<<<<<< HEAD
               <Text style={styles.chartFootnote}>
                 Data dihitung dari rerata pola lalu lintas mingguan.
+=======
+            </View>
+
+            {/* Weekly insight */}
+            <View style={[styles.insightBox, Shadow.sm]}>
+              <View style={styles.insightHeader}>
+                <Ionicons name="bulb-outline" size={18} color={Colors.primary} />
+                <Text style={styles.insightTitle}>Insight Mingguan</Text>
+              </View>
+              <Text style={styles.insightText}>
+                Hari dengan kepadatan tertinggi:{' '}
+                <Text style={styles.insightBold}>
+                  {weeklyData.reduce((a, b) =>
+                    a.avgOccupancy > b.avgOccupancy ? a : b,
+                  ).day}
+                </Text>
+              </Text>
+              <Text style={styles.insightText}>
+                Hari paling lengang:{' '}
+                <Text style={styles.insightBold}>
+                  {weeklyData.reduce((a, b) =>
+                    a.avgOccupancy < b.avgOccupancy ? a : b,
+                  ).day}
+                </Text>
+>>>>>>> 3f814b0 (Update 2)
               </Text>
             </View>
           </View>
         )}
 
+<<<<<<< HEAD
         {period === 'bulan' && (
           <View style={styles.section}>
             <Text style={styles.sectionTitle} accessibilityRole="header">
@@ -390,17 +516,30 @@ export default function HistoryScreen() {
         </View>
 
         <View style={{ height: 24 }} />
+=======
+        <View style={{ height: 32 }} />
+>>>>>>> 3f814b0 (Update 2)
       </ScrollView>
-    </SafeAreaView>
+    </View>
   );
 }
 
 function SummaryCard({
+<<<<<<< HEAD
+=======
+  icon,
+  iconColor,
+>>>>>>> 3f814b0 (Update 2)
   label,
   value,
   sub,
   accentColor = Colors.primary,
 }: {
+<<<<<<< HEAD
+=======
+  icon: React.ComponentProps<typeof Ionicons>['name'];
+  iconColor: string;
+>>>>>>> 3f814b0 (Update 2)
   label: string;
   value: string;
   sub: string;
@@ -413,24 +552,87 @@ function SummaryCard({
       accessibilityRole="none"
       accessibilityLabel={`${label}: ${value}, ${sub}`}
     >
+<<<<<<< HEAD
       <Text style={styles.summaryCardLabel}>{label}</Text>
       <Text style={styles.summaryCardValue}>{value}</Text>
       <Text style={styles.summaryCardSub}>{sub}</Text>
+=======
+      <View style={[styles.summaryIconBox, { backgroundColor: iconColor + '15' }]}>
+        <Ionicons name={icon} size={18} color={iconColor} />
+      </View>
+      <Text style={styles.summaryValue}>{value}</Text>
+      <Text style={styles.summaryLabel}>{label}</Text>
+      <Text style={styles.summarySub}>{sub}</Text>
+>>>>>>> 3f814b0 (Update 2)
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  safeArea: {
+  container: {
     flex: 1,
     backgroundColor: Colors.background,
+  },
+  purpleHeader: {
+    backgroundColor: Colors.primary,
+    borderBottomLeftRadius: 28,
+    borderBottomRightRadius: 28,
+    paddingBottom: Spacing.xl,
+    position: 'relative',
+    overflow: 'hidden',
+    shadowColor: Colors.primaryDark,
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.18,
+    shadowRadius: 16,
+    elevation: 6,
+  },
+  decorCircle1: {
+    position: 'absolute',
+    top: -50,
+    right: -30,
+    width: 180,
+    height: 180,
+    borderRadius: 90,
+    backgroundColor: 'rgba(255, 255, 255, 0.08)',
+  },
+  decorCircle2: {
+    position: 'absolute',
+    bottom: -30,
+    left: '15%',
+    width: 120,
+    height: 120,
+    borderRadius: 60,
+    backgroundColor: 'rgba(255, 255, 255, 0.05)',
+  },
+  headerTop: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingTop: 8,
+    paddingBottom: 4,
+  },
+  headerTitle: {
+    fontSize: FontSize.lg,
+    fontWeight: FontWeight.bold,
+    color: Colors.white,
+    letterSpacing: 0.3,
+  },
+  headerInner: {
+    maxWidth: 960,
+    width: '100%',
+    alignSelf: 'center',
   },
   scroll: {
     flex: 1,
   },
   content: {
     paddingTop: Spacing.lg,
+    paddingBottom: 120,
+    maxWidth: 960,
+    width: '100%',
+    alignSelf: 'center',
   },
+<<<<<<< HEAD
   header: {
     marginBottom: Spacing.md,
   },
@@ -460,6 +662,26 @@ const styles = StyleSheet.create({
   areaChip: {
     paddingHorizontal: Spacing.md,
     paddingVertical: Spacing.sm,
+=======
+  overlappingTabs: {
+    flexDirection: 'row',
+    gap: Spacing.sm,
+    marginTop: 0,
+    marginBottom: Spacing.xl,
+    backgroundColor: Colors.surface,
+    borderRadius: BorderRadius.lg,
+    padding: Spacing.sm,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.05,
+    shadowRadius: 12,
+    elevation: 3,
+  },
+  filterTab: {
+    flex: 1,
+    paddingVertical: Spacing.sm,
+    alignItems: 'center',
+>>>>>>> 3f814b0 (Update 2)
     borderRadius: BorderRadius.md,
     backgroundColor: Colors.surface,
     borderWidth: 1,
@@ -468,7 +690,11 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     flexDirection: 'row',
+<<<<<<< HEAD
     gap: 6,
+=======
+    gap: Spacing.xs,
+>>>>>>> 3f814b0 (Update 2)
   },
   areaChipActive: {
     backgroundColor: Colors.primary,
@@ -556,12 +782,20 @@ const styles = StyleSheet.create({
   },
   dayChip: {
     paddingHorizontal: Spacing.md,
+<<<<<<< HEAD
     paddingVertical: 8,
+=======
+    paddingVertical: Spacing.xs,
+>>>>>>> 3f814b0 (Update 2)
     borderRadius: BorderRadius.full,
     backgroundColor: Colors.surface,
     borderWidth: 1,
     borderColor: Colors.border,
+<<<<<<< HEAD
     minHeight: 44,
+=======
+    minHeight: 32,
+>>>>>>> 3f814b0 (Update 2)
     justifyContent: 'center',
     alignItems: 'center',
   },
@@ -571,6 +805,10 @@ const styles = StyleSheet.create({
   },
   dayChipText: {
     fontSize: FontSize.xs,
+<<<<<<< HEAD
+=======
+    color: Colors.textSecondary,
+>>>>>>> 3f814b0 (Update 2)
     fontWeight: FontWeight.medium,
     color: Colors.textSecondary,
   },
@@ -589,6 +827,7 @@ const styles = StyleSheet.create({
     borderRadius: BorderRadius.lg,
     padding: Spacing.sm,
     alignItems: 'center',
+<<<<<<< HEAD
     borderTopWidth: 3,
     borderWidth: 1,
     borderColor: Colors.border,
@@ -600,6 +839,35 @@ const styles = StyleSheet.create({
     color: Colors.textTertiary,
     textAlign: 'center',
     marginBottom: 4,
+=======
+    borderWidth: 1,
+    borderColor: Colors.border,
+  },
+  summaryIconBox: {
+    width: 32,
+    height: 32,
+    borderRadius: BorderRadius.full,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: Spacing.xs,
+  },
+  summaryValue: {
+    fontSize: FontSize.md,
+    fontWeight: FontWeight.bold,
+    color: Colors.textPrimary,
+  },
+  summaryLabel: {
+    fontSize: 10,
+    fontWeight: FontWeight.semibold,
+    color: Colors.textSecondary,
+    marginTop: 2,
+  },
+  summarySub: {
+    fontSize: 9,
+    color: Colors.textTertiary,
+    textAlign: 'center',
+    marginTop: 2,
+>>>>>>> 3f814b0 (Update 2)
   },
   summaryCardValue: {
     fontSize: FontSize.md,
@@ -710,11 +978,23 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.surface,
     borderRadius: BorderRadius.lg,
     padding: Spacing.lg,
+<<<<<<< HEAD
     gap: Spacing.sm,
     borderWidth: 1,
     borderColor: Colors.border,
     borderLeftWidth: 4,
     borderLeftColor: Colors.primary,
+=======
+    marginBottom: Spacing.xl,
+    borderWidth: 1,
+    borderColor: Colors.border,
+  },
+  insightHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.xs,
+    marginBottom: Spacing.sm,
+>>>>>>> 3f814b0 (Update 2)
   },
   insightTitle: {
     fontSize: FontSize.md,

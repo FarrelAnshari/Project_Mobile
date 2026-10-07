@@ -24,17 +24,25 @@ export const BottomTabInset = 80;
 export const MaxContentWidth = 600;
 
 export const Colors = {
-  primary: '#2563EB',
-  primaryLight: '#3B82F6',
-  primaryDark: '#1D4ED8',
-  secondary: '#60A5FA',
-  background: '#F8FAFC',
+  primary: '#615CED',      // Purple-blue from template
+  primaryLight: '#8B87FF',
+  primaryDark: '#4A46D6',
+  secondary: '#FF8A00',    // Orange accent from template
+  background: '#F8F9FA',
   surface: '#FFFFFF',
+<<<<<<< HEAD
   textPrimary: '#0F172A',
   textSecondary: '#475569',
   textTertiary: '#94A3B8',
   border: '#CBD5E1',
   borderLight: '#F1F5F9',
+=======
+  textPrimary: '#1E1E2D',
+  textSecondary: '#8F92A1',
+  textTertiary: '#BDBDBD',
+  border: '#E8E8E8',
+  borderLight: '#F3F3F3',
+>>>>>>> 3f814b0 (Update 2)
 
   // Semantic status colors
   success: '#15803D',
@@ -43,7 +51,11 @@ export const Colors = {
   warning: '#B45309',
   warningBg: '#FEF3C7',
   warningLight: '#FCD34D',
+<<<<<<< HEAD
   danger: '#B91C1C',
+=======
+  danger: '#EF4444',
+>>>>>>> 3f814b0 (Update 2)
   dangerBg: '#FEE2E2',
   dangerLight: '#FCA5A5',
   info: '#0369A1',

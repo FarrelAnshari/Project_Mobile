@@ -12,7 +12,7 @@
  *   98–100% = FULL
  */
 
-export type ParkingStatus = 'AVAILABLE' | 'BUSY' | 'NEAR FULL' | 'FULL';
+export type ParkingStatus = 'Sepi' | 'Sedang' | 'Ramai' | 'Hampir Penuh' | 'Penuh';
 
 export interface ParkingArea {
   id: number;
@@ -33,7 +33,7 @@ export const parkingAreas: ParkingArea[] = [
     capacity: 100,
     occupied: 72,
     available: 28,
-    status: 'BUSY',
+    status: 'Ramai',
     lastUpdated: '2 menit lalu',
     coordinates: { x: 0.22, y: 0.28 },
     description: 'Area parkir utama, dekat pintu masuk kampus.',
@@ -44,7 +44,7 @@ export const parkingAreas: ParkingArea[] = [
     capacity: 80,
     occupied: 35,
     available: 45,
-    status: 'AVAILABLE',
+    status: 'Sepi',
     lastUpdated: '2 menit lalu',
     coordinates: { x: 0.62, y: 0.22 },
     description: 'Area parkir dekat Fakultas Teknik.',
@@ -55,7 +55,7 @@ export const parkingAreas: ParkingArea[] = [
     capacity: 90,
     occupied: 88,
     available: 2,
-    status: 'NEAR FULL',
+    status: 'Hampir Penuh',
     lastUpdated: '1 menit lalu',
     coordinates: { x: 0.78, y: 0.58 },
     description: 'Area parkir dekat Kantin Pusat.',
@@ -66,7 +66,7 @@ export const parkingAreas: ParkingArea[] = [
     capacity: 120,
     occupied: 58,
     available: 62,
-    status: 'AVAILABLE',
+    status: 'Sedang',
     lastUpdated: '3 menit lalu',
     coordinates: { x: 0.42, y: 0.72 },
     description: 'Area parkir terbuka, kapasitas terbesar.',
@@ -77,7 +77,7 @@ export const parkingAreas: ParkingArea[] = [
     capacity: 70,
     occupied: 56,
     available: 14,
-    status: 'NEAR FULL',
+    status: 'Hampir Penuh',
     lastUpdated: '2 menit lalu',
     coordinates: { x: 0.18, y: 0.65 },
     description: 'Area parkir dekat Gedung Rektorat.',

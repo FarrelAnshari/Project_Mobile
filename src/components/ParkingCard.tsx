@@ -12,8 +12,8 @@ import {
   Text,
   TouchableOpacity,
   StyleSheet,
-  useWindowDimensions,
 } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 import { ParkingArea } from '../data/parkingData';
 import { getOccupancyPercent, needsAlert } from '../utils/parkingStatus';
 import StatusBadge from './StatusBadge';
@@ -31,11 +31,10 @@ interface Props {
   area: ParkingArea;
   onPress?: (area: ParkingArea) => void;
   compact?: boolean;
+  style?: any;
 }
 
-export default function ParkingCard({ area, onPress, compact = false }: Props) {
-  const { width } = useWindowDimensions();
-  const isWide = width >= 600;
+export default function ParkingCard({ area, onPress, compact = false, style }: Props) {
   const percent = getOccupancyPercent(area.occupied, area.capacity);
   const hasAlert = needsAlert(percent);
 
@@ -43,9 +42,9 @@ export default function ParkingCard({ area, onPress, compact = false }: Props) {
     <TouchableOpacity
       style={[
         styles.card,
-        Shadow.md,
+        Shadow.sm,
         compact && styles.cardCompact,
-        hasAlert && styles.cardAlert,
+        style,
       ]}
       onPress={() => onPress?.(area)}
       activeOpacity={0.75}
@@ -54,6 +53,7 @@ export default function ParkingCard({ area, onPress, compact = false }: Props) {
       accessibilityLabel={`${area.name}, ${percent} persen terisi, ${area.available} slot tersedia, Status: ${area.status}`}
       accessibilityHint="Ketuk untuk melihat detail area parkir ini"
     >
+<<<<<<< HEAD
       {/* Alert strip — visible text, not color-only */}
       {hasAlert && (
         <View style={styles.alertStrip}>
@@ -65,6 +65,8 @@ export default function ParkingCard({ area, onPress, compact = false }: Props) {
       )}
 
       {/* Header row */}
+=======
+>>>>>>> 3f814b0 (Update 2)
       <View style={styles.header}>
         <View style={styles.titleBlock}>
           <Text style={styles.name} numberOfLines={1} ellipsizeMode="tail">
@@ -72,9 +74,10 @@ export default function ParkingCard({ area, onPress, compact = false }: Props) {
           </Text>
           <Text style={styles.updated}>Diperbarui {area.lastUpdated}</Text>
         </View>
-        <StatusBadge status={area.status} size={compact ? 'sm' : 'md'} />
+        <StatusBadge status={area.status} size="sm" />
       </View>
 
+<<<<<<< HEAD
       {/* Occupancy bar */}
       <View style={styles.barSection}>
         <OccupancyBar percent={percent} height={compact ? 6 : 8} />
@@ -108,51 +111,45 @@ export default function ParkingCard({ area, onPress, compact = false }: Props) {
             <Text style={styles.detailBtnText}>Lihat Detail</Text>
             <Text style={styles.detailBtnArrow} accessibilityElementsHidden>›</Text>
           </View>
+=======
+      <View style={styles.mainInfo}>
+        <View style={styles.statsContainer}>
+          <Text style={styles.percentText}>{percent}% <Text style={styles.percentSub}>Terisi</Text></Text>
+          <Text style={styles.availableText}>{area.available} <Text style={styles.availableSub}>Slot Tersedia</Text></Text>
+>>>>>>> 3f814b0 (Update 2)
         </View>
-      )}
-    </TouchableOpacity>
-  );
-}
-
-function StatItem({
-  label,
-  value,
-  sub,
-  highlight = false,
-}: {
-  label: string;
-  value: string;
-  sub?: string;
-  highlight?: boolean;
-}) {
-  return (
-    <View style={styles.statItem}>
-      <View style={styles.statValueRow}>
-        <Text
-          style={[styles.statValue, highlight && styles.statValueHighlight]}
-        >
-          {value}
-        </Text>
-        {sub && <Text style={styles.statSub}>{sub}</Text>}
+        
+        {!compact && (
+          <View style={styles.detailBtnIcon}>
+             <Ionicons name="chevron-forward" size={20} color={Colors.textTertiary} />
+          </View>
+        )}
       </View>
-      <Text style={styles.statLabel}>{label}</Text>
-    </View>
+
+      <View style={styles.barSection}>
+        <OccupancyBar percent={percent} height={6} />
+      </View>
+    </TouchableOpacity>
   );
 }
 
 const styles = StyleSheet.create({
   card: {
     backgroundColor: Colors.surface,
-    borderRadius: BorderRadius.lg,
+    borderRadius: BorderRadius.xl,
     padding: Spacing.lg,
     marginBottom: Spacing.md,
+<<<<<<< HEAD
     overflow: 'hidden',
+=======
+>>>>>>> 3f814b0 (Update 2)
     borderWidth: 1,
     borderColor: Colors.border,
   },
   cardCompact: {
     padding: Spacing.md,
   },
+<<<<<<< HEAD
   cardAlert: {
     borderLeftWidth: 3,
     borderLeftColor: Colors.danger,
@@ -174,6 +171,8 @@ const styles = StyleSheet.create({
     color: Colors.danger,
     fontWeight: FontWeight.semibold,
   },
+=======
+>>>>>>> 3f814b0 (Update 2)
   header: {
     flexDirection: 'row',
     justifyContent: 'space-between',
@@ -194,25 +193,20 @@ const styles = StyleSheet.create({
     fontSize: FontSize.xs,
     color: Colors.textTertiary,
   },
-  barSection: {
+  mainInfo: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
     marginBottom: Spacing.md,
   },
-  statsRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-around',
-    marginTop: Spacing.sm,
-  },
-  statItem: {
-    alignItems: 'center',
-    flex: 1,
-  },
-  statValueRow: {
+  statsContainer: {
     flexDirection: 'row',
     alignItems: 'baseline',
-    gap: 2,
+    gap: Spacing.lg,
   },
-  statValue: {
+  percentText: {
     fontSize: FontSize.xl,
+<<<<<<< HEAD
     fontWeight: FontWeight.bold,
     color: Colors.textPrimary,
   },
@@ -263,5 +257,35 @@ const styles = StyleSheet.create({
     fontSize: FontSize.lg,
     color: Colors.primary,
     lineHeight: FontSize.lg + 2,
+=======
+    fontWeight: FontWeight.extrabold,
+    color: Colors.primary,
+  },
+  percentSub: {
+    fontSize: FontSize.xs,
+    fontWeight: FontWeight.medium,
+    color: Colors.textSecondary,
+  },
+  availableText: {
+    fontSize: FontSize.xl,
+    fontWeight: FontWeight.extrabold,
+    color: Colors.textPrimary,
+  },
+  availableSub: {
+    fontSize: FontSize.xs,
+    fontWeight: FontWeight.medium,
+    color: Colors.textSecondary,
+  },
+  detailBtnIcon: {
+    width: 32,
+    height: 32,
+    borderRadius: BorderRadius.full,
+    backgroundColor: Colors.background,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  barSection: {
+    marginTop: Spacing.xs,
+>>>>>>> 3f814b0 (Update 2)
   },
 });

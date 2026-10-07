@@ -7,8 +7,14 @@
  * Label: "Prediksi pada tahap prototype menggunakan data historis/simulasi"
  */
 
+<<<<<<< HEAD
 import React from 'react';
 import { View, Text, StyleSheet } from 'react-native';
+=======
+import React, { useMemo } from 'react';
+import { View, Text, StyleSheet, useWindowDimensions } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
+>>>>>>> 3f814b0 (Update 2)
 import { PredictionPoint } from '../data/predictionData';
 import { getOccupancyBarColor } from '../utils/parkingStatus';
 import {
@@ -30,7 +36,16 @@ export default function PredictionChart({
   title,
   compact = false,
 }: Props) {
+<<<<<<< HEAD
+=======
+  const { width } = useWindowDimensions();
+  const maxOccupancy = Math.max(...data.map((d) => d.occupancy));
+  const minOccupancy = Math.min(...data.map((d) => d.occupancy));
+>>>>>>> 3f814b0 (Update 2)
   const barHeight = compact ? 80 : 120;
+
+  const mostBusy = useMemo(() => data.find(d => d.occupancy === maxOccupancy), [data, maxOccupancy]);
+  const leastBusy = useMemo(() => data.find(d => d.occupancy === minOccupancy), [data, minOccupancy]);
 
   return (
     <View
@@ -43,6 +58,7 @@ export default function PredictionChart({
         <Text style={styles.chartTitle}>{title}</Text>
       )}
 
+<<<<<<< HEAD
       {/* Simulation disclaimer */}
       <View style={styles.disclaimer}>
         <Text style={styles.disclaimerText}>
@@ -57,6 +73,8 @@ export default function PredictionChart({
         </View>
       )}
 
+=======
+>>>>>>> 3f814b0 (Update 2)
       {/* Chart bars */}
       <View
         style={[styles.chartArea, { height: barHeight + 36 }]}
@@ -91,6 +109,7 @@ export default function PredictionChart({
         })}
       </View>
 
+<<<<<<< HEAD
       {/* X-axis indicator */}
       {!compact && (
         <Text style={styles.xAxisLabel}>Waktu (Jam Operasional)</Text>
@@ -110,10 +129,43 @@ export default function PredictionChart({
           <View style={styles.legendItem}>
             <View style={[styles.legendDot, { backgroundColor: Colors.danger }]} />
             <Text style={styles.legendText}>NEAR FULL (&gt;80%)</Text>
+=======
+      {/* Highlights (Only when not compact) */}
+      {!compact && mostBusy && leastBusy && (
+        <View style={styles.highlightsContainer}>
+          <View style={styles.highlightCard}>
+            <View style={[styles.highlightIcon, { backgroundColor: Colors.danger + '15' }]}>
+              <Ionicons name="trending-up" size={16} color={Colors.danger} />
+            </View>
+            <View>
+              <Text style={styles.highlightLabel}>Puncak Kepadatan</Text>
+              <Text style={styles.highlightValue}>{mostBusy.time} ({mostBusy.occupancy}%)</Text>
+            </View>
+          </View>
+          <View style={styles.highlightCard}>
+            <View style={[styles.highlightIcon, { backgroundColor: Colors.success + '15' }]}>
+              <Ionicons name="trending-down" size={16} color={Colors.success} />
+            </View>
+            <View>
+              <Text style={styles.highlightLabel}>Paling Sepi</Text>
+              <Text style={styles.highlightValue}>{leastBusy.time} ({leastBusy.occupancy}%)</Text>
+            </View>
+>>>>>>> 3f814b0 (Update 2)
           </View>
         </View>
       )}
 
+<<<<<<< HEAD
+=======
+      {/* Simulation disclaimer */}
+      <View style={styles.disclaimer}>
+        <Ionicons name="information-circle-outline" size={14} color={Colors.info} />
+        <Text style={styles.disclaimerText}>
+          Prediksi berdasarkan data historis
+        </Text>
+      </View>
+
+>>>>>>> 3f814b0 (Update 2)
       {/* Accessibility: list of values for screen readers */}
       <View style={styles.srOnly} accessibilityRole="list">
         {data.map((point, index) => (
@@ -133,10 +185,13 @@ export default function PredictionChart({
 const styles = StyleSheet.create({
   container: {
     backgroundColor: Colors.surface,
+<<<<<<< HEAD
     borderRadius: BorderRadius.lg,
     padding: Spacing.md,
     borderWidth: 1,
     borderColor: Colors.border,
+=======
+>>>>>>> 3f814b0 (Update 2)
   },
   chartTitle: {
     fontSize: FontSize.md,
@@ -144,6 +199,7 @@ const styles = StyleSheet.create({
     color: Colors.textPrimary,
     marginBottom: Spacing.sm,
   },
+<<<<<<< HEAD
   disclaimer: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -170,11 +226,14 @@ const styles = StyleSheet.create({
     color: Colors.textTertiary,
     fontWeight: FontWeight.medium,
   },
+=======
+>>>>>>> 3f814b0 (Update 2)
   chartArea: {
     flexDirection: 'row',
     alignItems: 'flex-end',
     justifyContent: 'space-between',
     paddingBottom: Spacing.xs,
+    marginBottom: Spacing.md,
   },
   barWrapper: {
     flex: 1,
@@ -204,6 +263,7 @@ const styles = StyleSheet.create({
     marginTop: 2,
     textAlign: 'center',
   },
+<<<<<<< HEAD
   xAxisLabel: {
     fontSize: FontSize.xs,
     color: Colors.textTertiary,
@@ -234,6 +294,48 @@ const styles = StyleSheet.create({
     fontSize: FontSize.xs,
     color: Colors.textSecondary,
     fontWeight: FontWeight.medium,
+=======
+  highlightsContainer: {
+    flexDirection: 'row',
+    gap: Spacing.sm,
+    marginBottom: Spacing.md,
+  },
+  highlightCard: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.sm,
+    backgroundColor: Colors.background,
+    padding: Spacing.sm,
+    borderRadius: BorderRadius.md,
+  },
+  highlightIcon: {
+    width: 28,
+    height: 28,
+    borderRadius: BorderRadius.sm,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  highlightLabel: {
+    fontSize: 10,
+    color: Colors.textSecondary,
+    marginBottom: 2,
+  },
+  highlightValue: {
+    fontSize: FontSize.sm,
+    fontWeight: FontWeight.bold,
+    color: Colors.textPrimary,
+  },
+  disclaimer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    justifyContent: 'center',
+  },
+  disclaimerText: {
+    fontSize: 10,
+    color: Colors.textTertiary,
+>>>>>>> 3f814b0 (Update 2)
   },
   // Hidden but accessible to screen readers
   srOnly: {

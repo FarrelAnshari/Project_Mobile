@@ -16,9 +16,17 @@ import {
   StyleSheet,
   SafeAreaView,
 } from 'react-native';
+<<<<<<< HEAD
 import { predictionDataToday, predictionDataTomorrow, PredictionPoint } from '../data/predictionData';
 import { parkingAreas, ParkingArea } from '../data/parkingData';
 import { getStatusFromOccupancy, getStatusColor, getOccupancyPercent } from '../utils/parkingStatus';
+=======
+import { Ionicons } from '@expo/vector-icons';
+import { useRouter } from 'expo-router';
+import { predictionDataToday, predictionDataTomorrow } from '../data/predictionData';
+import { parkingAreas } from '../data/parkingData';
+import { getStatusFromOccupancy, getStatusColor } from '../utils/parkingStatus';
+>>>>>>> 3f814b0 (Update 2)
 import { getRecommendations } from '../utils/recommendation';
 import PredictionChart from '../components/PredictionChart';
 import StatusBadge from '../components/StatusBadge';
@@ -35,6 +43,7 @@ import { useResponsive } from '../utils/responsive';
 type DayTab = 'today' | 'tomorrow';
 
 export default function PredictionScreen() {
+  const router = useRouter();
   const { horizontalPadding } = useResponsive();
   const [selectedAreaId, setSelectedAreaId] = useState<number>(3); // Default PARKIRAN 3 as example
   const [activeDay, setActiveDay] = useState<DayTab>('today');
@@ -65,6 +74,7 @@ export default function PredictionScreen() {
     });
   }, [baseData, currentOccupancy]);
 
+<<<<<<< HEAD
   // Find peak and quietest hours
   const peakPoint = predictionData.reduce((a, b) =>
     a.occupancy > b.occupancy ? a : b
@@ -76,9 +86,26 @@ export default function PredictionScreen() {
   // Best recommendation for alternative
   const recommendations = getRecommendations(parkingAreas, 2);
   const altRecommendation = recommendations.find((r) => r.area.id !== selectedArea.id) ?? recommendations[0];
+=======
+  // Best recommendation for early arrival
+  const recommendation = getRecommendations(parkingAreas, 1)[0];
+>>>>>>> 3f814b0 (Update 2)
 
   return (
-    <SafeAreaView style={styles.safeArea}>
+    <View style={styles.container}>
+      {/* PURPLE HEADER SECTION */}
+      <View style={styles.purpleHeader}>
+        <View style={styles.decorCircle1} />
+        <View style={styles.decorCircle2} />
+        <SafeAreaView>
+          <View style={[styles.headerInner, { paddingHorizontal: horizontalPadding }]}>
+            <View style={styles.headerTop}>
+              <Text style={styles.headerTitle}>Prediksi Kepadatan</Text>
+            </View>
+          </View>
+        </SafeAreaView>
+      </View>
+
       <ScrollView
         style={styles.scroll}
         contentContainerStyle={[
@@ -87,6 +114,7 @@ export default function PredictionScreen() {
         ]}
         showsVerticalScrollIndicator={false}
       >
+<<<<<<< HEAD
         {/* Header */}
         <View style={styles.header}>
           <Text style={styles.title}>Prediksi Kepadatan</Text>
@@ -99,11 +127,21 @@ export default function PredictionScreen() {
         <View style={styles.disclaimerBanner}>
           <View style={styles.disclaimerIcon}>
             <Text style={styles.disclaimerIconText}>i</Text>
+=======
+        {/* ML Disclaimer banner (Overlapping) */}
+        <View style={styles.overlappingBanner}>
+          <View style={styles.disclaimerIconBox}>
+             <Ionicons name="hardware-chip-outline" size={20} color={Colors.primary} />
+>>>>>>> 3f814b0 (Update 2)
           </View>
           <View style={styles.disclaimerTextBlock}>
             <Text style={styles.disclaimerTitle}>Data Simulasi / Historis</Text>
             <Text style={styles.disclaimerBody}>
+<<<<<<< HEAD
               Prediksi pada tahap prototype menggunakan data historis/simulasi. Model machine learning akan diintegrasikan pada sprint berikutnya.
+=======
+              Data ini merupakan estimasi berdasarkan data historis/simulasi. Model machine learning akan diintegrasikan pada sprint berikutnya.
+>>>>>>> 3f814b0 (Update 2)
             </Text>
           </View>
         </View>
@@ -231,6 +269,7 @@ export default function PredictionScreen() {
           />
         </View>
 
+<<<<<<< HEAD
         {/* Insight Cards */}
         <View style={styles.insightRow}>
           {/* Peak Time */}
@@ -263,6 +302,9 @@ export default function PredictionScreen() {
         </View>
 
         {/* Per-hour Details Table */}
+=======
+        {/* Per-hour details */}
+>>>>>>> 3f814b0 (Update 2)
         <View style={styles.section}>
           <Text style={styles.sectionTitle} accessibilityRole="header">
             Rincian Prediksi Per Jam — {selectedArea.name}
@@ -303,37 +345,125 @@ export default function PredictionScreen() {
           </View>
         </View>
 
+<<<<<<< HEAD
         {/* Recommendation / Alternative Suggestion */}
         {altRecommendation && (
           <View style={[styles.suggestionCard, Shadow.sm]}>
             <Text style={styles.suggestionTitle}>Rekomendasi Alternatif</Text>
+=======
+        {/* Suggestion */}
+        {recommendation && (
+          <TouchableOpacity
+            style={[styles.suggestionCard, Shadow.sm]}
+            onPress={() => router.push('/(tabs)/parking' as any)}
+            activeOpacity={0.8}
+            accessibilityRole="button"
+            accessibilityLabel={`Saran: pilih area ${recommendation.area.name}`}
+          >
+            <View style={styles.suggestionHeader}>
+              <Ionicons name="bulb-outline" size={18} color={Colors.primary} />
+              <Text style={styles.suggestionTitle}>Saran Kepadatan</Text>
+            </View>
+>>>>>>> 3f814b0 (Update 2)
             <Text style={styles.suggestionBody}>
               Jika {selectedArea.name} mendekati kapasitas penuh, disarankan memilih{' '}
               <Text style={styles.suggestionHighlight}>
                 {altRecommendation.area.name}
               </Text>{' '}
+<<<<<<< HEAD
               yang saat ini memiliki {altRecommendation.area.available} slot tersedia.
+=======
+              atau memilih area{' '}
+              <Text style={styles.suggestionHighlight}>
+                {recommendation.area.name}
+              </Text>
+              .
+>>>>>>> 3f814b0 (Update 2)
             </Text>
-          </View>
+            <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: Spacing.sm, gap: 4 }}>
+              <Text style={{ fontSize: FontSize.xs, fontWeight: FontWeight.bold, color: Colors.primary }}>
+                Lihat Area Parkir Ini
+              </Text>
+              <Ionicons name="arrow-forward" size={14} color={Colors.primary} />
+            </View>
+          </TouchableOpacity>
         )}
 
+<<<<<<< HEAD
         <View style={{ height: 24 }} />
+=======
+        <View style={{ height: 32 }} />
+>>>>>>> 3f814b0 (Update 2)
       </ScrollView>
-    </SafeAreaView>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
-  safeArea: {
+  container: {
     flex: 1,
     backgroundColor: Colors.background,
+  },
+  purpleHeader: {
+    backgroundColor: Colors.primary,
+    borderBottomLeftRadius: 28,
+    borderBottomRightRadius: 28,
+    paddingBottom: Spacing.xl,
+    position: 'relative',
+    overflow: 'hidden',
+    shadowColor: Colors.primaryDark,
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.18,
+    shadowRadius: 16,
+    elevation: 6,
+  },
+  decorCircle1: {
+    position: 'absolute',
+    top: -50,
+    right: -30,
+    width: 180,
+    height: 180,
+    borderRadius: 90,
+    backgroundColor: 'rgba(255, 255, 255, 0.08)',
+  },
+  decorCircle2: {
+    position: 'absolute',
+    bottom: -30,
+    left: '15%',
+    width: 120,
+    height: 120,
+    borderRadius: 60,
+    backgroundColor: 'rgba(255, 255, 255, 0.05)',
+  },
+  headerTop: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingTop: 8,
+    paddingBottom: 4,
+  },
+  headerTitle: {
+    fontSize: FontSize.lg,
+    fontWeight: FontWeight.bold,
+    color: Colors.white,
+    letterSpacing: 0.3,
+  },
+  headerInner: {
+    maxWidth: 960,
+    width: '100%',
+    alignSelf: 'center',
   },
   scroll: {
     flex: 1,
   },
   content: {
     paddingTop: Spacing.lg,
+    paddingBottom: 120,
+    maxWidth: 960,
+    width: '100%',
+    alignSelf: 'center',
   },
+<<<<<<< HEAD
   header: {
     marginBottom: Spacing.md,
   },
@@ -349,9 +479,13 @@ const styles = StyleSheet.create({
     lineHeight: 22,
   },
   disclaimerBanner: {
+=======
+  overlappingBanner: {
+>>>>>>> 3f814b0 (Update 2)
     flexDirection: 'row',
     alignItems: 'flex-start',
     gap: Spacing.sm,
+<<<<<<< HEAD
     backgroundColor: Colors.infoBg,
     borderRadius: BorderRadius.lg,
     padding: Spacing.md,
@@ -372,6 +506,21 @@ const styles = StyleSheet.create({
     fontSize: FontSize.xs,
     color: Colors.white,
     fontWeight: FontWeight.bold,
+=======
+    backgroundColor: Colors.surface,
+    borderRadius: BorderRadius.xl,
+    padding: Spacing.lg,
+    marginTop: 0,
+    marginBottom: Spacing.xl,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.05,
+    shadowRadius: 12,
+    elevation: 3,
+  },
+  disclaimerIconBox: {
+    marginTop: 2,
+>>>>>>> 3f814b0 (Update 2)
   },
   disclaimerTextBlock: {
     flex: 1,
@@ -379,13 +528,20 @@ const styles = StyleSheet.create({
   },
   disclaimerTitle: {
     fontSize: FontSize.sm,
+<<<<<<< HEAD
     fontWeight: FontWeight.semibold,
     color: Colors.textPrimary,
+=======
+    fontWeight: FontWeight.bold,
+    color: Colors.primary,
+    marginBottom: 4,
+>>>>>>> 3f814b0 (Update 2)
   },
   disclaimerBody: {
     fontSize: FontSize.xs,
     color: Colors.textSecondary,
     lineHeight: 18,
+<<<<<<< HEAD
   },
   section: {
     marginBottom: Spacing.lg,
@@ -485,6 +641,8 @@ const styles = StyleSheet.create({
     width: 1,
     backgroundColor: Colors.border,
     marginVertical: 2,
+=======
+>>>>>>> 3f814b0 (Update 2)
   },
   tabs: {
     flexDirection: 'row',
@@ -516,6 +674,7 @@ const styles = StyleSheet.create({
   },
   chartContainer: {
     marginBottom: Spacing.lg,
+<<<<<<< HEAD
   },
   insightRow: {
     flexDirection: 'row',
@@ -524,9 +683,12 @@ const styles = StyleSheet.create({
   },
   insightCard: {
     flex: 1,
+=======
+    overflow: 'hidden',
+>>>>>>> 3f814b0 (Update 2)
     backgroundColor: Colors.surface,
-    borderRadius: BorderRadius.lg,
     padding: Spacing.md,
+<<<<<<< HEAD
     alignItems: 'center',
     gap: 4,
     borderWidth: 1,
@@ -568,6 +730,17 @@ const styles = StyleSheet.create({
     fontSize: FontSize.sm,
     color: Colors.textTertiary,
     marginBottom: 4,
+=======
+  },
+  section: {
+    marginBottom: Spacing.xl,
+  },
+  sectionTitle: {
+    fontSize: FontSize.lg,
+    fontWeight: FontWeight.bold,
+    color: Colors.textPrimary,
+    marginBottom: Spacing.md,
+>>>>>>> 3f814b0 (Update 2)
   },
   hourlyTable: {
     backgroundColor: Colors.surface,
@@ -618,8 +791,18 @@ const styles = StyleSheet.create({
     gap: Spacing.xs,
     borderWidth: 1,
     borderColor: Colors.border,
+<<<<<<< HEAD
     borderLeftWidth: 4,
     borderLeftColor: Colors.primary,
+=======
+    marginBottom: Spacing.lg,
+>>>>>>> 3f814b0 (Update 2)
+  },
+  suggestionHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.xs,
+    marginBottom: Spacing.sm,
   },
   suggestionTitle: {
     fontSize: FontSize.md,

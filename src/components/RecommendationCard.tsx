@@ -12,6 +12,7 @@ import {
   TouchableOpacity,
   StyleSheet,
 } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 import { Recommendation } from '../utils/recommendation';
 import { getOccupancyPercent } from '../utils/parkingStatus';
 import OccupancyBar from './OccupancyBar';
@@ -35,15 +36,24 @@ export default function RecommendationCard({ recommendation, onPress }: Props) {
 
   return (
     <View
-      style={[styles.card, Shadow.md]}
+      style={[styles.card, Shadow.sm]}
       accessible={true}
       accessibilityRole="none"
     >
       {/* Header */}
       <View style={styles.header}>
+<<<<<<< HEAD
         <View style={styles.recommendBadge}>
           <Text style={styles.recommendBadgeText}>REKOMENDASI</Text>
         </View>
+=======
+        <View style={styles.starBadge} accessibilityElementsHidden>
+          <Ionicons name="star" size={14} color={Colors.warning} />
+        </View>
+        <Text style={styles.badge} accessibilityElementsHidden>
+          Rekomendasi Terbaik
+        </Text>
+>>>>>>> 3f814b0 (Update 2)
       </View>
 
       {/* Area name */}
@@ -58,27 +68,33 @@ export default function RecommendationCard({ recommendation, onPress }: Props) {
       {/* Reason */}
       <Text style={styles.reason}>{reason}</Text>
 
-      {/* Mini occupancy bar */}
-      <View style={styles.barRow}>
-        <OccupancyBar percent={percent} height={6} />
-      </View>
-
       {/* Stats */}
       <View style={styles.statsRow}>
         <View style={styles.stat}>
           <Text style={[styles.statValue, styles.statValueHighlight]}>{area.available}</Text>
           <Text style={styles.statLabel}>Slot Tersedia</Text>
         </View>
+<<<<<<< HEAD
         <View style={styles.statDivider} />
+=======
+        <View style={styles.divider} />
+>>>>>>> 3f814b0 (Update 2)
         <View style={styles.stat}>
           <Text style={styles.statValue}>{percent}%</Text>
           <Text style={styles.statLabel}>Terisi</Text>
         </View>
+<<<<<<< HEAD
         <View style={styles.statDivider} />
         <View style={styles.stat}>
           <Text style={styles.statValue}>{area.capacity}</Text>
           <Text style={styles.statLabel}>Kapasitas</Text>
         </View>
+=======
+      </View>
+
+      <View style={styles.barRow}>
+        <OccupancyBar percent={percent} height={6} />
+>>>>>>> 3f814b0 (Update 2)
       </View>
 
       {/* CTA Button */}
@@ -91,7 +107,11 @@ export default function RecommendationCard({ recommendation, onPress }: Props) {
         accessibilityHint="Membuka detail area parkir yang direkomendasikan"
       >
         <Text style={styles.ctaBtnText}>Lihat Area</Text>
+<<<<<<< HEAD
         <Text style={styles.ctaBtnArrow} accessibilityElementsHidden>›</Text>
+=======
+        <Ionicons name="map-outline" size={18} color={Colors.white} />
+>>>>>>> 3f814b0 (Update 2)
       </TouchableOpacity>
     </View>
   );
@@ -103,15 +123,31 @@ const styles = StyleSheet.create({
     borderRadius: BorderRadius.xl,
     padding: Spacing.lg,
     borderWidth: 1,
-    borderColor: Colors.primary + '30',
+    borderColor: Colors.border,
   },
   header: {
     marginBottom: Spacing.sm,
   },
+<<<<<<< HEAD
   recommendBadge: {
     alignSelf: 'flex-start',
     backgroundColor: Colors.primary,
     borderRadius: BorderRadius.sm,
+=======
+  starBadge: {
+    width: 24,
+    height: 24,
+    borderRadius: BorderRadius.full,
+    backgroundColor: Colors.warningBg,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  badge: {
+    fontSize: FontSize.xs,
+    fontWeight: FontWeight.semibold,
+    color: Colors.primary,
+    backgroundColor: Colors.infoBg,
+>>>>>>> 3f814b0 (Update 2)
     paddingHorizontal: Spacing.sm,
     paddingVertical: 3,
   },
@@ -134,10 +170,11 @@ const styles = StyleSheet.create({
     lineHeight: 22,
   },
   barRow: {
-    marginBottom: Spacing.md,
+    marginBottom: Spacing.lg,
   },
   statsRow: {
     flexDirection: 'row',
+<<<<<<< HEAD
     justifyContent: 'space-around',
     marginBottom: Spacing.lg,
     paddingVertical: Spacing.md,
@@ -145,9 +182,12 @@ const styles = StyleSheet.create({
     borderRadius: BorderRadius.md,
     borderWidth: 1,
     borderColor: Colors.border,
+=======
+    alignItems: 'center',
+    marginBottom: Spacing.md,
+>>>>>>> 3f814b0 (Update 2)
   },
   stat: {
-    alignItems: 'center',
     flex: 1,
   },
   statDivider: {
@@ -168,15 +208,28 @@ const styles = StyleSheet.create({
     color: Colors.textSecondary,
     marginTop: 2,
   },
+  divider: {
+    width: 1,
+    height: '100%',
+    backgroundColor: Colors.border,
+    marginHorizontal: Spacing.md,
+  },
   ctaBtn: {
     backgroundColor: Colors.primary,
     paddingVertical: Spacing.md,
-    borderRadius: BorderRadius.md,
+    borderRadius: BorderRadius.lg,
     alignItems: 'center',
+<<<<<<< HEAD
     minHeight: 44,
     justifyContent: 'center',
     flexDirection: 'row',
     gap: Spacing.xs,
+=======
+    flexDirection: 'row',
+    justifyContent: 'center',
+    gap: Spacing.sm,
+    minHeight: 44, // minimum touch target
+>>>>>>> 3f814b0 (Update 2)
   },
   ctaBtnText: {
     color: Colors.white,
