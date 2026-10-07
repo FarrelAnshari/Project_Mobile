@@ -50,73 +50,23 @@ export default function ParkingCard({ area, onPress, compact = false, style }: P
       activeOpacity={0.75}
       accessible={true}
       accessibilityRole="button"
-      accessibilityLabel={`${area.name}, ${percent} persen terisi, ${area.available} slot tersedia, Status: ${area.status}`}
+      accessibilityLabel={`${area.name}. ${percent} persen terisi. ${area.available} slot tersedia. Status: ${area.status}.`}
       accessibilityHint="Ketuk untuk melihat detail area parkir ini"
     >
-<<<<<<< HEAD
-      {/* Alert strip — visible text, not color-only */}
-      {hasAlert && (
-        <View style={styles.alertStrip}>
-          <View style={styles.alertDot} />
-          <Text style={styles.alertText} accessibilityElementsHidden>
-            {area.status === 'FULL' ? 'Penuh' : 'Hampir Penuh'}
-          </Text>
-        </View>
-      )}
-
-      {/* Header row */}
-=======
->>>>>>> 3f814b0 (Update 2)
       <View style={styles.header}>
         <View style={styles.titleBlock}>
           <Text style={styles.name} numberOfLines={1} ellipsizeMode="tail">
             {area.name}
           </Text>
-          <Text style={styles.updated}>Diperbarui {area.lastUpdated}</Text>
+          <Text style={styles.updated}>{area.lastUpdated}</Text>
         </View>
         <StatusBadge status={area.status} size="sm" />
       </View>
 
-<<<<<<< HEAD
-      {/* Occupancy bar */}
-      <View style={styles.barSection}>
-        <OccupancyBar percent={percent} height={compact ? 6 : 8} />
-      </View>
-
-      {/* Stats row */}
-      <View style={styles.statsRow}>
-        <StatItem
-          label="Terisi"
-          value={`${area.occupied}`}
-          sub={`/ ${area.capacity}`}
-        />
-        <View style={styles.divider} />
-        <StatItem
-          label="Tersedia"
-          value={`${area.available}`}
-          highlight={area.available > 0 && area.status !== 'FULL'}
-        />
-        <View style={styles.divider} />
-        <StatItem label="Kapasitas" value={`${area.capacity}`} />
-      </View>
-
-      {/* Footer */}
-      {!compact && (
-        <View style={styles.footer}>
-          <View
-            style={styles.detailBtn}
-            accessibilityElementsHidden
-            importantForAccessibility="no"
-          >
-            <Text style={styles.detailBtnText}>Lihat Detail</Text>
-            <Text style={styles.detailBtnArrow} accessibilityElementsHidden>›</Text>
-          </View>
-=======
       <View style={styles.mainInfo}>
         <View style={styles.statsContainer}>
           <Text style={styles.percentText}>{percent}% <Text style={styles.percentSub}>Terisi</Text></Text>
           <Text style={styles.availableText}>{area.available} <Text style={styles.availableSub}>Slot Tersedia</Text></Text>
->>>>>>> 3f814b0 (Update 2)
         </View>
         
         {!compact && (
@@ -139,40 +89,12 @@ const styles = StyleSheet.create({
     borderRadius: BorderRadius.xl,
     padding: Spacing.lg,
     marginBottom: Spacing.md,
-<<<<<<< HEAD
-    overflow: 'hidden',
-=======
->>>>>>> 3f814b0 (Update 2)
     borderWidth: 1,
     borderColor: Colors.border,
   },
   cardCompact: {
     padding: Spacing.md,
   },
-<<<<<<< HEAD
-  cardAlert: {
-    borderLeftWidth: 3,
-    borderLeftColor: Colors.danger,
-  },
-  alertStrip: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: Spacing.xs,
-    marginBottom: Spacing.sm,
-  },
-  alertDot: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-    backgroundColor: Colors.danger,
-  },
-  alertText: {
-    fontSize: FontSize.xs,
-    color: Colors.danger,
-    fontWeight: FontWeight.semibold,
-  },
-=======
->>>>>>> 3f814b0 (Update 2)
   header: {
     flexDirection: 'row',
     justifyContent: 'space-between',
@@ -206,58 +128,6 @@ const styles = StyleSheet.create({
   },
   percentText: {
     fontSize: FontSize.xl,
-<<<<<<< HEAD
-    fontWeight: FontWeight.bold,
-    color: Colors.textPrimary,
-  },
-  statValueHighlight: {
-    color: Colors.success,
-  },
-  statSub: {
-    fontSize: FontSize.sm,
-    color: Colors.textTertiary,
-    fontWeight: FontWeight.regular,
-  },
-  statLabel: {
-    fontSize: FontSize.xs,
-    color: Colors.textSecondary,
-    marginTop: 2,
-  },
-  divider: {
-    width: 1,
-    backgroundColor: Colors.border,
-    marginVertical: 2,
-  },
-  footer: {
-    marginTop: Spacing.md,
-    borderTopWidth: 1,
-    borderTopColor: Colors.borderLight,
-    paddingTop: Spacing.sm,
-    alignItems: 'flex-end',
-  },
-  detailBtn: {
-    paddingVertical: 8,
-    paddingHorizontal: Spacing.sm,
-    minHeight: 44,
-    justifyContent: 'center',
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-    backgroundColor: Colors.primary + '10',
-    borderRadius: BorderRadius.sm,
-    borderWidth: 1,
-    borderColor: Colors.primary + '30',
-  },
-  detailBtnText: {
-    fontSize: FontSize.sm,
-    fontWeight: FontWeight.semibold,
-    color: Colors.primary,
-  },
-  detailBtnArrow: {
-    fontSize: FontSize.lg,
-    color: Colors.primary,
-    lineHeight: FontSize.lg + 2,
-=======
     fontWeight: FontWeight.extrabold,
     color: Colors.primary,
   },
@@ -286,6 +156,5 @@ const styles = StyleSheet.create({
   },
   barSection: {
     marginTop: Spacing.xs,
->>>>>>> 3f814b0 (Update 2)
   },
 });

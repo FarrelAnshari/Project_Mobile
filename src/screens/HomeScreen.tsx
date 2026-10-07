@@ -32,8 +32,6 @@ import {
 import { useResponsive } from '../utils/responsive';
 import { Ionicons } from '@expo/vector-icons';
 
-import { useAuth } from '../contexts/AuthContext';
-
 // Simulate small random variance on refresh
 function simulateRefresh(areas: ParkingArea[]): ParkingArea[] {
   return areas.map((area) => {
@@ -61,14 +59,9 @@ function getGreeting(): string {
 }
 
 export default function HomeScreen() {
-<<<<<<< HEAD
-  const { user } = useAuth();
-  const { width, isSmall, horizontalPadding } = useResponsive();
-=======
   const { width, isSmall, isWide, cardWidth, horizontalPadding } = useResponsive();
   const { user } = useAuth();
   const router = useRouter();
->>>>>>> 3f814b0 (Update 2)
   const [areas, setAreas] = useState<ParkingArea[]>(parkingAreas);
   const [refreshing, setRefreshing] = useState(false);
   const [lastRefreshed, setLastRefreshed] = useState('2 menit lalu');
@@ -184,18 +177,6 @@ export default function HomeScreen() {
         }
         showsVerticalScrollIndicator={false}
       >
-<<<<<<< HEAD
-        {/* ======== HEADER ======== */}
-        <View style={styles.header}>
-          <View>
-            <Text style={styles.appName}>PARKIN</Text>
-            <Text style={styles.greeting}>
-              Halo, {user?.name ? user.name.split(' ')[0] : 'Mahasiswa'}
-            </Text>
-            <Text style={styles.tagline}>
-              Pantau parkir kampus dengan mudah.
-            </Text>
-=======
         {/* OVERLAPPING CAMPUS STATUS CARD */}
         <View style={styles.overlappingCard}>
           <View style={styles.cardHeaderRow}>
@@ -204,7 +185,6 @@ export default function HomeScreen() {
               <Ionicons name="refresh-outline" size={16} color={Colors.primary} />
               <Text style={styles.refreshText}>{lastRefreshed}</Text>
             </TouchableOpacity>
->>>>>>> 3f814b0 (Update 2)
           </View>
           
           <View style={styles.campusOccupancyRow}>
@@ -230,53 +210,6 @@ export default function HomeScreen() {
         {/* QUICK ACTIONS */}
         <View style={styles.quickActions}>
           <TouchableOpacity
-<<<<<<< HEAD
-            style={styles.refreshBtn}
-            onPress={onRefresh}
-            accessibilityRole="button"
-            accessibilityLabel="Perbarui status parkir"
-            accessibilityHint="Memperbarui data kepadatan seluruh area parkir"
-          >
-            <Text style={styles.refreshIcon}>↻</Text>
-          </TouchableOpacity>
-        </View>
-
-        {/* ======== CAMPUS STATUS CARD ======== */}
-        <View
-          style={[styles.campusCard, Shadow.md]}
-          accessible={true}
-          accessibilityRole="none"
-          accessibilityLabel={`Status parkir kampus. ${stats.occupancyPercent} persen terisi. ${stats.totalOccupied} dari ${stats.totalCapacity} kendaraan. Status: ${campusStatus}.`}
-        >
-          <View style={styles.campusCardHeader}>
-            <Text style={styles.campusCardTitle}>Status Parkir Kampus</Text>
-            <StatusBadge status={campusStatus} size="sm" />
-          </View>
-
-          <View style={styles.campusOccupancyRow}>
-            <Text style={styles.campusPercent}>{stats.occupancyPercent}%</Text>
-            <View style={styles.campusPercentInfo}>
-              <Text style={styles.campusCapacityText}>
-                {stats.totalOccupied} dari {stats.totalCapacity} kendaraan
-              </Text>
-              <Text style={styles.campusAvailableText}>
-                {stats.totalAvailable} slot tersedia
-              </Text>
-            </View>
-          </View>
-
-          <OccupancyBar percent={stats.occupancyPercent} height={10} />
-
-          <Text style={styles.lastUpdated}>Terakhir diperbarui {lastRefreshed}</Text>
-        </View>
-
-        {/* ======== ALERT SECTION ======== */}
-        {alertAreas.length > 0 && (
-          <View style={styles.section}>
-            <Text style={styles.sectionTitle} accessibilityRole="header">
-              Peringatan Parkir
-            </Text>
-=======
             style={styles.quickActionBtn}
             onPress={navigateToParking}
             accessibilityLabel="Monitoring parkir"
@@ -325,7 +258,6 @@ export default function HomeScreen() {
               <Text style={styles.sectionTitle}>⚠️ Peringatan</Text>
               <Text style={styles.alertCount}>{alertAreas.length} area</Text>
             </View>
->>>>>>> 3f814b0 (Update 2)
             {alertAreas.map((area) => (
               <NotificationCard
                 key={area.id}
@@ -340,14 +272,6 @@ export default function HomeScreen() {
 
         {/* AREA PARKIR SECTION */}
         <View style={styles.section}>
-<<<<<<< HEAD
-          <Text style={styles.sectionTitle} accessibilityRole="header">
-            Area Parkir
-          </Text>
-          {areas.map((area) => (
-            <ParkingCard key={area.id} area={area} compact={false} />
-          ))}
-=======
           <View style={styles.sectionHeaderRow}>
             <Text style={styles.sectionTitle}>Area Parkir</Text>
             <TouchableOpacity onPress={navigateToParking}>
@@ -374,21 +298,14 @@ export default function HomeScreen() {
               <Ionicons name="chevron-forward" size={16} color={Colors.primary} />
             </TouchableOpacity>
           )}
->>>>>>> 3f814b0 (Update 2)
         </View>
 
         {/* RECOMMENDATION SECTION */}
         {recommendations.length > 0 && (
           <View style={styles.section}>
-<<<<<<< HEAD
-            <Text style={styles.sectionTitle} accessibilityRole="header">
-              Rekomendasi
-            </Text>
-=======
             <View style={styles.sectionHeaderRow}>
                <Text style={styles.sectionTitle}>Rekomendasi</Text>
             </View>
->>>>>>> 3f814b0 (Update 2)
             <RecommendationCard
               recommendation={recommendations[0]}
               onPress={handleRecommendationPress}
@@ -396,22 +313,6 @@ export default function HomeScreen() {
           </View>
         )}
 
-<<<<<<< HEAD
-        {/* ======== MINI PREDICTION CHART ======== */}
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle} accessibilityRole="header">
-            Prediksi Hari Ini
-          </Text>
-          <View style={[Shadow.sm, { borderRadius: BorderRadius.lg }]}>
-            <PredictionChart
-              data={todayPreview}
-              compact={true}
-            />
-          </View>
-        </View>
-
-=======
->>>>>>> 3f814b0 (Update 2)
         <View style={styles.bottomSpacer} />
       </ScrollView>
     </View>
@@ -535,52 +436,8 @@ const styles = StyleSheet.create({
     width: '100%',
     alignSelf: 'center',
   },
-<<<<<<< HEAD
-  header: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'flex-start',
-    marginBottom: Spacing.lg,
-  },
-  appName: {
-    fontSize: FontSize.sm,
-    fontWeight: FontWeight.bold,
-    color: Colors.primary,
-    letterSpacing: 1.5,
-    marginBottom: 2,
-  },
-  greeting: {
-    fontSize: FontSize.xxl,
-    fontWeight: FontWeight.bold,
-    color: Colors.textPrimary,
-  },
-  tagline: {
-    fontSize: FontSize.md,
-    color: Colors.textSecondary,
-    marginTop: 4,
-  },
-  refreshBtn: {
-    width: 44,
-    height: 44,
-    borderRadius: BorderRadius.full,
-    backgroundColor: Colors.surface,
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderWidth: 1,
-    borderColor: Colors.border,
-    ...Shadow.sm,
-  },
-  refreshIcon: {
-    fontSize: 20,
-    color: Colors.primary,
-    fontWeight: FontWeight.bold,
-  },
-  campusCard: {
-    backgroundColor: Colors.primary,
-=======
   overlappingCard: {
     backgroundColor: Colors.surface,
->>>>>>> 3f814b0 (Update 2)
     borderRadius: BorderRadius.xl,
     padding: Spacing.lg,
     marginTop: 0,

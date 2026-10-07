@@ -8,8 +8,8 @@
  * Status thresholds (prototype logic):
  *   0–50%   = AVAILABLE
  *   51–79%  = BUSY
- *   80–97%  = NEAR FULL
- *   98–100% = FULL
+ *   80–99%  = NEAR FULL
+ *   100%    = FULL
  */
 
 export type ParkingStatus = 'Sepi' | 'Sedang' | 'Ramai' | 'Hampir Penuh' | 'Penuh';

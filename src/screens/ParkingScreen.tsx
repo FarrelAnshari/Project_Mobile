@@ -39,10 +39,11 @@ import { useResponsive } from '../utils/responsive';
 
 const ALL_STATUSES: (ParkingStatus | 'Semua')[] = [
   'Semua',
-  'AVAILABLE',
-  'BUSY',
-  'NEAR FULL',
-  'FULL',
+  'Sepi',
+  'Sedang',
+  'Ramai',
+  'Hampir Penuh',
+  'Penuh',
 ];
 
 export default function ParkingScreen() {
@@ -89,17 +90,6 @@ export default function ParkingScreen() {
         ]}
         showsVerticalScrollIndicator={false}
       >
-<<<<<<< HEAD
-        {/* Header */}
-        <View style={styles.header}>
-          <Text style={styles.title}>Monitoring Parkir</Text>
-          <Text style={styles.subtitle}>
-            Status real-time seluruh area parkir kampus
-          </Text>
-        </View>
-
-=======
->>>>>>> 3f814b0 (Update 2)
         {/* Search */}
         <View style={styles.overlappingSearch}>
           <SearchBar
@@ -154,10 +144,7 @@ export default function ParkingScreen() {
           </Text>
           {filteredAreas.length === 0 ? (
             <View style={styles.emptyContainer}>
-<<<<<<< HEAD
-=======
               <Ionicons name="search-outline" size={36} color={Colors.textTertiary} />
->>>>>>> 3f814b0 (Update 2)
               <Text style={styles.emptyText}>Tidak ada hasil ditemukan.</Text>
             </View>
           ) : (
@@ -304,19 +291,6 @@ function ParkingDetailModal({
         </View>
 
         {/* Prediction chart for this area */}
-<<<<<<< HEAD
-        <View style={styles.detailChartSection}>
-          <Text style={styles.detailChartTitle}>
-            Prediksi Kepadatan Hari Ini
-          </Text>
-          <PredictionChart data={predictionDataToday} compact={false} />
-        </View>
-
-        {/* Last updated */}
-        <Text style={styles.detailUpdated}>
-          Terakhir diperbarui: {area.lastUpdated}
-        </Text>
-=======
         <View style={[styles.detailChartSection, { backgroundColor: Colors.surface, borderRadius: BorderRadius.lg, padding: Spacing.md }]}>
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: Spacing.xs, marginBottom: Spacing.sm }}>
             <Ionicons name="bar-chart-outline" size={16} color={Colors.primary} />
@@ -334,7 +308,6 @@ function ParkingDetailModal({
             Terakhir diperbarui: {area.lastUpdated}
           </Text>
         </View>
->>>>>>> 3f814b0 (Update 2)
       </ScrollView>
     </SafeAreaView>
   );
@@ -422,14 +395,13 @@ const styles = StyleSheet.create({
   },
   filterChip: {
     paddingHorizontal: Spacing.md,
-    paddingVertical: 10,
+    paddingVertical: 8,
     borderRadius: BorderRadius.full,
     backgroundColor: Colors.surface,
     borderWidth: 1,
     borderColor: Colors.border,
-    minHeight: 44,
+    minHeight: 36,
     justifyContent: 'center',
-    alignItems: 'center',
   },
   filterChipActive: {
     backgroundColor: Colors.primary,
@@ -442,7 +414,6 @@ const styles = StyleSheet.create({
   },
   filterChipTextActive: {
     color: Colors.white,
-    fontWeight: FontWeight.bold,
   },
   section: {
     marginBottom: Spacing.xl,
@@ -489,21 +460,13 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   closeBtn: {
-<<<<<<< HEAD
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-=======
     width: 32,
     height: 32,
     borderRadius: 16,
->>>>>>> 3f814b0 (Update 2)
     backgroundColor: Colors.borderLight,
     alignItems: 'center',
     justifyContent: 'center',
     marginLeft: Spacing.sm,
-    borderWidth: 1,
-    borderColor: Colors.border,
   },
   modalScroll: {
     flex: 1,
@@ -526,8 +489,6 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.surface,
     borderRadius: BorderRadius.lg,
     overflow: 'hidden',
-    borderWidth: 1,
-    borderColor: Colors.border,
   },
   statGridItem: {
     width: '50%',

@@ -2,10 +2,10 @@
  * PARKIN — Smart Campus Parking
  * Screen: Riwayat / History
  *
- * Tampilan histori kepadatan parkir dengan filter periode dan area parkir (PARKIRAN 1–5).
+ * Tampilan histori kepadatan parkir dengan filter hari/minggu.
  */
 
-import React, { useState, useMemo } from 'react';
+import React, { useState } from 'react';
 import {
   View,
   Text,
@@ -16,8 +16,7 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { historyData, weeklyData, DayHistory } from '../data/predictionData';
-import { parkingAreas, ParkingArea } from '../data/parkingData';
-import { getStatusFromOccupancy, getOccupancyBarColor, getOccupancyPercent } from '../utils/parkingStatus';
+import { getStatusFromOccupancy, getOccupancyBarColor } from '../utils/parkingStatus';
 import StatusBadge from '../components/StatusBadge';
 import {
   Colors,
@@ -29,57 +28,12 @@ import {
 } from '../constants/theme';
 import { useResponsive } from '../utils/responsive';
 
-type PeriodFilter = 'hari' | 'minggu' | 'bulan';
-
-const monthlyData = [
-  { week: 'Mgg 1', avgOccupancy: 68 },
-  { week: 'Mgg 2', avgOccupancy: 74 },
-  { week: 'Mgg 3', avgOccupancy: 81 },
-  { week: 'Mgg 4', avgOccupancy: 76 },
-];
+type FilterType = 'hari' | 'minggu';
 
 export default function HistoryScreen() {
   const { horizontalPadding } = useResponsive();
-  const [selectedAreaId, setSelectedAreaId] = useState<number>(3); // Default PARKIRAN 3 as example
-  const [period, setPeriod] = useState<PeriodFilter>('hari');
+  const [filter, setFilter] = useState<FilterType>('hari');
   const [selectedDay, setSelectedDay] = useState<DayHistory>(historyData[0]);
-
-  const selectedArea = useMemo(
-    () => parkingAreas.find((a) => a.id === selectedAreaId) ?? parkingAreas[0],
-    [selectedAreaId]
-  );
-
-  const areaBaseOccupancy = getOccupancyPercent(selectedArea.occupied, selectedArea.capacity);
-
-  // Scaled hourly history points based on selected area
-  const scaledPoints = useMemo(() => {
-    const factor = areaBaseOccupancy / 55;
-    return selectedDay.points.map((p) => {
-      const scaled = Math.min(100, Math.max(10, Math.round(p.occupancy * factor)));
-      return {
-        time: p.time,
-        occupancy: scaled,
-      };
-    });
-  }, [selectedDay, areaBaseOccupancy]);
-
-  const avgOccupancy = useMemo(() => {
-    if (period === 'hari') {
-      const sum = scaledPoints.reduce((acc, cur) => acc + cur.occupancy, 0);
-      return Math.round(sum / scaledPoints.length);
-    } else if (period === 'minggu') {
-      const factor = areaBaseOccupancy / 55;
-      const sum = weeklyData.reduce((acc, cur) => acc + Math.round(cur.avgOccupancy * factor), 0);
-      return Math.min(100, Math.round(sum / weeklyData.length));
-    } else {
-      const factor = areaBaseOccupancy / 55;
-      const sum = monthlyData.reduce((acc, cur) => acc + Math.round(cur.avgOccupancy * factor), 0);
-      return Math.min(100, Math.round(sum / monthlyData.length));
-    }
-  }, [period, scaledPoints, areaBaseOccupancy]);
-
-  const peakPeriodText = '11:00–13:00';
-  const quietPeriodText = '17:00–18:00';
 
   return (
     <View style={styles.container}>
@@ -104,65 +58,6 @@ export default function HistoryScreen() {
         ]}
         showsVerticalScrollIndicator={false}
       >
-<<<<<<< HEAD
-        {/* Header */}
-        <View style={styles.header}>
-          <Text style={styles.title}>Riwayat Kepadatan</Text>
-          <Text style={styles.subtitle}>
-            Histori dan pola okupansi parkir kampus
-          </Text>
-        </View>
-
-        {/* Area Parkir Selector (PARKIRAN 1–5) */}
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle} accessibilityRole="header">
-            Pilih Area Parkir
-          </Text>
-          <ScrollView
-            horizontal
-            showsHorizontalScrollIndicator={false}
-            contentContainerStyle={styles.areaChipContainer}
-            accessible={true}
-            accessibilityRole="tablist"
-            accessibilityLabel="Pilihan area parkir untuk riwayat kepadatan"
-          >
-            {parkingAreas.map((area) => {
-              const isSelected = area.id === selectedArea.id;
-              const areaOccupancy = getOccupancyPercent(area.occupied, area.capacity);
-              return (
-                <TouchableOpacity
-                  key={area.id}
-                  style={[
-                    styles.areaChip,
-                    isSelected && styles.areaChipActive,
-                  ]}
-                  onPress={() => setSelectedAreaId(area.id)}
-                  accessibilityRole="tab"
-                  accessibilityLabel={`${area.name}, ${areaOccupancy} persen terisi`}
-                  accessibilityState={{ selected: isSelected }}
-                  accessibilityHint={`Menampilkan data riwayat kepadatan untuk ${area.name}`}
-                >
-                  <Text
-                    style={[
-                      styles.areaChipText,
-                      isSelected && styles.areaChipTextActive,
-                    ]}
-                  >
-                    {area.name}
-                  </Text>
-                  <Text
-                    style={[
-                      styles.areaChipSub,
-                      isSelected && styles.areaChipSubActive,
-                    ]}
-                  >
-                    {areaOccupancy}%
-                  </Text>
-                </TouchableOpacity>
-              );
-            })}
-          </ScrollView>
-=======
         {/* Filter tabs (Overlapping) */}
         <View style={styles.overlappingTabs} accessibilityRole="tablist">
           {[
@@ -195,85 +90,11 @@ export default function HistoryScreen() {
               </Text>
             </TouchableOpacity>
           ))}
->>>>>>> 3f814b0 (Update 2)
         </View>
 
-        {/* Selected Area Card Banner */}
-        <View
-          style={[styles.areaBannerCard, Shadow.sm]}
-          accessible={true}
-          accessibilityLabel={`${selectedArea.name}. Rata-rata okupansi ${avgOccupancy} persen. Periode paling padat: ${peakPeriodText}.`}
-        >
-          <View style={styles.areaBannerHeader}>
-            <View>
-              <Text style={styles.areaBannerName}>{selectedArea.name}</Text>
-              <Text style={styles.areaBannerSub}>
-                Kapasitas {selectedArea.capacity} slot kendaraan
-              </Text>
-            </View>
-            <StatusBadge status={getStatusFromOccupancy(avgOccupancy)} size="sm" />
-          </View>
-        </View>
-
-        {/* Period Filter (Hari Ini | Minggu | Bulan) */}
-        <View style={styles.filterSection}>
-          <Text style={styles.periodFilterLabel}>Periode:</Text>
-          <View style={styles.filterTabs} accessibilityRole="tablist">
-            {[
-              { id: 'hari' as PeriodFilter, label: 'Hari Ini' },
-              { id: 'minggu' as PeriodFilter, label: 'Minggu' },
-              { id: 'bulan' as PeriodFilter, label: 'Bulan' },
-            ].map((f) => (
-              <TouchableOpacity
-                key={f.id}
-                style={[
-                  styles.filterTab,
-                  period === f.id && styles.filterTabActive,
-                ]}
-                onPress={() => setPeriod(f.id)}
-                accessibilityRole="tab"
-                accessibilityLabel={`Periode ${f.label}`}
-                accessibilityState={{ selected: period === f.id }}
-              >
-                <Text
-                  style={[
-                    styles.filterTabText,
-                    period === f.id && styles.filterTabTextActive,
-                  ]}
-                >
-                  {f.label}
-                </Text>
-              </TouchableOpacity>
-            ))}
-          </View>
-        </View>
-
-        {/* Summary Cards */}
-        <View style={styles.summaryRow}>
-          <SummaryCard
-            label="Rata-rata Okupansi"
-            value={`${avgOccupancy}%`}
-            sub="Rerata periode"
-            accentColor={Colors.primary}
-          />
-          <SummaryCard
-            label="Periode Paling Padat"
-            value={peakPeriodText}
-            sub="Jam sibuk utama"
-            accentColor={Colors.danger}
-          />
-          <SummaryCard
-            label="Periode Paling Sepi"
-            value={quietPeriodText}
-            sub="Jam paling lengang"
-            accentColor={Colors.success}
-          />
-        </View>
-
-        {/* Content based on selected period */}
-        {period === 'hari' && (
+        {filter === 'hari' ? (
           <>
-            {/* Day Selector sub-tab */}
+            {/* Day selector */}
             <ScrollView
               horizontal
               showsHorizontalScrollIndicator={false}
@@ -304,9 +125,6 @@ export default function HistoryScreen() {
               ))}
             </ScrollView>
 
-<<<<<<< HEAD
-            {/* Hourly history list */}
-=======
             {/* Summary cards */}
             <View style={styles.summaryRow}>
               <SummaryCard
@@ -333,13 +151,12 @@ export default function HistoryScreen() {
             </View>
 
             {/* Hourly history chart */}
->>>>>>> 3f814b0 (Update 2)
             <View style={styles.section}>
               <Text style={styles.sectionTitle} accessibilityRole="header">
-                Rincian Per Jam — {selectedArea.name} ({selectedDay.label})
+                Rincian Per Jam — {selectedDay.label}
               </Text>
               <View style={[styles.historyTable, Shadow.sm]}>
-                {scaledPoints.map((point, index) => {
+                {selectedDay.points.map((point, index) => {
                   const status = getStatusFromOccupancy(point.occupancy);
                   const color = getOccupancyBarColor(point.occupancy);
                   return (
@@ -347,10 +164,10 @@ export default function HistoryScreen() {
                       key={index}
                       style={[
                         styles.historyRow,
-                        index < scaledPoints.length - 1 && styles.historyRowBorder,
+                        index < selectedDay.points.length - 1 && styles.historyRowBorder,
                       ]}
                       accessible={true}
-                      accessibilityLabel={`${point.time}: ${point.occupancy} persen — Status: ${status}`}
+                      accessibilityLabel={`${point.time}: ${point.occupancy} persen kepadatan`}
                     >
                       <Text style={styles.historyTime}>{point.time}</Text>
                       <View style={styles.historyBarTrack}>
@@ -373,8 +190,6 @@ export default function HistoryScreen() {
                 })}
               </View>
             </View>
-<<<<<<< HEAD
-=======
 
             {/* Insight */}
             <View style={[styles.insightBox, Shadow.sm]}>
@@ -393,44 +208,44 @@ export default function HistoryScreen() {
                 <Text style={styles.insightBold}>{selectedDay.quietTime}</Text>.
               </Text>
             </View>
->>>>>>> 3f814b0 (Update 2)
           </>
-        )}
-
-        {period === 'minggu' && (
-          <View style={styles.section}>
-            <Text style={styles.sectionTitle} accessibilityRole="header">
-              Rata-rata Harian Mingguan — {selectedArea.name}
-            </Text>
-            <View style={[styles.weeklyCard, Shadow.sm]}>
-              <View style={styles.weeklyBars}>
-                {weeklyData.map((item, index) => {
-                  const factor = areaBaseOccupancy / 55;
-                  const occ = Math.min(100, Math.round(item.avgOccupancy * factor));
-                  const color = getOccupancyBarColor(occ);
+        ) : (
+          <>
+            {/* Weekly chart */}
+            <View style={styles.section}>
+              <Text style={styles.sectionTitle} accessibilityRole="header">
+                Rata-Rata Kepadatan Per Hari
+              </Text>
+              <View style={[styles.weeklyChart, Shadow.sm]}>
+                {weeklyData.map((day, index) => {
+                  const color = getOccupancyBarColor(day.avgOccupancy);
+                  const barHeight = (day.avgOccupancy / 100) * 100;
                   return (
-                    <View key={index} style={styles.weeklyBarCol}>
-                      <Text style={[styles.weeklyValueText, { color }]}>{occ}%</Text>
+                    <View
+                      key={index}
+                      style={styles.weeklyBarWrapper}
+                      accessible={true}
+                      accessibilityLabel={`${day.day}: rata-rata ${day.avgOccupancy} persen`}
+                    >
+                      <Text style={[styles.weeklyValue, { color }]}>
+                        {day.avgOccupancy}%
+                      </Text>
                       <View style={styles.weeklyBarTrack}>
                         <View
                           style={[
-                            styles.weeklyBarFill,
+                            styles.weeklyBar,
                             {
-                              height: `${occ}%`,
+                              height: barHeight,
                               backgroundColor: color,
                             },
                           ]}
                         />
                       </View>
-                      <Text style={styles.weeklyDayLabel}>{item.day}</Text>
+                      <Text style={styles.weeklyDay}>{day.day}</Text>
                     </View>
                   );
                 })}
               </View>
-<<<<<<< HEAD
-              <Text style={styles.chartFootnote}>
-                Data dihitung dari rerata pola lalu lintas mingguan.
-=======
             </View>
 
             {/* Weekly insight */}
@@ -454,116 +269,42 @@ export default function HistoryScreen() {
                     a.avgOccupancy < b.avgOccupancy ? a : b,
                   ).day}
                 </Text>
->>>>>>> 3f814b0 (Update 2)
               </Text>
             </View>
-          </View>
+          </>
         )}
 
-<<<<<<< HEAD
-        {period === 'bulan' && (
-          <View style={styles.section}>
-            <Text style={styles.sectionTitle} accessibilityRole="header">
-              Tren Mingguan Bulanan — {selectedArea.name}
-            </Text>
-            <View style={[styles.weeklyCard, Shadow.sm]}>
-              <View style={styles.weeklyBars}>
-                {monthlyData.map((item, index) => {
-                  const factor = areaBaseOccupancy / 55;
-                  const occ = Math.min(100, Math.round(item.avgOccupancy * factor));
-                  const color = getOccupancyBarColor(occ);
-                  return (
-                    <View key={index} style={styles.weeklyBarCol}>
-                      <Text style={[styles.weeklyValueText, { color }]}>{occ}%</Text>
-                      <View style={styles.weeklyBarTrack}>
-                        <View
-                          style={[
-                            styles.weeklyBarFill,
-                            {
-                              height: `${occ}%`,
-                              backgroundColor: color,
-                            },
-                          ]}
-                        />
-                      </View>
-                      <Text style={styles.weeklyDayLabel}>{item.week}</Text>
-                    </View>
-                  );
-                })}
-              </View>
-              <Text style={styles.chartFootnote}>
-                Rata-rata okupansi per minggu sepanjang bulan ini.
-              </Text>
-            </View>
-          </View>
-        )}
-
-        {/* Insight Box */}
-        <View style={[styles.insightBox, Shadow.sm]}>
-          <Text style={styles.insightTitle}>Insight Riwayat — {selectedArea.name}</Text>
-          <Text style={styles.insightText}>
-            Rata-rata okupansi {selectedArea.name} berada di angka{' '}
-            <Text style={styles.insightBold}>{avgOccupancy}%</Text>.
-          </Text>
-          <Text style={styles.insightText}>
-            Periode paling padat terjadi pada rentang{' '}
-            <Text style={styles.insightBold}>{peakPeriodText}</Text>, di mana slot parkir sering kali mencapai titik batas optimal.
-          </Text>
-          <Text style={styles.insightText}>
-            Untuk menghindari antrean, pengguna disarankan tiba sebelum pukul 09:30 atau pada periode lengang{' '}
-            <Text style={styles.insightBold}>{quietPeriodText}</Text>.
-          </Text>
-        </View>
-
-        <View style={{ height: 24 }} />
-=======
         <View style={{ height: 32 }} />
->>>>>>> 3f814b0 (Update 2)
       </ScrollView>
     </View>
   );
 }
 
 function SummaryCard({
-<<<<<<< HEAD
-=======
   icon,
   iconColor,
->>>>>>> 3f814b0 (Update 2)
   label,
   value,
   sub,
-  accentColor = Colors.primary,
 }: {
-<<<<<<< HEAD
-=======
   icon: React.ComponentProps<typeof Ionicons>['name'];
   iconColor: string;
->>>>>>> 3f814b0 (Update 2)
   label: string;
   value: string;
   sub: string;
-  accentColor?: string;
 }) {
   return (
     <View
-      style={[styles.summaryCard, { borderTopColor: accentColor }, Shadow.sm]}
+      style={[styles.summaryCard, Shadow.sm]}
       accessible={true}
-      accessibilityRole="none"
-      accessibilityLabel={`${label}: ${value}, ${sub}`}
+      accessibilityLabel={`${label}: ${value}. ${sub}`}
     >
-<<<<<<< HEAD
-      <Text style={styles.summaryCardLabel}>{label}</Text>
-      <Text style={styles.summaryCardValue}>{value}</Text>
-      <Text style={styles.summaryCardSub}>{sub}</Text>
-=======
       <View style={[styles.summaryIconBox, { backgroundColor: iconColor + '15' }]}>
         <Ionicons name={icon} size={18} color={iconColor} />
       </View>
       <Text style={styles.summaryValue}>{value}</Text>
       <Text style={styles.summaryLabel}>{label}</Text>
       <Text style={styles.summarySub}>{sub}</Text>
->>>>>>> 3f814b0 (Update 2)
     </View>
   );
 }
@@ -632,37 +373,6 @@ const styles = StyleSheet.create({
     width: '100%',
     alignSelf: 'center',
   },
-<<<<<<< HEAD
-  header: {
-    marginBottom: Spacing.md,
-  },
-  title: {
-    fontSize: FontSize.xxl,
-    fontWeight: FontWeight.bold,
-    color: Colors.textPrimary,
-  },
-  subtitle: {
-    fontSize: FontSize.md,
-    color: Colors.textSecondary,
-    marginTop: 4,
-  },
-  section: {
-    marginBottom: Spacing.lg,
-  },
-  sectionTitle: {
-    fontSize: FontSize.md,
-    fontWeight: FontWeight.bold,
-    color: Colors.textPrimary,
-    marginBottom: Spacing.sm,
-  },
-  areaChipContainer: {
-    gap: Spacing.sm,
-    paddingVertical: 2,
-  },
-  areaChip: {
-    paddingHorizontal: Spacing.md,
-    paddingVertical: Spacing.sm,
-=======
   overlappingTabs: {
     flexDirection: 'row',
     gap: Spacing.sm,
@@ -681,90 +391,18 @@ const styles = StyleSheet.create({
     flex: 1,
     paddingVertical: Spacing.sm,
     alignItems: 'center',
->>>>>>> 3f814b0 (Update 2)
     borderRadius: BorderRadius.md,
     backgroundColor: Colors.surface,
     borderWidth: 1,
     borderColor: Colors.border,
     minHeight: 44,
-    alignItems: 'center',
     justifyContent: 'center',
     flexDirection: 'row',
-<<<<<<< HEAD
-    gap: 6,
-=======
     gap: Spacing.xs,
->>>>>>> 3f814b0 (Update 2)
-  },
-  areaChipActive: {
-    backgroundColor: Colors.primary,
-    borderColor: Colors.primary,
-  },
-  areaChipText: {
-    fontSize: FontSize.sm,
-    fontWeight: FontWeight.semibold,
-    color: Colors.textPrimary,
-  },
-  areaChipTextActive: {
-    color: Colors.white,
-  },
-  areaChipSub: {
-    fontSize: FontSize.xs,
-    color: Colors.textTertiary,
-    fontWeight: FontWeight.medium,
-  },
-  areaChipSubActive: {
-    color: Colors.white + 'CC',
-  },
-  areaBannerCard: {
-    backgroundColor: Colors.surface,
-    borderRadius: BorderRadius.lg,
-    padding: Spacing.md,
-    borderWidth: 1,
-    borderColor: Colors.border,
-    marginBottom: Spacing.md,
-  },
-  areaBannerHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-  },
-  areaBannerName: {
-    fontSize: FontSize.lg,
-    fontWeight: FontWeight.bold,
-    color: Colors.textPrimary,
-  },
-  areaBannerSub: {
-    fontSize: FontSize.xs,
-    color: Colors.textSecondary,
-    marginTop: 2,
-  },
-  filterSection: {
-    marginBottom: Spacing.md,
-  },
-  periodFilterLabel: {
-    fontSize: FontSize.xs,
-    fontWeight: FontWeight.semibold,
-    color: Colors.textSecondary,
-    marginBottom: 6,
-  },
-  filterTabs: {
-    flexDirection: 'row',
-    backgroundColor: Colors.borderLight,
-    borderRadius: BorderRadius.md,
-    padding: 3,
-  },
-  filterTab: {
-    flex: 1,
-    paddingVertical: 10,
-    alignItems: 'center',
-    borderRadius: BorderRadius.sm,
-    minHeight: 44,
-    justifyContent: 'center',
   },
   filterTabActive: {
-    backgroundColor: Colors.surface,
-    ...Shadow.sm,
+    backgroundColor: Colors.primary,
+    borderColor: Colors.primary,
   },
   filterTabText: {
     fontSize: FontSize.sm,
@@ -772,54 +410,38 @@ const styles = StyleSheet.create({
     color: Colors.textSecondary,
   },
   filterTabTextActive: {
-    fontWeight: FontWeight.semibold,
-    color: Colors.primary,
+    color: Colors.white,
   },
   daySelectorRow: {
     gap: Spacing.sm,
-    marginBottom: Spacing.md,
-    paddingVertical: 2,
+    paddingBottom: Spacing.md,
   },
   dayChip: {
     paddingHorizontal: Spacing.md,
-<<<<<<< HEAD
-    paddingVertical: 8,
-=======
     paddingVertical: Spacing.xs,
->>>>>>> 3f814b0 (Update 2)
     borderRadius: BorderRadius.full,
     backgroundColor: Colors.surface,
     borderWidth: 1,
     borderColor: Colors.border,
-<<<<<<< HEAD
-    minHeight: 44,
-=======
     minHeight: 32,
->>>>>>> 3f814b0 (Update 2)
     justifyContent: 'center',
-    alignItems: 'center',
   },
   dayChipActive: {
-    backgroundColor: Colors.primary + '15',
-    borderColor: Colors.primary,
+    backgroundColor: Colors.primaryLight,
+    borderColor: Colors.primaryLight,
   },
   dayChipText: {
     fontSize: FontSize.xs,
-<<<<<<< HEAD
-=======
     color: Colors.textSecondary,
->>>>>>> 3f814b0 (Update 2)
     fontWeight: FontWeight.medium,
-    color: Colors.textSecondary,
   },
   dayChipTextActive: {
-    color: Colors.primary,
-    fontWeight: FontWeight.semibold,
+    color: Colors.white,
   },
   summaryRow: {
     flexDirection: 'row',
     gap: Spacing.sm,
-    marginBottom: Spacing.lg,
+    marginBottom: Spacing.xl,
   },
   summaryCard: {
     flex: 1,
@@ -827,19 +449,6 @@ const styles = StyleSheet.create({
     borderRadius: BorderRadius.lg,
     padding: Spacing.sm,
     alignItems: 'center',
-<<<<<<< HEAD
-    borderTopWidth: 3,
-    borderWidth: 1,
-    borderColor: Colors.border,
-    minHeight: 88,
-    justifyContent: 'center',
-  },
-  summaryCardLabel: {
-    fontSize: 10,
-    color: Colors.textTertiary,
-    textAlign: 'center',
-    marginBottom: 4,
-=======
     borderWidth: 1,
     borderColor: Colors.border,
   },
@@ -867,32 +476,26 @@ const styles = StyleSheet.create({
     color: Colors.textTertiary,
     textAlign: 'center',
     marginTop: 2,
->>>>>>> 3f814b0 (Update 2)
   },
-  summaryCardValue: {
-    fontSize: FontSize.md,
+  section: {
+    marginBottom: Spacing.xl,
+  },
+  sectionTitle: {
+    fontSize: FontSize.lg,
     fontWeight: FontWeight.bold,
     color: Colors.textPrimary,
-    textAlign: 'center',
-    marginBottom: 2,
-  },
-  summaryCardSub: {
-    fontSize: 9,
-    color: Colors.textTertiary,
-    textAlign: 'center',
+    marginBottom: Spacing.md,
   },
   historyTable: {
     backgroundColor: Colors.surface,
     borderRadius: BorderRadius.lg,
     overflow: 'hidden',
-    borderWidth: 1,
-    borderColor: Colors.border,
   },
   historyRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingVertical: 12,
     paddingHorizontal: Spacing.md,
+    paddingVertical: Spacing.sm,
     gap: Spacing.sm,
     minHeight: 44,
   },
@@ -901,10 +504,10 @@ const styles = StyleSheet.create({
     borderBottomColor: Colors.borderLight,
   },
   historyTime: {
-    width: 44,
-    fontSize: FontSize.xs,
-    fontWeight: FontWeight.semibold,
+    fontSize: FontSize.sm,
     color: Colors.textSecondary,
+    fontWeight: FontWeight.medium,
+    width: 44,
   },
   historyBarTrack: {
     flex: 1,
@@ -918,73 +521,15 @@ const styles = StyleSheet.create({
     borderRadius: 4,
   },
   historyValue: {
+    fontSize: FontSize.sm,
+    fontWeight: FontWeight.bold,
     width: 36,
-    fontSize: FontSize.xs,
-    fontWeight: FontWeight.bold,
     textAlign: 'right',
-  },
-  weeklyCard: {
-    backgroundColor: Colors.surface,
-    borderRadius: BorderRadius.lg,
-    padding: Spacing.lg,
-    borderWidth: 1,
-    borderColor: Colors.border,
-  },
-  weeklyBars: {
-    flexDirection: 'row',
-    alignItems: 'flex-end',
-    justifyContent: 'space-between',
-    height: 140,
-    paddingBottom: Spacing.sm,
-  },
-  weeklyBarCol: {
-    flex: 1,
-    alignItems: 'center',
-    gap: 4,
-    height: '100%',
-    justifyContent: 'flex-end',
-  },
-  weeklyValueText: {
-    fontSize: 10,
-    fontWeight: FontWeight.bold,
-  },
-  weeklyBarTrack: {
-    width: 20,
-    height: 100,
-    backgroundColor: Colors.borderLight,
-    borderRadius: BorderRadius.sm,
-    justifyContent: 'flex-end',
-    overflow: 'hidden',
-  },
-  weeklyBarFill: {
-    width: '100%',
-    borderRadius: BorderRadius.sm,
-  },
-  weeklyDayLabel: {
-    fontSize: FontSize.xs,
-    color: Colors.textSecondary,
-    fontWeight: FontWeight.medium,
-  },
-  chartFootnote: {
-    fontSize: FontSize.xs,
-    color: Colors.textTertiary,
-    textAlign: 'center',
-    marginTop: Spacing.md,
-    borderTopWidth: 1,
-    borderTopColor: Colors.borderLight,
-    paddingTop: Spacing.sm,
   },
   insightBox: {
     backgroundColor: Colors.surface,
     borderRadius: BorderRadius.lg,
     padding: Spacing.lg,
-<<<<<<< HEAD
-    gap: Spacing.sm,
-    borderWidth: 1,
-    borderColor: Colors.border,
-    borderLeftWidth: 4,
-    borderLeftColor: Colors.primary,
-=======
     marginBottom: Spacing.xl,
     borderWidth: 1,
     borderColor: Colors.border,
@@ -994,13 +539,11 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: Spacing.xs,
     marginBottom: Spacing.sm,
->>>>>>> 3f814b0 (Update 2)
   },
   insightTitle: {
     fontSize: FontSize.md,
     fontWeight: FontWeight.bold,
-    color: Colors.textPrimary,
-    marginBottom: 4,
+    color: Colors.primary,
   },
   insightText: {
     fontSize: FontSize.sm,
@@ -1010,5 +553,41 @@ const styles = StyleSheet.create({
   insightBold: {
     fontWeight: FontWeight.bold,
     color: Colors.textPrimary,
+  },
+  // Weekly chart
+  weeklyChart: {
+    flexDirection: 'row',
+    alignItems: 'flex-end',
+    backgroundColor: Colors.surface,
+    borderRadius: BorderRadius.lg,
+    padding: Spacing.md,
+    height: 180,
+    gap: Spacing.xs,
+  },
+  weeklyBarWrapper: {
+    flex: 1,
+    alignItems: 'center',
+    gap: 4,
+  },
+  weeklyValue: {
+    fontSize: 9,
+    fontWeight: FontWeight.bold,
+  },
+  weeklyBarTrack: {
+    width: '80%',
+    height: 100,
+    backgroundColor: Colors.borderLight,
+    borderRadius: BorderRadius.sm,
+    justifyContent: 'flex-end',
+    overflow: 'hidden',
+  },
+  weeklyBar: {
+    width: '100%',
+    borderRadius: BorderRadius.sm,
+  },
+  weeklyDay: {
+    fontSize: FontSize.xs,
+    color: Colors.textSecondary,
+    fontWeight: FontWeight.medium,
   },
 });

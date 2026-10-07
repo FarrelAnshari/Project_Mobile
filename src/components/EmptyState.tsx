@@ -3,7 +3,6 @@
  * Component: EmptyState
  *
  * Shown when there is no data, loading, or error.
- * Clean, professional UI — no emoji decorations.
  */
 
 import React from 'react';
@@ -36,8 +35,15 @@ const DEFAULT_MESSAGES: Record<StateType, string> = {
   error: 'Gagal memuat data parkir.',
 };
 
+const ICONS: Record<StateType, string> = {
+  loading: '⏳',
+  empty: '🅿️',
+  error: '⚠️',
+};
+
 export default function EmptyState({ type, message, onRetry }: Props) {
   const displayMessage = message ?? DEFAULT_MESSAGES[type];
+  const icon = ICONS[type];
 
   return (
     <View
@@ -46,28 +52,18 @@ export default function EmptyState({ type, message, onRetry }: Props) {
       accessibilityRole="none"
       accessibilityLabel={displayMessage}
     >
-      {type === 'loading' && (
+      {type === 'loading' ? (
         <ActivityIndicator
           size="large"
           color={Colors.primary}
-          accessibilityLabel="Memuat data..."
+          accessibilityLabel="Memuat..."
         />
+      ) : (
+        <Text style={styles.icon} accessibilityElementsHidden>
+          {icon}
+        </Text>
       )}
-
-      {type === 'empty' && (
-        <View style={styles.iconCircle} accessibilityElementsHidden>
-          <Text style={styles.iconLetter}>P</Text>
-        </View>
-      )}
-
-      {type === 'error' && (
-        <View style={[styles.iconCircle, styles.iconCircleError]} accessibilityElementsHidden>
-          <Text style={[styles.iconLetter, styles.iconLetterError]}>!</Text>
-        </View>
-      )}
-
       <Text style={styles.message}>{displayMessage}</Text>
-
       {type === 'error' && onRetry && (
         <TouchableOpacity
           style={styles.retryBtn}
@@ -88,38 +84,19 @@ const styles = StyleSheet.create({
   container: {
     alignItems: 'center',
     justifyContent: 'center',
-    paddingVertical: Spacing.xl,
+    paddingVertical: Spacing.section,
     paddingHorizontal: Spacing.xl,
     gap: Spacing.md,
   },
-  iconCircle: {
-    width: 56,
-    height: 56,
-    borderRadius: 28,
-    backgroundColor: Colors.borderLight,
-    borderWidth: 2,
-    borderColor: Colors.border,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: Spacing.xs,
-  },
-  iconCircleError: {
-    backgroundColor: Colors.dangerBg,
-    borderColor: Colors.danger,
-  },
-  iconLetter: {
-    fontSize: FontSize.xl,
-    fontWeight: FontWeight.bold,
-    color: Colors.textSecondary,
-  },
-  iconLetterError: {
-    color: Colors.danger,
+  icon: {
+    fontSize: 48,
+    marginBottom: Spacing.sm,
   },
   message: {
     fontSize: FontSize.md,
     color: Colors.textSecondary,
     textAlign: 'center',
-    lineHeight: 22,
+    lineHeight: 24,
   },
   retryBtn: {
     backgroundColor: Colors.primary,
@@ -129,7 +106,6 @@ const styles = StyleSheet.create({
     marginTop: Spacing.sm,
     minHeight: 44,
     justifyContent: 'center',
-    alignItems: 'center',
   },
   retryText: {
     color: Colors.white,

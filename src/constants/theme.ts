@@ -30,57 +30,35 @@ export const Colors = {
   secondary: '#FF8A00',    // Orange accent from template
   background: '#F8F9FA',
   surface: '#FFFFFF',
-<<<<<<< HEAD
-  textPrimary: '#0F172A',
-  textSecondary: '#475569',
-  textTertiary: '#94A3B8',
-  border: '#CBD5E1',
-  borderLight: '#F1F5F9',
-=======
   textPrimary: '#1E1E2D',
   textSecondary: '#8F92A1',
   textTertiary: '#BDBDBD',
   border: '#E8E8E8',
   borderLight: '#F3F3F3',
->>>>>>> 3f814b0 (Update 2)
 
-  // Semantic status colors
-  success: '#15803D',
+  // Status colors
+  success: '#16A34A',
   successBg: '#DCFCE7',
   successLight: '#86EFAC',
-  warning: '#B45309',
+  warning: '#F59E0B',
   warningBg: '#FEF3C7',
   warningLight: '#FCD34D',
-<<<<<<< HEAD
-  danger: '#B91C1C',
-=======
   danger: '#EF4444',
->>>>>>> 3f814b0 (Update 2)
   dangerBg: '#FEE2E2',
   dangerLight: '#FCA5A5',
-  info: '#0369A1',
+  info: '#0EA5E9',
   infoBg: '#E0F2FE',
 
-  // Parking status colors — AVAILABLE / BUSY / NEAR FULL / FULL
-  available: '#15803D',       // AVAILABLE — green
-  availableBg: '#DCFCE7',
-  busy: '#B45309',            // BUSY — amber
-  busyBg: '#FEF3C7',
-  nearFull: '#B91C1C',        // NEAR FULL — red
-  nearFullBg: '#FEE2E2',
-  full: '#7F1D1D',            // FULL — deep red
-  fullBg: '#FEE2E2',
-
-  // Legacy aliases (kept for OccupancyBar color fallback)
-  sepi: '#15803D',
+  // Parking status colors
+  sepi: '#16A34A',    // Sepi — green
   sepiBg: '#DCFCE7',
-  sedang: '#B45309',
-  sedangBg: '#FEF3C7',
-  ramai: '#B91C1C',
-  ramaiBg: '#FEE2E2',
-  hampirPenuh: '#7F1D1D',
-  hampirPenuhBg: '#FEE2E2',
-  penuh: '#7F1D1D',
+  sedang: '#0EA5E9',  // Sedang — blue
+  sedangBg: '#E0F2FE',
+  ramai: '#F59E0B',   // Ramai — amber
+  ramaiBg: '#FEF3C7',
+  hampirPenuh: '#EA580C', // Hampir Penuh — orange
+  hampirPenuhBg: '#FFF7ED',
+  penuh: '#DC2626',   // Penuh — red
   penuhBg: '#FEE2E2',
 
   shadow: 'rgba(15, 23, 42, 0.08)',

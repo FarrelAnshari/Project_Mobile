@@ -51,14 +51,6 @@ export default function NotificationCard({
       }
     >
       <View style={styles.header}>
-<<<<<<< HEAD
-        {/* Alert indicator — shape + color + text (not color-only) */}
-        <View style={styles.alertIconBox}>
-          <Text style={styles.alertIconText}>!</Text>
-        </View>
-        <View style={styles.titleBlock}>
-          <Text style={styles.title}>
-=======
         <View style={[styles.iconBox, isWarning ? styles.iconBoxWarning : styles.iconBoxDanger]}>
           <Ionicons 
             name={isFull ? "close-circle" : "warning"} 
@@ -68,7 +60,6 @@ export default function NotificationCard({
         </View>
         <View style={styles.titleBlock}>
           <Text style={[styles.title, isWarning ? styles.titleWarning : styles.titleDanger]}>
->>>>>>> 3f814b0 (Update 2)
             {isFull ? `${area.name} Penuh` : `${area.name} Hampir Penuh`}
           </Text>
           <Text style={styles.subtitle}>
@@ -102,21 +93,11 @@ export default function NotificationCard({
             accessibilityLabel={`Lihat alternatif: ${alternativeArea.name} dengan ${alternativeArea.available} slot tersedia`}
             accessibilityHint="Buka detail area parkir alternatif"
           >
-<<<<<<< HEAD
-            <View>
-              <Text style={styles.altBtnName}>{alternativeArea.name}</Text>
-              <Text style={styles.altBtnStatus}>{alternativeArea.status}</Text>
-            </View>
-            <Text style={styles.altBtnSlot}>
-              {alternativeArea.available} slot ›
-            </Text>
-=======
             <View style={styles.altBtnLeft}>
               <Text style={styles.altBtnName}>{alternativeArea.name}</Text>
               <Text style={styles.altBtnSlot}>{alternativeArea.available} Slot Tersedia</Text>
             </View>
             <Ionicons name="arrow-forward" size={16} color={Colors.success} />
->>>>>>> 3f814b0 (Update 2)
           </TouchableOpacity>
         </View>
       )}
@@ -130,8 +111,6 @@ const styles = StyleSheet.create({
     padding: Spacing.md,
     borderWidth: 1,
     marginBottom: Spacing.md,
-    borderLeftWidth: 4,
-    borderLeftColor: Colors.danger,
   },
   cardDanger: {
     backgroundColor: Colors.dangerBg,
@@ -146,21 +125,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: Spacing.md,
   },
-<<<<<<< HEAD
-  alertIconBox: {
-    width: 28,
-    height: 28,
-    borderRadius: 14,
-    backgroundColor: Colors.danger,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginTop: 1,
-  },
-  alertIconText: {
-    fontSize: FontSize.md,
-    fontWeight: FontWeight.bold,
-    color: Colors.white,
-=======
   iconBox: {
     width: 36,
     height: 36,
@@ -173,7 +137,6 @@ const styles = StyleSheet.create({
   },
   iconBoxWarning: {
     backgroundColor: Colors.warning + '15',
->>>>>>> 3f814b0 (Update 2)
   },
   titleBlock: {
     flex: 1,
@@ -195,8 +158,8 @@ const styles = StyleSheet.create({
   },
   dismissBtn: {
     padding: 4,
-    minWidth: 44,
-    minHeight: 44,
+    minWidth: 28,
+    minHeight: 28,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -234,11 +197,6 @@ const styles = StyleSheet.create({
     fontSize: FontSize.md,
     fontWeight: FontWeight.semibold,
     color: Colors.textPrimary,
-  },
-  altBtnStatus: {
-    fontSize: FontSize.xs,
-    color: Colors.textSecondary,
-    marginTop: 1,
   },
   altBtnSlot: {
     fontSize: FontSize.xs,

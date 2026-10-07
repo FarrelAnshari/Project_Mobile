@@ -4,101 +4,89 @@
  *
  * Uses Expo Router Tabs with custom styling.
  * 5 tabs: Beranda, Parkir, Prediksi, Riwayat, Profil
- * No emoji icons — uses text-based icon shapes for accessibility.
  */
 
-import { Tabs, Redirect } from 'expo-router';
-import { Platform, Text, View, StyleSheet } from 'react-native';
-import { Colors, FontSize, FontWeight, BorderRadius } from '../../constants/theme';
-import { useAuth } from '../../contexts/AuthContext';
-
-/**
- * TabIcon — text-based icon (no emoji, no external lib needed).
- * Uses a styled letter/symbol inside a container.
- * Active state uses background fill + different color (not color-only).
- */
-function TabIcon({
-  symbol,
-  focused,
-}: {
-  symbol: string;
-  focused: boolean;
-}) {
-  return (
-    <View style={[styles.tabIconContainer, focused && styles.tabIconContainerActive]}>
-      <Text style={[styles.tabSymbol, focused && styles.tabSymbolActive]}>
-        {symbol}
-      </Text>
-    </View>
-  );
-}
+import { Tabs } from 'expo-router';
+import { Platform, View, StyleSheet, useWindowDimensions } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
+import { Colors, FontWeight, BorderRadius } from '../../constants/theme';
 
 export default function TabLayout() {
-  const { isAuthenticated, isLoading } = useAuth();
-
-  if (!isLoading && !isAuthenticated) {
-    return <Redirect href={'/(auth)/login' as any} />;
-  }
+  const { width } = useWindowDimensions();
+  const isWide = width > 768;
+  const tabWidth = isWide ? Math.min(640, width - 48) : '100%';
+  const leftPos = isWide ? (width - (typeof tabWidth === 'number' ? tabWidth : 0)) / 2 : 0;
 
   return (
     <Tabs
       screenOptions={{
         headerShown: false,
-        tabBarActiveTintColor: Colors.primary,
-        tabBarInactiveTintColor: Colors.textTertiary,
-        tabBarStyle: styles.tabBar,
+        tabBarActiveTintColor: Colors.primaryLight,
+        tabBarInactiveTintColor: Colors.textSecondary,
+        tabBarStyle: [
+          styles.tabBar,
+          isWide && {
+            width: tabWidth,
+            left: leftPos,
+            borderRadius: 28,
+            bottom: 16,
+          },
+        ],
         tabBarLabelStyle: styles.tabLabel,
         tabBarItemStyle: styles.tabItem,
+        tabBarShowLabel: false, // Cleaner look similar to template
       }}
     >
       <Tabs.Screen
         name="index"
         options={{
           title: 'Beranda',
-          tabBarIcon: ({ focused }) => (
-            <TabIcon symbol="⌂" focused={focused} />
+          tabBarIcon: ({ focused, color }) => (
+            <Ionicons name={focused ? 'home' : 'home-outline'} size={24} color={color} />
           ),
-          tabBarAccessibilityLabel: 'Beranda — Dashboard kepadatan parkir kampus',
+          tabBarAccessibilityLabel: 'Tab Beranda — Dashboard kepadatan parkir kampus',
         }}
       />
       <Tabs.Screen
         name="parking"
         options={{
           title: 'Parkir',
-          tabBarIcon: ({ focused }) => (
-            <TabIcon symbol="P" focused={focused} />
+          tabBarIcon: ({ focused, color }) => (
+            <Ionicons name={focused ? 'car' : 'car-outline'} size={26} color={color} />
           ),
-          tabBarAccessibilityLabel: 'Parkir — Monitoring seluruh area parkir',
+          tabBarAccessibilityLabel: 'Tab Parkir — Monitoring seluruh area parkir',
         }}
       />
       <Tabs.Screen
         name="prediction"
         options={{
           title: 'Prediksi',
-          tabBarIcon: ({ focused }) => (
-            <TabIcon symbol="↗" focused={focused} />
+          tabBarIcon: ({ focused, color }) => (
+            <View style={styles.floatingAction}>
+               <Ionicons name="stats-chart" size={24} color={Colors.white} />
+            </View>
           ),
-          tabBarAccessibilityLabel: 'Prediksi — Prediksi kepadatan parkir',
+          tabBarAccessibilityLabel: 'Tab Prediksi — Prediksi kepadatan parkir',
         }}
       />
       <Tabs.Screen
         name="history"
         options={{
           title: 'Riwayat',
-          tabBarIcon: ({ focused }) => (
-            <TabIcon symbol="≡" focused={focused} />
+          tabBarIcon: ({ focused, color }) => (
+            <Ionicons name={focused ? 'time' : 'time-outline'} size={26} color={color} />
           ),
-          tabBarAccessibilityLabel: 'Riwayat — Histori kepadatan parkir',
+          tabBarAccessibilityLabel: 'Tab Riwayat — Histori kepadatan parkir',
         }}
       />
       <Tabs.Screen
         name="profile"
         options={{
           title: 'Profil',
-          tabBarIcon: ({ focused }) => (
-            <TabIcon symbol="◉" focused={focused} />
+          tabBarIcon: ({ focused, color }) => (
+            <Ionicons name={focused ? 'person' : 'person-outline'} size={24} color={color} />
           ),
-          tabBarAccessibilityLabel: 'Profil — Pengaturan dan profil pengguna',
+          tabBarAccessibilityLabel: 'Tab Profil — Pengaturan dan profil pengguna',
         }}
       />
     </Tabs>
@@ -107,43 +95,41 @@ export default function TabLayout() {
 
 const styles = StyleSheet.create({
   tabBar: {
-    backgroundColor: Colors.surface,
-    borderTopWidth: 1,
-    borderTopColor: Colors.border,
-    height: Platform.OS === 'ios' ? 88 : 68,
+    backgroundColor: '#1E1E2D', // Dark color matching template
+    borderTopWidth: 0,
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
+    height: Platform.OS === 'ios' ? 90 : 70,
     paddingBottom: Platform.OS === 'ios' ? 24 : 10,
-    paddingTop: 8,
-    elevation: 8,
+    paddingTop: 10,
+    position: 'absolute', // Floating effect over background
+    bottom: 0,
+    elevation: 20,
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: -2 },
-    shadowOpacity: 0.06,
-    shadowRadius: 8,
+    shadowOffset: { width: 0, height: -4 },
+    shadowOpacity: 0.1,
+    shadowRadius: 16,
   },
   tabItem: {
     paddingVertical: 0,
   },
   tabLabel: {
     fontSize: 10,
-    fontWeight: FontWeight.semibold,
+    fontWeight: FontWeight.medium,
     marginTop: 2,
   },
-  tabIconContainer: {
+  floatingAction: {
+    width: 50,
+    height: 50,
+    borderRadius: 25,
+    backgroundColor: Colors.primary,
     alignItems: 'center',
     justifyContent: 'center',
-    width: 36,
-    height: 28,
-    borderRadius: BorderRadius.sm,
-  },
-  tabIconContainerActive: {
-    backgroundColor: Colors.primary + '15',
-  },
-  tabSymbol: {
-    fontSize: 18,
-    color: Colors.textTertiary,
-    lineHeight: 22,
-  },
-  tabSymbolActive: {
-    color: Colors.primary,
-    fontWeight: FontWeight.bold,
-  },
+    marginBottom: Platform.OS === 'ios' ? 20 : 30, // Raise the middle action button
+    shadowColor: Colors.primary,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 8,
+  }
 });

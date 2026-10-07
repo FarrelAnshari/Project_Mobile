@@ -2,17 +2,15 @@
  * PARKIN — Smart Campus Parking
  * Mock Data: Prediction & History
  *
- * NOTE: Prototype / simulation data.
+ * NOTE: Prototype/simulation data.
  * Label: "Prediksi berdasarkan data historis/simulasi"
- * Uses standard statuses: AVAILABLE, BUSY, NEAR FULL, FULL
+ * Replace prediction logic with ML model/API in future sprint.
  */
-
-import { ParkingStatus } from './parkingData';
 
 export interface PredictionPoint {
   time: string;
   occupancy: number; // 0–100 (%)
-  label: ParkingStatus;
+  label: string;     // human-readable status
 }
 
 export interface HistoryPoint {
@@ -31,34 +29,34 @@ export interface DayHistory {
 
 /** Prediction data for today (typical weekday pattern) */
 export const predictionDataToday: PredictionPoint[] = [
-  { time: '07:00', occupancy: 30, label: 'AVAILABLE' },
-  { time: '08:00', occupancy: 45, label: 'AVAILABLE' },
-  { time: '09:00', occupancy: 58, label: 'BUSY' },
-  { time: '10:00', occupancy: 71, label: 'BUSY' },
-  { time: '11:00', occupancy: 84, label: 'NEAR FULL' },
-  { time: '12:00', occupancy: 92, label: 'NEAR FULL' },
-  { time: '13:00', occupancy: 88, label: 'NEAR FULL' },
-  { time: '14:00', occupancy: 70, label: 'BUSY' },
-  { time: '15:00', occupancy: 55, label: 'BUSY' },
-  { time: '16:00', occupancy: 40, label: 'AVAILABLE' },
-  { time: '17:00', occupancy: 25, label: 'AVAILABLE' },
-  { time: '18:00', occupancy: 15, label: 'AVAILABLE' },
+  { time: '07:00', occupancy: 30, label: 'Sepi' },
+  { time: '08:00', occupancy: 45, label: 'Sedang' },
+  { time: '09:00', occupancy: 58, label: 'Sedang' },
+  { time: '10:00', occupancy: 71, label: 'Ramai' },
+  { time: '11:00', occupancy: 84, label: 'Hampir Penuh' },
+  { time: '12:00', occupancy: 92, label: 'Hampir Penuh' },
+  { time: '13:00', occupancy: 88, label: 'Hampir Penuh' },
+  { time: '14:00', occupancy: 70, label: 'Ramai' },
+  { time: '15:00', occupancy: 55, label: 'Sedang' },
+  { time: '16:00', occupancy: 40, label: 'Sedang' },
+  { time: '17:00', occupancy: 25, label: 'Sepi' },
+  { time: '18:00', occupancy: 15, label: 'Sepi' },
 ];
 
 /** Prediction data for tomorrow */
 export const predictionDataTomorrow: PredictionPoint[] = [
-  { time: '07:00', occupancy: 25, label: 'AVAILABLE' },
-  { time: '08:00', occupancy: 40, label: 'AVAILABLE' },
-  { time: '09:00', occupancy: 55, label: 'BUSY' },
-  { time: '10:00', occupancy: 68, label: 'BUSY' },
-  { time: '11:00', occupancy: 80, label: 'NEAR FULL' },
-  { time: '12:00', occupancy: 88, label: 'NEAR FULL' },
-  { time: '13:00', occupancy: 85, label: 'NEAR FULL' },
-  { time: '14:00', occupancy: 65, label: 'BUSY' },
-  { time: '15:00', occupancy: 50, label: 'AVAILABLE' },
-  { time: '16:00', occupancy: 35, label: 'AVAILABLE' },
-  { time: '17:00', occupancy: 20, label: 'AVAILABLE' },
-  { time: '18:00', occupancy: 10, label: 'AVAILABLE' },
+  { time: '07:00', occupancy: 25, label: 'Sepi' },
+  { time: '08:00', occupancy: 40, label: 'Sedang' },
+  { time: '09:00', occupancy: 55, label: 'Sedang' },
+  { time: '10:00', occupancy: 68, label: 'Ramai' },
+  { time: '11:00', occupancy: 80, label: 'Ramai' },
+  { time: '12:00', occupancy: 88, label: 'Hampir Penuh' },
+  { time: '13:00', occupancy: 85, label: 'Hampir Penuh' },
+  { time: '14:00', occupancy: 65, label: 'Ramai' },
+  { time: '15:00', occupancy: 50, label: 'Sedang' },
+  { time: '16:00', occupancy: 35, label: 'Sepi' },
+  { time: '17:00', occupancy: 20, label: 'Sepi' },
+  { time: '18:00', occupancy: 10, label: 'Sepi' },
 ];
 
 /** History data per day */

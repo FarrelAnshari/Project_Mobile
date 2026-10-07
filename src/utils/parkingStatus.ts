@@ -13,16 +13,18 @@ import { ParkingStatus } from '../data/parkingData';
  * Determine parking status from occupancy percentage.
  * Prototype logic — replace with ML API in Sprint 02.
  *
- * 0–50%   = AVAILABLE
- * 51–79%  = BUSY
- * 80–97%  = NEAR FULL
- * 98–100% = FULL
+ * 0–40%   = Sepi
+ * 41–60%  = Sedang
+ * 61–80%  = Ramai
+ * 81–95%  = Hampir Penuh
+ * 96–100% = Penuh
  */
 export function getStatusFromOccupancy(occupancyPercent: number): ParkingStatus {
-  if (occupancyPercent <= 50) return 'AVAILABLE';
-  if (occupancyPercent <= 79) return 'BUSY';
-  if (occupancyPercent <= 97) return 'NEAR FULL';
-  return 'FULL';
+  if (occupancyPercent <= 40) return 'Sepi';
+  if (occupancyPercent <= 60) return 'Sedang';
+  if (occupancyPercent <= 80) return 'Ramai';
+  if (occupancyPercent <= 95) return 'Hampir Penuh';
+  return 'Penuh';
 }
 
 export function getOccupancyPercent(occupied: number, capacity: number): number {
@@ -33,53 +35,58 @@ export function getOccupancyPercent(occupied: number, capacity: number): number 
 /** Returns color associated with the parking status */
 export function getStatusColor(status: ParkingStatus): string {
   switch (status) {
-    case 'AVAILABLE': return Colors.available;
-    case 'BUSY':      return Colors.busy;
-    case 'NEAR FULL': return Colors.nearFull;
-    case 'FULL':      return Colors.full;
-    default:          return Colors.textSecondary;
+    case 'Sepi':        return Colors.sepi;
+    case 'Sedang':      return Colors.sedang;
+    case 'Ramai':       return Colors.ramai;
+    case 'Hampir Penuh': return Colors.hampirPenuh;
+    case 'Penuh':       return Colors.penuh;
+    default:            return Colors.textSecondary;
   }
 }
 
 /** Returns background color for status badge */
 export function getStatusBgColor(status: ParkingStatus): string {
   switch (status) {
-    case 'AVAILABLE': return Colors.availableBg;
-    case 'BUSY':      return Colors.busyBg;
-    case 'NEAR FULL': return Colors.nearFullBg;
-    case 'FULL':      return Colors.fullBg;
-    default:          return Colors.borderLight;
+    case 'Sepi':        return Colors.sepiBg;
+    case 'Sedang':      return Colors.sedangBg;
+    case 'Ramai':       return Colors.ramaiBg;
+    case 'Hampir Penuh': return Colors.hampirPenuhBg;
+    case 'Penuh':       return Colors.penuhBg;
+    default:            return Colors.borderLight;
   }
 }
 
-/** Returns a simple text indicator for status (no emoji) */
+/** Returns emoji icon for status (screen-reader friendly via accessibilityLabel) */
 export function getStatusIcon(status: ParkingStatus): string {
   switch (status) {
-    case 'AVAILABLE': return '✓';
-    case 'BUSY':      return '~';
-    case 'NEAR FULL': return '!';
-    case 'FULL':      return '✕';
-    default:          return '-';
+    case 'Sepi':        return '🟢';
+    case 'Sedang':      return '🔵';
+    case 'Ramai':       return '🟡';
+    case 'Hampir Penuh': return '🟠';
+    case 'Penuh':       return '🔴';
+    default:            return '⚪';
   }
 }
 
 /** Returns accessibility label for status (for screen readers) */
 export function getStatusA11yLabel(status: ParkingStatus): string {
   switch (status) {
-    case 'AVAILABLE': return 'Status: Tersedia. Area parkir masih sangat tersedia.';
-    case 'BUSY':      return 'Status: Sedang Sibuk. Area parkir cukup tersedia.';
-    case 'NEAR FULL': return 'Status: Hampir Penuh. Segera cari alternatif.';
-    case 'FULL':      return 'Status: Penuh. Tidak ada slot tersedia.';
-    default:          return 'Status tidak diketahui.';
+    case 'Sepi':        return 'Status: Sepi. Area parkir masih sangat tersedia.';
+    case 'Sedang':      return 'Status: Sedang. Area parkir cukup tersedia.';
+    case 'Ramai':       return 'Status: Ramai. Area parkir mulai padat.';
+    case 'Hampir Penuh': return 'Status: Hampir Penuh. Segera cari alternatif.';
+    case 'Penuh':       return 'Status: Penuh. Tidak ada slot tersedia.';
+    default:            return 'Status tidak diketahui.';
   }
 }
 
 /** Returns bar color for occupancy bar */
 export function getOccupancyBarColor(percent: number): string {
-  if (percent <= 50) return Colors.available;
-  if (percent <= 79) return Colors.busy;
-  if (percent <= 97) return Colors.nearFull;
-  return Colors.full;
+  if (percent <= 40) return Colors.success;
+  if (percent <= 60) return Colors.info;
+  if (percent <= 80) return Colors.warning;
+  if (percent <= 95) return Colors.hampirPenuh;
+  return Colors.danger;
 }
 
 /** Returns whether an area needs an alert */

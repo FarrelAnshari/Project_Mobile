@@ -46,8 +46,8 @@ export default function ParkingMap({ areas, onMarkerPress }: Props) {
     <View style={styles.wrapper}>
       {/* Map header */}
       <View style={styles.mapHeader}>
-        <Text style={styles.mapTitle}>Peta Parkir Kampus</Text>
-        <Text style={styles.mapSubtitle}>Tampilan visual — tanpa API key</Text>
+        <Text style={styles.mapTitle}>🗺️ Peta Parkir Kampus</Text>
+        <Text style={styles.mapSubtitle}>Visual — tanpa API key</Text>
       </View>
 
       {/* Map canvas */}
@@ -63,7 +63,7 @@ export default function ParkingMap({ areas, onMarkerPress }: Props) {
 
         {/* Campus label */}
         <View style={styles.campusLabel}>
-          <Text style={styles.campusLabelText}>Kampus</Text>
+          <Text style={styles.campusLabelText}>🏫 Kampus</Text>
         </View>
 
         {/* Parking markers */}
@@ -80,8 +80,8 @@ export default function ParkingMap({ areas, onMarkerPress }: Props) {
               style={[
                 styles.marker,
                 {
-                  left: x - 18,
-                  top: y - 18,
+                  left: x - 16,
+                  top: y - 16,
                   borderColor: statusColor,
                   backgroundColor: isSelected ? statusColor : Colors.surface,
                 },
@@ -92,7 +92,6 @@ export default function ParkingMap({ areas, onMarkerPress }: Props) {
               accessibilityRole="button"
               accessibilityLabel={`${area.name}. Status: ${area.status}. ${area.available} slot tersedia.`}
               accessibilityHint="Ketuk untuk melihat info parkir ini"
-              hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
             >
               <Text
                 style={[
@@ -100,7 +99,7 @@ export default function ParkingMap({ areas, onMarkerPress }: Props) {
                   { color: isSelected ? Colors.white : statusColor },
                 ]}
               >
-                {area.id}
+                {percent}%
               </Text>
             </TouchableOpacity>
           );
@@ -117,13 +116,9 @@ export default function ParkingMap({ areas, onMarkerPress }: Props) {
           <View
             style={[styles.popup, Shadow.md, { borderLeftColor: color }]}
             accessibilityRole="none"
-            accessibilityLabel={`Info: ${selectedArea.name}. ${percent} persen terisi. ${selectedArea.available} slot tersedia. Status: ${selectedArea.status}.`}
+            accessibilityLabel={`Info: ${selectedArea.name}. ${percent} persen terisi. ${selectedArea.available} slot tersedia.`}
           >
-            <View style={styles.popupHeader}>
-              <Text style={styles.popupName}>{selectedArea.name}</Text>
-              <View style={[styles.popupStatusDot, { backgroundColor: color }]} />
-              <Text style={[styles.popupStatus, { color }]}>{selectedArea.status}</Text>
-            </View>
+            <Text style={[styles.popupName, { color }]}>{selectedArea.name}</Text>
             <Text style={styles.popupDetails}>
               {selectedArea.occupied} / {selectedArea.capacity} kendaraan · {percent}%
             </Text>
@@ -134,16 +129,16 @@ export default function ParkingMap({ areas, onMarkerPress }: Props) {
         );
       })()}
 
-      {/* Legend — shows text labels + color dots for non-color-only info */}
-      <View style={styles.legend}>
-        <Text style={styles.legendTitle}>Keterangan:</Text>
+      {/* Legend */}
+      <View style={styles.legend} accessibilityElementsHidden>
         {[
-          { label: 'AVAILABLE', color: Colors.available },
-          { label: 'BUSY', color: Colors.busy },
-          { label: 'NEAR FULL', color: Colors.nearFull },
-          { label: 'FULL', color: Colors.full },
+          { label: 'Sepi', color: Colors.sepi },
+          { label: 'Sedang', color: Colors.sedang },
+          { label: 'Ramai', color: Colors.ramai },
+          { label: 'Hampir Penuh', color: Colors.hampirPenuh },
+          { label: 'Penuh', color: Colors.penuh },
         ].map(({ label, color }) => (
-          <View key={label} style={styles.legendItem} accessible accessibilityLabel={label}>
+          <View key={label} style={styles.legendItem}>
             <View style={[styles.legendDot, { backgroundColor: color }]} />
             <Text style={styles.legendLabel}>{label}</Text>
           </View>
@@ -158,8 +153,6 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.surface,
     borderRadius: BorderRadius.lg,
     overflow: 'hidden',
-    borderWidth: 1,
-    borderColor: Colors.border,
   },
   mapHeader: {
     flexDirection: 'row',
@@ -185,8 +178,6 @@ const styles = StyleSheet.create({
     margin: Spacing.sm,
     borderRadius: BorderRadius.md,
     overflow: 'hidden',
-    borderWidth: 1,
-    borderColor: '#C7D7F5',
   },
   gridLine1: {
     position: 'absolute',
@@ -208,10 +199,6 @@ const styles = StyleSheet.create({
     position: 'absolute',
     top: Spacing.sm,
     left: Spacing.sm,
-    backgroundColor: Colors.surface + 'CC',
-    paddingHorizontal: 6,
-    paddingVertical: 2,
-    borderRadius: 4,
   },
   campusLabelText: {
     fontSize: FontSize.xs,
@@ -226,13 +213,14 @@ const styles = StyleSheet.create({
     borderWidth: 2,
     alignItems: 'center',
     justifyContent: 'center',
+    // minimum touch target via hitSlop
   },
   markerSelected: {
-    transform: [{ scale: 1.2 }],
+    transform: [{ scale: 1.25 }],
     zIndex: 10,
   },
   markerText: {
-    fontSize: FontSize.sm,
+    fontSize: 10,
     fontWeight: FontWeight.bold,
   },
   popup: {
@@ -242,28 +230,11 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.surface,
     borderRadius: BorderRadius.md,
     borderLeftWidth: 4,
-    borderWidth: 1,
-    borderColor: Colors.border,
-  },
-  popupHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: Spacing.xs,
-    marginBottom: 4,
   },
   popupName: {
     fontSize: FontSize.md,
     fontWeight: FontWeight.bold,
-    color: Colors.textPrimary,
-  },
-  popupStatusDot: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-  },
-  popupStatus: {
-    fontSize: FontSize.xs,
-    fontWeight: FontWeight.bold,
+    marginBottom: 2,
   },
   popupDetails: {
     fontSize: FontSize.sm,
@@ -283,12 +254,6 @@ const styles = StyleSheet.create({
     paddingVertical: Spacing.sm,
     borderTopWidth: 1,
     borderTopColor: Colors.borderLight,
-    alignItems: 'center',
-  },
-  legendTitle: {
-    fontSize: FontSize.xs,
-    color: Colors.textTertiary,
-    fontWeight: FontWeight.medium,
   },
   legendItem: {
     flexDirection: 'row',
@@ -303,6 +268,5 @@ const styles = StyleSheet.create({
   legendLabel: {
     fontSize: FontSize.xs,
     color: Colors.textSecondary,
-    fontWeight: FontWeight.medium,
   },
 });
