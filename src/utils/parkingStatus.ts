@@ -20,11 +20,10 @@ import { ParkingStatus } from '../data/parkingData';
  * 96–100% = Penuh
  */
 export function getStatusFromOccupancy(occupancyPercent: number): ParkingStatus {
-  if (occupancyPercent <= 40) return 'Sepi';
-  if (occupancyPercent <= 60) return 'Sedang';
-  if (occupancyPercent <= 80) return 'Ramai';
-  if (occupancyPercent <= 95) return 'Hampir Penuh';
-  return 'Penuh';
+  if (occupancyPercent <= 50) return 'AVAILABLE';
+  if (occupancyPercent <= 79) return 'BUSY';
+  if (occupancyPercent <= 97) return 'NEAR FULL';
+  return 'FULL';
 }
 
 export function getOccupancyPercent(occupied: number, capacity: number): number {
@@ -35,61 +34,102 @@ export function getOccupancyPercent(occupied: number, capacity: number): number 
 /** Returns color associated with the parking status */
 export function getStatusColor(status: ParkingStatus): string {
   switch (status) {
-    case 'Sepi':        return Colors.sepi;
-    case 'Sedang':      return Colors.sedang;
-    case 'Ramai':       return Colors.ramai;
-    case 'Hampir Penuh': return Colors.hampirPenuh;
-    case 'Penuh':       return Colors.penuh;
-    default:            return Colors.textSecondary;
+    case 'AVAILABLE':
+    case 'Sepi':
+      return Colors.available ?? Colors.success;
+    case 'BUSY':
+    case 'Sedang':
+    case 'Ramai':
+      return Colors.busy ?? Colors.warning;
+    case 'NEAR FULL':
+    case 'Hampir Penuh':
+      return Colors.nearFull ?? Colors.danger;
+    case 'FULL':
+    case 'Penuh':
+      return Colors.full ?? Colors.danger;
+    default:
+      return Colors.textSecondary;
   }
 }
 
 /** Returns background color for status badge */
 export function getStatusBgColor(status: ParkingStatus): string {
   switch (status) {
-    case 'Sepi':        return Colors.sepiBg;
-    case 'Sedang':      return Colors.sedangBg;
-    case 'Ramai':       return Colors.ramaiBg;
-    case 'Hampir Penuh': return Colors.hampirPenuhBg;
-    case 'Penuh':       return Colors.penuhBg;
-    default:            return Colors.borderLight;
+    case 'AVAILABLE':
+    case 'Sepi':
+      return Colors.availableBg ?? Colors.successBg;
+    case 'BUSY':
+    case 'Sedang':
+    case 'Ramai':
+      return Colors.busyBg ?? Colors.warningBg;
+    case 'NEAR FULL':
+    case 'Hampir Penuh':
+      return Colors.nearFullBg ?? Colors.dangerBg;
+    case 'FULL':
+    case 'Penuh':
+      return Colors.fullBg ?? Colors.dangerBg;
+    default:
+      return Colors.borderLight;
   }
 }
 
-/** Returns emoji icon for status (screen-reader friendly via accessibilityLabel) */
+/** Returns indicator icon for status */
 export function getStatusIcon(status: ParkingStatus): string {
   switch (status) {
-    case 'Sepi':        return '🟢';
-    case 'Sedang':      return '🔵';
-    case 'Ramai':       return '🟡';
-    case 'Hampir Penuh': return '🟠';
-    case 'Penuh':       return '🔴';
-    default:            return '⚪';
+    case 'AVAILABLE':
+      return '✓';
+    case 'BUSY':
+      return '~';
+    case 'NEAR FULL':
+      return '!';
+    case 'FULL':
+      return '✕';
+    case 'Sepi':
+      return '🟢';
+    case 'Sedang':
+      return '🔵';
+    case 'Ramai':
+      return '🟡';
+    case 'Hampir Penuh':
+      return '🟠';
+    case 'Penuh':
+      return '🔴';
+    default:
+      return '-';
   }
 }
 
 /** Returns accessibility label for status (for screen readers) */
 export function getStatusA11yLabel(status: ParkingStatus): string {
   switch (status) {
-    case 'Sepi':        return 'Status: Sepi. Area parkir masih sangat tersedia.';
-    case 'Sedang':      return 'Status: Sedang. Area parkir cukup tersedia.';
-    case 'Ramai':       return 'Status: Ramai. Area parkir mulai padat.';
-    case 'Hampir Penuh': return 'Status: Hampir Penuh. Segera cari alternatif.';
-    case 'Penuh':       return 'Status: Penuh. Tidak ada slot tersedia.';
-    default:            return 'Status tidak diketahui.';
+    case 'AVAILABLE':
+    case 'Sepi':
+      return 'Status: Tersedia / Sepi. Area parkir masih sangat tersedia.';
+    case 'BUSY':
+    case 'Sedang':
+    case 'Ramai':
+      return 'Status: Sibuk / Ramai. Area parkir cukup padat.';
+    case 'NEAR FULL':
+    case 'Hampir Penuh':
+      return 'Status: Hampir Penuh. Segera cari alternatif.';
+    case 'FULL':
+    case 'Penuh':
+      return 'Status: Penuh. Tidak ada slot tersedia.';
+    default:
+      return `Status: ${status}`;
   }
 }
 
 /** Returns bar color for occupancy bar */
 export function getOccupancyBarColor(percent: number): string {
-  if (percent <= 40) return Colors.success;
-  if (percent <= 60) return Colors.info;
-  if (percent <= 80) return Colors.warning;
-  if (percent <= 95) return Colors.hampirPenuh;
-  return Colors.danger;
+  if (percent <= 50) return Colors.available ?? Colors.success;
+  if (percent <= 79) return Colors.busy ?? Colors.warning;
+  if (percent <= 97) return Colors.nearFull ?? Colors.danger;
+  return Colors.full ?? Colors.danger;
 }
 
 /** Returns whether an area needs an alert */
 export function needsAlert(occupancyPercent: number): boolean {
   return occupancyPercent >= 80;
 }
+

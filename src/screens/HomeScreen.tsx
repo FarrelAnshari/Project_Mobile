@@ -1,4 +1,4 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useEffect } from 'react';
 import {
   View,
   Text,
@@ -8,12 +8,13 @@ import {
   StyleSheet,
   SafeAreaView,
   StatusBar,
-  Animated,
+  ActivityIndicator,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useAuth } from '../context/AuthContext';
-import { parkingAreas, getCampusStats, ParkingArea } from '../data/parkingData';
-import { predictionDataToday } from '../data/predictionData';
+import { ParkingArea } from '../models/parking';
+import { getCampusStats } from '../data/parkingData';
+import { getParkingAreas, getDemoParkingAreas, ParkingApiError } from '../services/parkingApi';
 import { getRecommendations } from '../utils/recommendation';
 import { getOccupancyPercent, needsAlert } from '../utils/parkingStatus';
 import ParkingCard from '../components/ParkingCard';
@@ -32,23 +33,6 @@ import {
 import { useResponsive } from '../utils/responsive';
 import { Ionicons } from '@expo/vector-icons';
 
-// Simulate small random variance on refresh
-function simulateRefresh(areas: ParkingArea[]): ParkingArea[] {
-  return areas.map((area) => {
-    const delta = Math.round((Math.random() - 0.5) * 4);
-    const newOccupied = Math.max(0, Math.min(area.capacity, area.occupied + delta));
-    const newAvailable = area.capacity - newOccupied;
-    const percent = Math.round((newOccupied / area.capacity) * 100);
-    return {
-      ...area,
-      occupied: newOccupied,
-      available: newAvailable,
-      status: getStatusFromOccupancy(percent),
-      lastUpdated: 'Baru diperbarui',
-    };
-  });
-}
-
 // Get greeting based on time of day
 function getGreeting(): string {
   const hour = new Date().getHours();
@@ -62,30 +46,67 @@ export default function HomeScreen() {
   const { width, isSmall, isWide, cardWidth, horizontalPadding } = useResponsive();
   const { user } = useAuth();
   const router = useRouter();
-  const [areas, setAreas] = useState<ParkingArea[]>(parkingAreas);
+
+  // API Data & Loading/Error States
+  const [areas, setAreas] = useState<ParkingArea[]>([]);
+  const [loading, setLoading] = useState<boolean>(true);
+  const [error, setError] = useState<string | null>(null);
   const [refreshing, setRefreshing] = useState(false);
-  const [lastRefreshed, setLastRefreshed] = useState('2 menit lalu');
-  const [dismissedAlerts, setDismissedAlerts] = useState<number[]>([]);
+  const [lastRefreshed, setLastRefreshed] = useState('Memuat...');
+  const [dismissedAlerts, setDismissedAlerts] = useState<string[]>([]);
 
   const firstName = user?.name?.split(' ')[0] ?? 'Mahasiswa';
+
+  // Fetch parking areas from REST API
+  const fetchParkingData = useCallback(async (isRefresh = false) => {
+    if (isRefresh) {
+      setRefreshing(true);
+    } else {
+      setLoading(true);
+    }
+    setError(null);
+
+    try {
+      const data = await getParkingAreas();
+      setAreas(data);
+      setLastRefreshed('Baru saja');
+    } catch (err: unknown) {
+      const message =
+        err instanceof ParkingApiError
+          ? err.message
+          : 'Gagal memuat data parkir dari server.';
+      setError(message);
+    } finally {
+      setLoading(false);
+      setRefreshing(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    fetchParkingData();
+  }, [fetchParkingData]);
+
+  const onRefresh = useCallback(() => {
+    fetchParkingData(true);
+  }, [fetchParkingData]);
+
+  // Fallback demo data loader if REST API backend server is offline
+  const handleLoadDemoData = () => {
+    const demoData = getDemoParkingAreas();
+    setAreas(demoData);
+    setError(null);
+    setLastRefreshed('Demo API');
+  };
 
   const stats = getCampusStats(areas);
   const recommendations = getRecommendations(areas, 1);
   const alertAreas = areas.filter(
     (a) =>
-      needsAlert(getOccupancyPercent(a.occupied, a.capacity)) &&
+      needsAlert(typeof a.occupancy === 'number' ? a.occupancy : getOccupancyPercent(a.occupied, a.capacity)) &&
       !dismissedAlerts.includes(a.id)
   );
-  const bestAlternative = getRecommendations(areas, 1)[0]?.area;
+  const bestAlternative = recommendations[0]?.area;
   const campusStatus = getStatusFromOccupancy(stats.occupancyPercent);
-
-  const onRefresh = useCallback(async () => {
-    setRefreshing(true);
-    await new Promise((r) => setTimeout(r, 800));
-    setAreas(simulateRefresh(areas));
-    setLastRefreshed('Baru saja');
-    setRefreshing(false);
-  }, [areas]);
 
   // Navigate to parking tab
   const navigateToParking = () => {
@@ -113,7 +134,7 @@ export default function HomeScreen() {
   };
 
   // Dismiss notification
-  const handleDismissAlert = (areaId: number) => {
+  const handleDismissAlert = (areaId: string) => {
     setDismissedAlerts((prev) => [...prev, areaId]);
   };
 
@@ -177,6 +198,45 @@ export default function HomeScreen() {
         }
         showsVerticalScrollIndicator={false}
       >
+        {/* ERROR STATE BANNER */}
+        {error && (
+          <View style={styles.errorBanner}>
+            <View style={styles.errorHeaderRow}>
+              <Ionicons name="alert-circle" size={22} color={Colors.danger} />
+              <View style={styles.errorTextContainer}>
+                <Text style={styles.errorTitle}>Gagal Terhubung ke REST API</Text>
+                <Text style={styles.errorDesc}>{error}</Text>
+              </View>
+            </View>
+            <View style={styles.errorBtnRow}>
+              <TouchableOpacity
+                style={styles.retryBtn}
+                onPress={() => fetchParkingData()}
+                accessibilityLabel="Coba lagi mengambil data API"
+              >
+                <Ionicons name="refresh" size={15} color={Colors.white} />
+                <Text style={styles.retryBtnText}>Coba Lagi</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={styles.demoBtn}
+                onPress={handleLoadDemoData}
+                accessibilityLabel="Muat data demo API"
+              >
+                <Ionicons name="cloud-download-outline" size={15} color={Colors.primary} />
+                <Text style={styles.demoBtnText}>Muat Demo API</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        )}
+
+        {/* LOADING STATE INDICATOR */}
+        {loading && areas.length === 0 && (
+          <View style={styles.loadingBox}>
+            <ActivityIndicator size="small" color={Colors.primary} />
+            <Text style={styles.loadingBoxText}>Mengambil data parkir dari REST API...</Text>
+          </View>
+        )}
+
         {/* OVERLAPPING CAMPUS STATUS CARD */}
         <View style={styles.overlappingCard}>
           <View style={styles.cardHeaderRow}>
@@ -187,24 +247,48 @@ export default function HomeScreen() {
             </TouchableOpacity>
           </View>
           
-          <View style={styles.campusOccupancyRow}>
-             <View style={styles.campusOccupancyLeft}>
-                <Text style={styles.campusPercent}>{stats.occupancyPercent}%</Text>
-                <Text style={styles.campusPercentLabel}>Terisi</Text>
-             </View>
-             <View style={styles.campusDivider} />
-             <View style={styles.campusOccupancyRight}>
-                <Text style={styles.campusAvailableText}>{stats.totalAvailable}</Text>
-                <Text style={styles.campusCapacityText}>Slot tersedia dari {stats.totalCapacity}</Text>
-             </View>
-          </View>
-          
-          <View style={{ marginTop: Spacing.md, marginBottom: Spacing.sm }}>
-             <OccupancyBar percent={stats.occupancyPercent} height={6} />
-          </View>
-          <View style={{ alignSelf: 'flex-start', marginTop: Spacing.sm }}>
-             <StatusBadge status={campusStatus} size="sm" />
-          </View>
+          {error && areas.length === 0 ? (
+            <View>
+              <View style={styles.campusOccupancyRow}>
+                <View style={styles.campusOccupancyLeft}>
+                  <Text style={[styles.campusPercent, { color: Colors.danger }]}>--</Text>
+                  <Text style={styles.campusPercentLabel}>Tidak Tersedia</Text>
+                </View>
+                <View style={styles.campusDivider} />
+                <View style={styles.campusOccupancyRight}>
+                  <Text style={[styles.campusAvailableText, { color: Colors.textSecondary }]}>--</Text>
+                  <Text style={styles.campusCapacityText}>Gagal memuat kapasitas parkir</Text>
+                </View>
+              </View>
+              <View style={{ alignSelf: 'flex-start', marginTop: Spacing.md }}>
+                <View style={styles.apiErrorBadge}>
+                  <Ionicons name="cloud-offline-outline" size={14} color={Colors.danger} />
+                  <Text style={styles.apiErrorBadgeText}>Koneksi API Gagal</Text>
+                </View>
+              </View>
+            </View>
+          ) : (
+            <>
+              <View style={styles.campusOccupancyRow}>
+                 <View style={styles.campusOccupancyLeft}>
+                    <Text style={styles.campusPercent}>{stats.occupancyPercent}%</Text>
+                    <Text style={styles.campusPercentLabel}>Terisi</Text>
+                 </View>
+                 <View style={styles.campusDivider} />
+                 <View style={styles.campusOccupancyRight}>
+                    <Text style={styles.campusAvailableText}>{stats.totalAvailable}</Text>
+                    <Text style={styles.campusCapacityText}>Slot tersedia dari {stats.totalCapacity}</Text>
+                 </View>
+              </View>
+              
+              <View style={{ marginTop: Spacing.md, marginBottom: Spacing.sm }}>
+                 <OccupancyBar percent={stats.occupancyPercent} height={6} />
+              </View>
+              <View style={{ alignSelf: 'flex-start', marginTop: Spacing.sm }}>
+                 <StatusBadge status={campusStatus} size="sm" />
+              </View>
+            </>
+          )}
         </View>
 
         {/* QUICK ACTIONS */}
@@ -278,17 +362,41 @@ export default function HomeScreen() {
               <Text style={styles.viewAllText}>Lihat Semua →</Text>
             </TouchableOpacity>
           </View>
-          <View style={isWide ? { flexDirection: 'row', flexWrap: 'wrap', gap: 16 } : undefined}>
-            {areas.slice(0, isWide ? 6 : 3).map((area) => (
-              <ParkingCard
-                key={area.id}
-                area={area}
-                onPress={handleCardPress}
-                compact={false}
-                style={isWide ? { width: cardWidth } : undefined}
+          {areas.length === 0 && !loading ? (
+            <View style={styles.emptyContainer}>
+              <Ionicons
+                name={error ? "cloud-offline-outline" : "car-outline"}
+                size={36}
+                color={error ? Colors.danger : Colors.textTertiary}
               />
-            ))}
-          </View>
+              <Text style={styles.emptyText}>
+                {error
+                  ? 'Data area parkir tidak tersedia karena koneksi API gagal.'
+                  : 'Tidak ada data area parkir.'}
+              </Text>
+              {error && (
+                <TouchableOpacity
+                  style={[styles.retryBtn, { marginTop: Spacing.sm }]}
+                  onPress={() => fetchParkingData()}
+                >
+                  <Ionicons name="refresh" size={15} color={Colors.white} />
+                  <Text style={styles.retryBtnText}>Coba Lagi</Text>
+                </TouchableOpacity>
+              )}
+            </View>
+          ) : (
+            <View style={isWide ? { flexDirection: 'row', flexWrap: 'wrap', gap: 16 } : undefined}>
+              {areas.slice(0, isWide ? 6 : 3).map((area) => (
+                <ParkingCard
+                  key={area.id}
+                  area={area}
+                  onPress={handleCardPress}
+                  compact={false}
+                  style={isWide ? { width: cardWidth } : undefined}
+                />
+              ))}
+            </View>
+          )}
           {areas.length > 3 && (
             <TouchableOpacity
               style={styles.showMoreBtn}
@@ -588,4 +696,117 @@ const styles = StyleSheet.create({
   bottomSpacer: {
     height: 32,
   },
+  // Error & Loading States
+  errorBanner: {
+    backgroundColor: Colors.dangerBg,
+    borderRadius: BorderRadius.lg,
+    padding: Spacing.md,
+    borderWidth: 1,
+    borderColor: Colors.danger + '40',
+    marginBottom: Spacing.lg,
+  },
+  errorHeaderRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: Spacing.sm,
+  },
+  errorTextContainer: {
+    flex: 1,
+  },
+  errorTitle: {
+    fontSize: FontSize.sm,
+    fontWeight: FontWeight.bold,
+    color: Colors.danger,
+    marginBottom: 2,
+  },
+  errorDesc: {
+    fontSize: FontSize.xs,
+    color: Colors.textSecondary,
+    lineHeight: 18,
+  },
+  errorBtnRow: {
+    flexDirection: 'row',
+    gap: Spacing.sm,
+    marginTop: Spacing.sm,
+  },
+  retryBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    backgroundColor: Colors.danger,
+    paddingHorizontal: Spacing.md,
+    paddingVertical: 6,
+    borderRadius: BorderRadius.sm,
+  },
+  retryBtnText: {
+    fontSize: FontSize.xs,
+    color: Colors.white,
+    fontWeight: FontWeight.semibold,
+  },
+  demoBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    backgroundColor: Colors.surface,
+    paddingHorizontal: Spacing.md,
+    paddingVertical: 6,
+    borderRadius: BorderRadius.sm,
+    borderWidth: 1,
+    borderColor: Colors.border,
+  },
+  demoBtnText: {
+    fontSize: FontSize.xs,
+    color: Colors.primary,
+    fontWeight: FontWeight.semibold,
+  },
+  loadingBox: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: Spacing.sm,
+    paddingVertical: Spacing.md,
+    marginBottom: Spacing.md,
+    backgroundColor: Colors.surface,
+    borderRadius: BorderRadius.lg,
+    borderWidth: 1,
+    borderColor: Colors.border,
+  },
+  loadingBoxText: {
+    fontSize: FontSize.xs,
+    color: Colors.textSecondary,
+    fontWeight: FontWeight.medium,
+  },
+  emptyContainer: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: Spacing.xl,
+    backgroundColor: Colors.surface,
+    borderRadius: BorderRadius.xl,
+    borderWidth: 1,
+    borderColor: Colors.border,
+    marginBottom: Spacing.lg,
+    gap: Spacing.sm,
+  },
+  emptyText: {
+    fontSize: FontSize.sm,
+    color: Colors.textSecondary,
+    textAlign: 'center',
+  },
+  apiErrorBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    backgroundColor: Colors.dangerBg,
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    borderRadius: BorderRadius.full,
+    borderWidth: 1,
+    borderColor: Colors.danger + '30',
+  },
+  apiErrorBadgeText: {
+    fontSize: FontSize.xs,
+    color: Colors.danger,
+    fontWeight: FontWeight.semibold,
+  },
 });
+

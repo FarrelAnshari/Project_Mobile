@@ -32,7 +32,7 @@ interface Props {
 
 export default function RecommendationCard({ recommendation, onPress }: Props) {
   const { area, reason } = recommendation;
-  const percent = getOccupancyPercent(area.occupied, area.capacity);
+  const percent = typeof area.occupancy === 'number' ? area.occupancy : getOccupancyPercent(area.occupied, area.capacity);
 
   return (
     <View

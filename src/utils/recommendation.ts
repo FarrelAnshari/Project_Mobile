@@ -24,8 +24,10 @@ export interface Recommendation {
  * Prototype logic — replace with ML model in Sprint 02.
  */
 function calculateScore(area: ParkingArea): number {
-  const availabilityScore = (area.available / area.capacity) * 60; // 60% weight
-  const occupancyScore = (1 - area.occupied / area.capacity) * 40; // 40% weight
+  const cap = Math.max(1, area.capacity);
+  const availabilityScore = (area.available / cap) * 60; // 60% weight
+  const occupancyPercent = typeof area.occupancy === 'number' ? area.occupancy : (area.occupied / cap) * 100;
+  const occupancyScore = Math.max(0, (1 - occupancyPercent / 100)) * 40; // 40% weight
   return availabilityScore + occupancyScore;
 }
 
@@ -50,11 +52,11 @@ export function getRecommendations(
 
 /** Build a human-friendly reason string for the recommendation */
 function buildReason(area: ParkingArea): string {
-  const percent = Math.round((area.occupied / area.capacity) * 100);
-  if (percent <= 40) return `Sangat lengang — ${area.available} slot tersedia`;
-  if (percent <= 60) return `Cukup tersedia — ${area.available} slot tersedia`;
-  if (percent <= 80) return `${area.available} slot tersedia`;
-  return `Terbatas — hanya ${area.available} slot tersisa`;
+  const percent = typeof area.occupancy === 'number' ? area.occupancy : Math.round((area.occupied / (area.capacity || 1)) * 100);
+  if (percent <= 40) return `Sangat lengang — ${area.available} slot tersedia (${percent}% terisi)`;
+  if (percent <= 60) return `Cukup tersedia — ${area.available} slot tersedia (${percent}% terisi)`;
+  if (percent <= 80) return `${area.available} slot tersedia (${percent}% terisi)`;
+  return `Terbatas — hanya ${area.available} slot tersisa (${percent}% terisi)`;
 }
 
 /** Get top 1 recommendation as the "primary" suggestion */

@@ -35,7 +35,7 @@ interface Props {
 }
 
 export default function ParkingCard({ area, onPress, compact = false, style }: Props) {
-  const percent = getOccupancyPercent(area.occupied, area.capacity);
+  const percent = typeof area.occupancy === 'number' ? area.occupancy : getOccupancyPercent(area.occupied, area.capacity);
   const hasAlert = needsAlert(percent);
 
   return (
@@ -58,7 +58,7 @@ export default function ParkingCard({ area, onPress, compact = false, style }: P
           <Text style={styles.name} numberOfLines={1} ellipsizeMode="tail">
             {area.name}
           </Text>
-          <Text style={styles.updated}>{area.lastUpdated}</Text>
+          <Text style={styles.updated}>{area.lastUpdated || area.updated_at}</Text>
         </View>
         <StatusBadge status={area.status} size="sm" />
       </View>

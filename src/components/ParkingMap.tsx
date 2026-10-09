@@ -35,7 +35,7 @@ export default function ParkingMap({ areas, onMarkerPress }: Props) {
   const { width } = useWindowDimensions();
   const mapWidth = Math.min(width - Spacing.lg * 2, 860);
   const mapHeight = width > 768 ? 260 : 220;
-  const [selectedId, setSelectedId] = useState<number | null>(null);
+  const [selectedId, setSelectedId] = useState<string | null>(null);
 
   const handleMarkerPress = (area: ParkingArea) => {
     setSelectedId(area.id === selectedId ? null : area.id);
@@ -68,9 +68,10 @@ export default function ParkingMap({ areas, onMarkerPress }: Props) {
 
         {/* Parking markers */}
         {areas.map((area) => {
+          if (!area.coordinates) return null;
           const x = area.coordinates.x * mapWidth;
           const y = area.coordinates.y * mapHeight;
-          const percent = getOccupancyPercent(area.occupied, area.capacity);
+          const percent = typeof area.occupancy === 'number' ? area.occupancy : getOccupancyPercent(area.occupied, area.capacity);
           const statusColor = getStatusColor(area.status);
           const isSelected = area.id === selectedId;
 
@@ -110,7 +111,7 @@ export default function ParkingMap({ areas, onMarkerPress }: Props) {
       {selectedId && (() => {
         const selectedArea = areas.find((a) => a.id === selectedId);
         if (!selectedArea) return null;
-        const percent = getOccupancyPercent(selectedArea.occupied, selectedArea.capacity);
+        const percent = typeof selectedArea.occupancy === 'number' ? selectedArea.occupancy : getOccupancyPercent(selectedArea.occupied, selectedArea.capacity);
         const color = getStatusColor(selectedArea.status);
         return (
           <View

@@ -50,6 +50,16 @@ export const Colors = {
   infoBg: '#E0F2FE',
 
   // Parking status colors
+  available: '#16A34A',
+  availableBg: '#DCFCE7',
+  busy: '#F59E0B',
+  busyBg: '#FEF3C7',
+  nearFull: '#EA580C',
+  nearFullBg: '#FFF7ED',
+  full: '#DC2626',
+  fullBg: '#FEE2E2',
+
+  // Legacy status colors
   sepi: '#16A34A',    // Sepi — green
   sepiBg: '#DCFCE7',
   sedang: '#0EA5E9',  // Sedang — blue
