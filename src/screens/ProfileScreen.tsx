@@ -24,6 +24,7 @@ import {
   Platform,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { useRouter } from 'expo-router';
 import {
   Colors,
   Spacing,
@@ -54,6 +55,7 @@ interface A11ySettings {
 // Screen
 // ============================================================
 export default function ProfileScreen() {
+  const router = useRouter();
   const { horizontalPadding } = useResponsive();
   const { user, logout, updateProfile, changePassword } = useAuth();
 
@@ -87,12 +89,14 @@ export default function ProfileScreen() {
   // Status sesi modal
   const [sessionModalVisible, setSessionModalVisible] = useState(false);
 
-  // Logout confirmation
+  // Task 03: Logout confirmation & redirect ke /login
   const handleLogout = useCallback(() => {
     if (Platform.OS === 'web') {
       const confirmed = window.confirm('Keluar dari PARKIN?\nKamu perlu login kembali untuk mengakses aplikasi.');
       if (confirmed) {
-        logout();
+        logout().then(() => {
+          router.replace('/login' as any);
+        });
       }
     } else {
       Alert.alert(
@@ -105,12 +109,13 @@ export default function ProfileScreen() {
             style: 'destructive',
             onPress: async () => {
               await logout();
+              router.replace('/login' as any);
             },
           },
         ]
       );
     }
-  }, [logout]);
+  }, [logout, router]);
 
   // Save notification settings to AsyncStorage
   async function handleNotifChange(

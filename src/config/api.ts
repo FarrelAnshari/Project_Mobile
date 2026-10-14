@@ -18,6 +18,8 @@ export const API_CONFIG = {
 
   /** API Endpoints */
   ENDPOINTS: {
+    LOGIN: '/login',
+    PROGRAMS: '/programs',
     TEST_CONNECTIVITY: '/posts/1',
     PARKING_AREAS: '/parking-areas',
     PARKING_AREA_DETAIL: (id: string) => `/parking-areas/${id}`,

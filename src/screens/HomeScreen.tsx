@@ -1,37 +1,37 @@
-import React, { useState, useCallback, useEffect } from 'react';
-import {
-  View,
-  Text,
-  ScrollView,
-  TouchableOpacity,
-  RefreshControl,
-  StyleSheet,
-  SafeAreaView,
-  StatusBar,
-  ActivityIndicator,
-} from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
-import { useAuth } from '../context/AuthContext';
-import { ParkingArea } from '../models/parking';
-import { getCampusStats } from '../data/parkingData';
-import { getParkingAreas, getDemoParkingAreas, ParkingApiError } from '../services/parkingApi';
-import { getRecommendations } from '../utils/recommendation';
-import { getOccupancyPercent, needsAlert } from '../utils/parkingStatus';
-import ParkingCard from '../components/ParkingCard';
-import RecommendationCard from '../components/RecommendationCard';
+import { useCallback, useEffect, useState } from 'react';
+import {
+  ActivityIndicator,
+  RefreshControl,
+  SafeAreaView,
+  ScrollView,
+  StatusBar,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
+} from 'react-native';
 import NotificationCard from '../components/NotificationCard';
 import OccupancyBar from '../components/OccupancyBar';
+import ParkingCard from '../components/ParkingCard';
+import RecommendationCard from '../components/RecommendationCard';
 import StatusBadge from '../components/StatusBadge';
-import { getStatusFromOccupancy } from '../utils/parkingStatus';
+import ProgramsList from '../components/ProgramsList';
 import {
+  BorderRadius,
   Colors,
-  Spacing,
   FontSize,
   FontWeight,
-  BorderRadius,
+  Spacing,
 } from '../constants/theme';
+import { useAuth } from '../context/AuthContext';
+import { getCampusStats } from '../data/parkingData';
+import { ParkingArea } from '../models/parking';
+import { getDemoParkingAreas, getParkingAreas, ParkingApiError } from '../services/parkingApi';
+import { getOccupancyPercent, getStatusFromOccupancy, needsAlert } from '../utils/parkingStatus';
+import { getRecommendations } from '../utils/recommendation';
 import { useResponsive } from '../utils/responsive';
-import { Ionicons } from '@expo/vector-icons';
 
 // Get greeting based on time of day
 function getGreeting(): string {
@@ -141,7 +141,7 @@ export default function HomeScreen() {
   return (
     <View style={styles.container}>
       <StatusBar barStyle="light-content" backgroundColor={Colors.primary} />
-      
+
       {/* PURPLE HEADER SECTION */}
       <View style={styles.purpleHeader}>
         {/* Subtle Ambient Decorative Circles */}
@@ -167,7 +167,7 @@ export default function HomeScreen() {
                 <Ionicons name="person-outline" size={20} color={Colors.white} />
               </TouchableOpacity>
             </View>
-            
+
             <View style={styles.greetingRow}>
               <View style={styles.greetingTextContainer}>
                 <Text style={styles.greetingLabel}>{getGreeting()},</Text>
@@ -246,7 +246,7 @@ export default function HomeScreen() {
               <Text style={styles.refreshText}>{lastRefreshed}</Text>
             </TouchableOpacity>
           </View>
-          
+
           {error && areas.length === 0 ? (
             <View>
               <View style={styles.campusOccupancyRow}>
@@ -270,22 +270,22 @@ export default function HomeScreen() {
           ) : (
             <>
               <View style={styles.campusOccupancyRow}>
-                 <View style={styles.campusOccupancyLeft}>
-                    <Text style={styles.campusPercent}>{stats.occupancyPercent}%</Text>
-                    <Text style={styles.campusPercentLabel}>Terisi</Text>
-                 </View>
-                 <View style={styles.campusDivider} />
-                 <View style={styles.campusOccupancyRight}>
-                    <Text style={styles.campusAvailableText}>{stats.totalAvailable}</Text>
-                    <Text style={styles.campusCapacityText}>Slot tersedia dari {stats.totalCapacity}</Text>
-                 </View>
+                <View style={styles.campusOccupancyLeft}>
+                  <Text style={styles.campusPercent}>{stats.occupancyPercent}%</Text>
+                  <Text style={styles.campusPercentLabel}>Terisi</Text>
+                </View>
+                <View style={styles.campusDivider} />
+                <View style={styles.campusOccupancyRight}>
+                  <Text style={styles.campusAvailableText}>{stats.totalAvailable}</Text>
+                  <Text style={styles.campusCapacityText}>Slot tersedia dari {stats.totalCapacity}</Text>
+                </View>
               </View>
-              
+
               <View style={{ marginTop: Spacing.md, marginBottom: Spacing.sm }}>
-                 <OccupancyBar percent={stats.occupancyPercent} height={6} />
+                <OccupancyBar percent={stats.occupancyPercent} height={6} />
               </View>
               <View style={{ alignSelf: 'flex-start', marginTop: Spacing.sm }}>
-                 <StatusBadge status={campusStatus} size="sm" />
+                <StatusBadge status={campusStatus} size="sm" />
               </View>
             </>
           )}
@@ -412,7 +412,7 @@ export default function HomeScreen() {
         {recommendations.length > 0 && (
           <View style={styles.section}>
             <View style={styles.sectionHeaderRow}>
-               <Text style={styles.sectionTitle}>Rekomendasi</Text>
+              <Text style={styles.sectionTitle}>Rekomendasi</Text>
             </View>
             <RecommendationCard
               recommendation={recommendations[0]}
@@ -420,6 +420,14 @@ export default function HomeScreen() {
             />
           </View>
         )}
+
+        {/* SPRINT 04: PROTECTED PROGRAMS SECTION (GET /programs) */}
+        <View style={styles.section}>
+          <View style={styles.sectionHeaderRow}>
+            <Text style={styles.sectionTitle}>Program Kampus (Protected API)</Text>
+          </View>
+          <ProgramsList />
+        </View>
 
         <View style={styles.bottomSpacer} />
       </ScrollView>

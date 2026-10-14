@@ -14,8 +14,17 @@
  * → AuthContext dan UI tidak perlu diubah.
  */
 
+import { API_CONFIG } from '../config/api';
 import { saveData, getData, STORAGE_KEYS } from './asyncStorageService';
-import { saveSecureData, getSecureData, clearAllSecureData, SECURE_KEYS } from './secureStorageService';
+import {
+  saveSecureData,
+  getSecureData,
+  clearAllSecureData,
+  SECURE_KEYS,
+  setAccessToken,
+  getAccessToken,
+  deleteAccessToken,
+} from './secureStorageService';
 
 // ============================================================
 // Types
@@ -176,38 +185,94 @@ export async function register(input: RegisterInput): Promise<AuthResult> {
 }
 
 /**
- * Login user.
- * → Validasi email + password.
- * → Buat session dan simpan token ke SecureStore.
- * → Simpan profile ke AsyncStorage.
+ * Task 01 – Implement Token Authentication:
+ * 1. Mengirim POST request (email & password) ke endpoint /login.
+ * 2. Menerima respons berupa access_token (JWT).
+ * 3. Menyimpan access_token secara aman ke SecureStore (SecureStore.setItemAsync('access_token', token)).
+ * 4. Mengembalikan data profil user untuk mengupdate global state AuthContext.
  */
 export async function login(input: LoginInput): Promise<AuthResult> {
-  // Simulasi delay jaringan
-  await delay(1000);
+  const emailClean = input.email.trim();
+  const passwordClean = input.password;
+
+  // 1. Coba kirim POST request ke endpoint backend nyata jika tersedia
+  try {
+    const loginUrl = `${API_CONFIG.BASE_URL}${API_CONFIG.ENDPOINTS.LOGIN}`;
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 6000);
+
+    const response = await fetch(loginUrl, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Accept': 'application/json',
+      },
+      body: JSON.stringify({
+        email: emailClean,
+        password: passwordClean,
+      }),
+      signal: controller.signal,
+    });
+
+    clearTimeout(timeoutId);
+
+    if (response.ok) {
+      const data = await response.json();
+      // Terima respons access_token (JWT)
+      const token = data.access_token || data.token;
+      if (token) {
+        // Simpan access_token secara aman ke SecureStore (Task 01)
+        await setAccessToken(token);
+
+        const profile: UserProfile = data.user || {
+          id: data.userId || generateId(),
+          name: data.name || emailClean.split('@')[0],
+          email: emailClean,
+          createdAt: new Date().toISOString(),
+        };
+
+        // Simpan data profil non-sensitif ke AsyncStorage
+        await saveData<UserProfile>(STORAGE_KEYS.USER_PROFILE, profile);
+        return { success: true, user: profile };
+      }
+    } else if (response.status === 401 || response.status === 400) {
+      const errData = await response.json().catch(() => null);
+      return {
+        success: false,
+        error: errData?.message || 'Email atau password salah.',
+      };
+    }
+  } catch {
+    // Backend offline / network timeout / server belum aktif:
+    // Lanjutkan ke validasi demo offline agar mahasiswa tetap bisa demo & uji aplikasi.
+  }
+
+  // Fallback demo database lokal (AsyncStorage)
+  await delay(800);
 
   const users = await getUsers();
   const user = users.find(
-    (u) => u.email.toLowerCase() === input.email.toLowerCase()
+    (u) => u.email.toLowerCase() === emailClean.toLowerCase()
   );
 
   if (!user) {
     return { success: false, error: 'Email atau password salah.' };
   }
 
-  if (user.passwordHash !== hashPassword(input.password)) {
+  if (user.passwordHash !== hashPassword(passwordClean)) {
     return { success: false, error: 'Email atau password salah.' };
   }
 
-  // Buat session
+  // Buat mock JWT token
   const token = generateMockToken(user.id);
   const session: AuthSession = {
     userId: user.id,
     expiresAt: Date.now() + 7 * 24 * 60 * 60 * 1000, // 7 hari
   };
 
-  // Simpan token ke SecureStore (TIDAK di AsyncStorage)
-  await saveSecureData(SECURE_KEYS.ACCESS_TOKEN, token);
-  // Simpan session ke SecureStore
+  // Simpan access_token secara aman ke SecureStore (SecureStore.setItemAsync('access_token', token))
+  await setAccessToken(token);
+  // Simpan session expiry ke SecureStore
   await saveSecureData(SECURE_KEYS.SESSION, JSON.stringify(session));
 
   const profile: UserProfile = {
@@ -224,40 +289,54 @@ export async function login(input: LoginInput): Promise<AuthResult> {
 }
 
 /**
- * Cek apakah ada session yang valid.
- * → Ambil session dari SecureStore.
- * → Validasi expiry.
- * → Ambil profile dari AsyncStorage.
+ * Task 03 – Protect the PARKIN Session (Sesi Login Persisten):
+ * Saat aplikasi dibuka kembali, cek apakah access_token ada di SecureStore
+ * (SecureStore.getItemAsync('access_token')).
+ * Jika ada, kembalikan user profile agar langsung masuk ke halaman utama.
  */
 export async function restoreSession(): Promise<UserProfile | null> {
   try {
-    const sessionJson = await getSecureData(SECURE_KEYS.SESSION);
-    if (!sessionJson) return null;
-
-    const session: AuthSession = JSON.parse(sessionJson);
-
-    // Cek apakah session masih valid
-    if (Date.now() > session.expiresAt) {
-      await logout();
+    // 1. Ambil token dari SecureStore
+    const token = await getAccessToken();
+    if (!token) {
       return null;
     }
 
-    // Ambil profile dari AsyncStorage
+    // 2. Ambil profile dari AsyncStorage
     const profile = await getData<UserProfile>(STORAGE_KEYS.USER_PROFILE);
-    return profile;
-  } catch {
+    if (profile) {
+      return profile;
+    }
+
+    // Fallback profil default jika profile hilang di AsyncStorage tetapi token ada
+    return {
+      id: 'restored_user',
+      name: 'Pengguna PARKIN',
+      email: 'mahasiswa@parkin.campus.id',
+      createdAt: new Date().toISOString(),
+    };
+  } catch (error) {
+    console.warn('[authService] Gagal memulihkan sesi:', error);
     return null;
   }
 }
 
 /**
- * Logout: hapus semua data sensitif.
+ * Task 03 – Protect the PARKIN Session (Logout):
+ * 1. Menghapus token dari secure storage (SecureStore.deleteItemAsync('access_token'))
+ * 2. Menghapus data profile dan session
  */
 export async function logout(): Promise<void> {
-  // Hapus semua SecureStore data
-  await clearAllSecureData();
-  // Hapus profile dari AsyncStorage
-  await saveData(STORAGE_KEYS.USER_PROFILE, null);
+  try {
+    // Hapus access_token dari SecureStore (Task 03)
+    await deleteAccessToken();
+    // Hapus semua data sensitif sesi lainnya
+    await clearAllSecureData();
+    // Hapus data profile non-sensitif dari AsyncStorage
+    await saveData(STORAGE_KEYS.USER_PROFILE, null);
+  } catch (error) {
+    console.warn('[authService] Error saat logout:', error);
+  }
 }
 
 /**

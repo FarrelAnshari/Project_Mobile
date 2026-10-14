@@ -12,10 +12,10 @@
 import { Platform } from 'react-native';
 import * as SecureStore from 'expo-secure-store';
 
-// Keys yang digunakan di SecureStore
+// Keys yang digunakan di SecureStore sesuai spesifikasi Sprint 04
 export const SECURE_KEYS = {
   SESSION: 'parkin_session',
-  ACCESS_TOKEN: 'parkin_access_token',
+  ACCESS_TOKEN: 'access_token',
 } as const;
 
 function getWebStorage(): Storage | null {
@@ -103,4 +103,29 @@ export async function clearAllSecureData(): Promise<void> {
   await Promise.all(
     Object.values(SECURE_KEYS).map((key) => removeSecureData(key))
   );
+}
+
+// ============================================================
+// Sprint 04 Direct Token Helpers
+// ============================================================
+
+/**
+ * Task 01: Simpan access_token JWT ke SecureStore
+ */
+export async function setAccessToken(token: string): Promise<void> {
+  await saveSecureData(SECURE_KEYS.ACCESS_TOKEN, token);
+}
+
+/**
+ * Task 02 & 03: Ambil access_token dari SecureStore
+ */
+export async function getAccessToken(): Promise<string | null> {
+  return await getSecureData(SECURE_KEYS.ACCESS_TOKEN);
+}
+
+/**
+ * Task 03: Hapus access_token dari SecureStore
+ */
+export async function deleteAccessToken(): Promise<void> {
+  await removeSecureData(SECURE_KEYS.ACCESS_TOKEN);
 }

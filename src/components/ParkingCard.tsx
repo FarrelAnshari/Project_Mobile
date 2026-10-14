@@ -6,26 +6,25 @@
  * and a Detail button. Fully accessible.
  */
 
-import React from 'react';
+import { Ionicons } from '@expo/vector-icons';
 import {
-  View,
+  StyleSheet,
   Text,
   TouchableOpacity,
-  StyleSheet,
+  View,
 } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
-import { ParkingArea } from '../data/parkingData';
-import { getOccupancyPercent, needsAlert } from '../utils/parkingStatus';
-import StatusBadge from './StatusBadge';
-import OccupancyBar from './OccupancyBar';
 import {
+  BorderRadius,
   Colors,
-  Spacing,
   FontSize,
   FontWeight,
-  BorderRadius,
   Shadow,
+  Spacing,
 } from '../constants/theme';
+import { ParkingArea } from '../data/parkingData';
+import { getOccupancyPercent, needsAlert } from '../utils/parkingStatus';
+import OccupancyBar from './OccupancyBar';
+import StatusBadge from './StatusBadge';
 
 interface Props {
   area: ParkingArea;
@@ -68,10 +67,10 @@ export default function ParkingCard({ area, onPress, compact = false, style }: P
           <Text style={styles.percentText}>{percent}% <Text style={styles.percentSub}>Terisi</Text></Text>
           <Text style={styles.availableText}>{area.available} <Text style={styles.availableSub}>Slot Tersedia</Text></Text>
         </View>
-        
+
         {!compact && (
           <View style={styles.detailBtnIcon}>
-             <Ionicons name="chevron-forward" size={20} color={Colors.textTertiary} />
+            <Ionicons name="chevron-forward" size={20} color={Colors.textTertiary} />
           </View>
         )}
       </View>

@@ -29,6 +29,8 @@ import {
   AuthResult,
 } from '../services/authService';
 
+import { setOnUnauthorizedCallback } from '../services/apiClient';
+
 // ============================================================
 // Types
 // ============================================================
@@ -38,13 +40,17 @@ type AuthState = 'loading' | 'unauthenticated' | 'authenticated';
 interface AuthContextValue {
   /** State autentikasi saat ini */
   authState: AuthState;
+  /** Boolean status autentikasi (Task 01 & Task 03) */
+  isAuthenticated: boolean;
+  /** Boolean status loading saat restore session */
+  isLoading: boolean;
   /** User yang sedang login (null jika belum login) */
   user: UserProfile | null;
-  /** Login dengan email dan password */
+  /** Login dengan email dan password (Task 01) */
   login: (input: LoginInput) => Promise<AuthResult>;
   /** Register akun baru */
   register: (input: RegisterInput) => Promise<AuthResult>;
-  /** Logout dan hapus session */
+  /** Logout dan hapus session (Task 03) */
   logout: () => Promise<void>;
   /** Update nama/data profile */
   updateProfile: (updates: Partial<Pick<UserProfile, 'name'>>) => Promise<boolean>;
@@ -69,17 +75,28 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [authState, setAuthState] = useState<AuthState>('loading');
   const [user, setUser] = useState<UserProfile | null>(null);
 
-  // Saat app/web dibuka: selalu arahkan lewat Login page terlebih dahulu
+  // Task 03: Memeriksa token di SecureStore saat aplikasi dibuka kembali (Persistent Session)
   useEffect(() => {
     checkSession();
   }, []);
 
   async function checkSession() {
-    // Memastikan setiap kali app/web dibuka, harus melewati halaman login
-    setUser(null);
-    setAuthState('unauthenticated');
+    try {
+      const restoredUser = await restoreSession();
+      if (restoredUser) {
+        setUser(restoredUser);
+        setAuthState('authenticated');
+      } else {
+        setUser(null);
+        setAuthState('unauthenticated');
+      }
+    } catch {
+      setUser(null);
+      setAuthState('unauthenticated');
+    }
   }
 
+  // Task 01: Login berhasil → Update global authentication state
   const login = useCallback(async (input: LoginInput): Promise<AuthResult> => {
     const result = await authLogin(input);
     if (result.success && result.user) {
@@ -92,17 +109,27 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const register = useCallback(
     async (input: RegisterInput): Promise<AuthResult> => {
       const result = await authRegister(input);
-      // Registrasi berhasil → redirect ke login (tidak auto-login)
       return result;
     },
     []
   );
 
+  // Task 03: Logout → Hapus token dari SecureStore & set state unauthenticated
   const logout = useCallback(async () => {
-    await authLogout();
-    setUser(null);
-    setAuthState('unauthenticated');
+    try {
+      await authLogout();
+    } finally {
+      setUser(null);
+      setAuthState('unauthenticated');
+    }
   }, []);
+
+  // Hubungkan auto-logout ketika API Client menerima status 401 Unauthorized
+  useEffect(() => {
+    setOnUnauthorizedCallback(() => {
+      logout();
+    });
+  }, [logout]);
 
   const updateProfile = useCallback(
     async (updates: Partial<Pick<UserProfile, 'name'>>): Promise<boolean> => {
@@ -130,6 +157,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const value: AuthContextValue = {
     authState,
+    isAuthenticated: authState === 'authenticated',
+    isLoading: authState === 'loading',
     user,
     login,
     register,
