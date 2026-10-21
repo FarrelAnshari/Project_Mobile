@@ -35,7 +35,8 @@ import {
 } from '../constants/theme';
 import { useResponsive } from '../utils/responsive';
 import { useAuth } from '../context/AuthContext';
-import { saveData, getData, STORAGE_KEYS } from '../services/asyncStorageService';
+import { saveData, STORAGE_KEYS } from '../services/asyncStorageService';
+import { getAccessToken } from '../services/secureStorageService';
 
 // ============================================================
 // Types
@@ -86,8 +87,20 @@ export default function ProfileScreen() {
   const [pwError, setPwError] = useState('');
   const [pwLoading, setPwLoading] = useState(false);
 
-  // Status sesi modal
+  // Status sesi modal (Task 03)
   const [sessionModalVisible, setSessionModalVisible] = useState(false);
+  const [sessionToken, setSessionToken] = useState<string | null>(null);
+  const [tokenCopied, setTokenCopied] = useState(false);
+
+  const handleOpenSessionModal = useCallback(async () => {
+    try {
+      const token = await getAccessToken();
+      setSessionToken(token);
+    } catch {
+      setSessionToken(null);
+    }
+    setSessionModalVisible(true);
+  }, []);
 
   // Task 03: Logout confirmation & redirect ke /login
   const handleLogout = useCallback(() => {
@@ -297,10 +310,10 @@ export default function ProfileScreen() {
             <MenuRow
               icon="phone-portrait-outline"
               label="Status Sesi"
-              subtitle="Sesi aktif · 7 hari"
-              onPress={() => setSessionModalVisible(true)}
+              subtitle="Sesi aktif · Token SecureStore"
+              onPress={handleOpenSessionModal}
               isLast
-              accessibilityLabel="Lihat status sesi"
+              accessibilityLabel="Lihat status sesi dan token autentikasi"
             />
           </View>
         </View>
@@ -591,7 +604,7 @@ export default function ProfileScreen() {
         </KeyboardAvoidingView>
       </Modal>
 
-      {/* ===== Modal Status Sesi ===== */}
+      {/* ===== Modal Status Sesi (Task 03) ===== */}
       <Modal
         visible={sessionModalVisible}
         animationType="fade"
@@ -600,44 +613,95 @@ export default function ProfileScreen() {
         accessibilityViewIsModal
       >
         <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'center', alignItems: 'center', padding: Spacing.lg }}>
-          <View style={{ backgroundColor: Colors.surface, borderRadius: BorderRadius.xl, padding: Spacing.xl, width: '100%', maxWidth: 400, ...Shadow.md }}>
+          <View style={{ backgroundColor: Colors.surface, borderRadius: BorderRadius.xl, padding: Spacing.xl, width: '100%', maxWidth: 440, ...Shadow.md }}>
             <View style={{ alignItems: 'center', marginBottom: Spacing.md }}>
               <View style={{ width: 56, height: 56, borderRadius: 28, backgroundColor: Colors.success + '15', alignItems: 'center', justifyContent: 'center', marginBottom: Spacing.sm }}>
                 <Ionicons name="shield-checkmark" size={32} color={Colors.success} />
               </View>
               <Text style={{ fontSize: FontSize.lg, fontWeight: FontWeight.bold, color: Colors.textPrimary }}>Status Sesi Aktif</Text>
-              <Text style={{ fontSize: FontSize.xs, color: Colors.textSecondary, marginTop: 4 }}>Informasi autentikasi & keamanan</Text>
+              <Text style={{ fontSize: FontSize.xs, color: Colors.textSecondary, marginTop: 4 }}>Task 03: Protect the Session (Login, Token, Logout)</Text>
             </View>
 
-            <View style={{ backgroundColor: Colors.background, borderRadius: BorderRadius.md, padding: Spacing.md, gap: Spacing.sm, marginBottom: Spacing.lg }}>
+            <View style={{ backgroundColor: Colors.background, borderRadius: BorderRadius.md, padding: Spacing.md, gap: Spacing.sm, marginBottom: Spacing.md }}>
               <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
                 <Text style={{ fontSize: FontSize.xs, color: Colors.textSecondary }}>Pengguna:</Text>
                 <Text style={{ fontSize: FontSize.xs, fontWeight: FontWeight.semibold, color: Colors.textPrimary }}>{user?.email}</Text>
               </View>
               <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
-                <Text style={{ fontSize: FontSize.xs, color: Colors.textSecondary }}>Perangkat:</Text>
-                <Text style={{ fontSize: FontSize.xs, fontWeight: FontWeight.semibold, color: Colors.textPrimary }}>{Platform.OS === 'web' ? 'Web Browser' : Platform.OS}</Text>
+                <Text style={{ fontSize: FontSize.xs, color: Colors.textSecondary }}>Nama:</Text>
+                <Text style={{ fontSize: FontSize.xs, fontWeight: FontWeight.semibold, color: Colors.textPrimary }}>{user?.name}</Text>
               </View>
               <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
-                <Text style={{ fontSize: FontSize.xs, color: Colors.textSecondary }}>Tipe Token:</Text>
-                <Text style={{ fontSize: FontSize.xs, fontWeight: FontWeight.semibold, color: Colors.primary }}>Bearer JWT (Mock)</Text>
+                <Text style={{ fontSize: FontSize.xs, color: Colors.textSecondary }}>Penyimpanan Token:</Text>
+                <Text style={{ fontSize: FontSize.xs, fontWeight: FontWeight.bold, color: Colors.primary }}>Expo SecureStore</Text>
               </View>
               <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
-                <Text style={{ fontSize: FontSize.xs, color: Colors.textSecondary }}>Masa Berlaku:</Text>
-                <Text style={{ fontSize: FontSize.xs, fontWeight: FontWeight.semibold, color: Colors.success }}>7 Hari (Auto-renew)</Text>
+                <Text style={{ fontSize: FontSize.xs, color: Colors.textSecondary }}>Kunci SecureStore:</Text>
+                <Text style={{ fontSize: FontSize.xs, fontFamily: 'monospace', fontWeight: FontWeight.semibold, color: Colors.textPrimary }}>{'"access_token"'}</Text>
               </View>
               <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
-                <Text style={{ fontSize: FontSize.xs, color: Colors.textSecondary }}>Penyimpanan:</Text>
-                <Text style={{ fontSize: FontSize.xs, fontWeight: FontWeight.semibold, color: Colors.textPrimary }}>SecureStore Enkripsi</Text>
+                <Text style={{ fontSize: FontSize.xs, color: Colors.textSecondary }}>Status Autentikasi:</Text>
+                <Text style={{ fontSize: FontSize.xs, fontWeight: FontWeight.bold, color: Colors.success }}>Terautentikasi (Valid)</Text>
               </View>
             </View>
 
-            <TouchableOpacity
-              style={{ backgroundColor: Colors.primary, paddingVertical: Spacing.md, borderRadius: BorderRadius.md, alignItems: 'center' }}
-              onPress={() => setSessionModalVisible(false)}
-            >
-              <Text style={{ color: Colors.white, fontWeight: FontWeight.bold, fontSize: FontSize.sm }}>Tutup</Text>
-            </TouchableOpacity>
+            {/* Token Viewer */}
+            <View style={{ marginBottom: Spacing.md }}>
+              <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 }}>
+                <Text style={{ fontSize: FontSize.xs, fontWeight: FontWeight.semibold, color: Colors.textSecondary }}>
+                  Access Token di SecureStore:
+                </Text>
+                <TouchableOpacity
+                  onPress={() => {
+                    if (!sessionToken) return;
+                    if (Platform.OS === 'web' && typeof navigator !== 'undefined' && navigator.clipboard) {
+                      navigator.clipboard.writeText(sessionToken);
+                      setTokenCopied(true);
+                      setTimeout(() => setTokenCopied(false), 2000);
+                    } else {
+                      Alert.alert('Access Token Disalin', sessionToken);
+                    }
+                  }}
+                  style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}
+                  accessibilityRole="button"
+                  accessibilityLabel="Salin token sesi"
+                >
+                  <Ionicons name={tokenCopied ? 'checkmark' : 'copy-outline'} size={13} color={Colors.primary} />
+                  <Text style={{ fontSize: 11, fontWeight: FontWeight.semibold, color: Colors.primary }}>
+                    {tokenCopied ? 'Tersalin' : 'Salin Token'}
+                  </Text>
+                </TouchableOpacity>
+              </View>
+              <View style={{ backgroundColor: Colors.background, padding: Spacing.sm, borderRadius: BorderRadius.sm, maxHeight: 70, borderWidth: 1, borderColor: Colors.borderLight }}>
+                <Text style={{ fontSize: 10, fontFamily: 'monospace', color: Colors.textSecondary }} numberOfLines={3} selectable>
+                  {sessionToken || 'Tidak ada token aktif'}
+                </Text>
+              </View>
+            </View>
+
+            <View style={{ gap: Spacing.sm }}>
+              <TouchableOpacity
+                style={{ backgroundColor: Colors.primary, paddingVertical: Spacing.sm + 2, borderRadius: BorderRadius.md, alignItems: 'center' }}
+                onPress={() => setSessionModalVisible(false)}
+                accessibilityRole="button"
+                accessibilityLabel="Tutup dialog status sesi"
+              >
+                <Text style={{ color: Colors.white, fontWeight: FontWeight.bold, fontSize: FontSize.sm }}>Tutup</Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                style={{ backgroundColor: Colors.danger + '15', borderWidth: 1, borderColor: Colors.danger + '40', paddingVertical: Spacing.sm + 2, borderRadius: BorderRadius.md, alignItems: 'center', flexDirection: 'row', justifyContent: 'center', gap: 6 }}
+                onPress={() => {
+                  setSessionModalVisible(false);
+                  setTimeout(() => handleLogout(), 300);
+                }}
+                accessibilityRole="button"
+                accessibilityLabel="Hapus token dan logout (Task 03)"
+              >
+                <Ionicons name="log-out-outline" size={16} color={Colors.danger} />
+                <Text style={{ color: Colors.danger, fontWeight: FontWeight.bold, fontSize: FontSize.sm }}>Hapus Token & Logout (Task 03)</Text>
+              </TouchableOpacity>
+            </View>
           </View>
         </View>
       </Modal>

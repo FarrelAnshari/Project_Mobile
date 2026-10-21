@@ -1,0 +1,91 @@
+{
+  "clientName": "Thunder Client",
+  "collectionName": "PresidentKu - Tasks 01-03",
+  "collectionId": "presidentku-tasks-collection",
+  "dateExported": "2026-10-21",
+  "version": "1.1",
+  "folders": [],
+  "requests": [
+    {
+      "_id": "req-task-01-login",
+      "colId": "presidentku-tasks-collection",
+      "containerId": "",
+      "name": "1. Task 01 - Login (Dapatkan Token)",
+      "url": "http://localhost:5001/login",
+      "method": "POST",
+      "sortNum": 10000,
+      "created": "2026-10-21",
+      "modified": "2026-10-21",
+      "headers": [
+        {
+          "name": "Content-Type",
+          "value": "application/json"
+        }
+      ],
+      "body": {
+        "type": "json",
+        "raw": "{\n  \"email\": \"user@mail.com\",\n  \"password\": \"password123\"\n}",
+        "form": []
+      }
+    },
+    {
+      "_id": "req-task-02-get-programs-with-token",
+      "colId": "presidentku-tasks-collection",
+      "containerId": "",
+      "name": "2. Task 02 - GET Programs (Dengan Bearer Token - 200 OK)",
+      "url": "http://localhost:5001/programs",
+      "method": "GET",
+      "sortNum": 20000,
+      "created": "2026-10-21",
+      "modified": "2026-10-21",
+      "headers": [
+        {
+          "name": "Accept",
+          "value": "application/json"
+        }
+      ],
+      "auth": {
+        "type": "bearer",
+        "bearer": "eyJh..."
+      }
+    },
+    {
+      "_id": "req-task-02-get-programs-no-token",
+      "colId": "presidentku-tasks-collection",
+      "containerId": "",
+      "name": "3. Task 02 - GET Programs (Tanpa Token - Uji 401 Unauthorized)",
+      "url": "http://localhost:5001/programs",
+      "method": "GET",
+      "sortNum": 30000,
+      "created": "2026-10-21",
+      "modified": "2026-10-21",
+      "headers": [
+        {
+          "name": "Accept",
+          "value": "application/json"
+        }
+      ]
+    },
+    {
+      "_id": "req-task-03-logout",
+      "colId": "presidentku-tasks-collection",
+      "containerId": "",
+      "name": "4. Task 03 - Logout (Hapus Token Session)",
+      "url": "http://localhost:5001/logout",
+      "method": "POST",
+      "sortNum": 40000,
+      "created": "2026-10-21",
+      "modified": "2026-10-21",
+      "headers": [
+        {
+          "name": "Content-Type",
+          "value": "application/json"
+        }
+      ],
+      "auth": {
+        "type": "bearer",
+        "bearer": "eyJh..."
+      }
+    }
+  ]
+}

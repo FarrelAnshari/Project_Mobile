@@ -259,12 +259,12 @@ export default function LoginScreen() {
             )}
 
             <View style={styles.fieldGroup}>
-              <Text style={styles.fieldLabel}>Email</Text>
+              <Text style={styles.fieldLabel} accessibilityRole="text">Email</Text>
               <View style={[styles.inputWrapper, !!emailError && styles.inputError]}>
                 <Ionicons name="mail-outline" size={18} color={Colors.textTertiary} style={styles.inputIcon} />
                 <TextInput
                   style={styles.input}
-                  placeholder="mahasiswa@parkin.campus.id"
+                  placeholder="user@mail.com"
                   placeholderTextColor={Colors.textTertiary}
                   value={email}
                   onChangeText={(t) => {
@@ -277,13 +277,19 @@ export default function LoginScreen() {
                   returnKeyType="next"
                   onSubmitEditing={() => passwordRef.current?.focus()}
                   editable={!loading}
+                  accessibilityLabel="Input alamat email"
+                  accessibilityHint="Masukkan email untuk autentikasi API"
                 />
               </View>
-              {!!emailError && <Text style={styles.fieldError}>{emailError}</Text>}
+              {!!emailError && (
+                <Text style={styles.fieldError} accessibilityRole="alert">
+                  {emailError}
+                </Text>
+              )}
             </View>
 
             <View style={styles.fieldGroup}>
-              <Text style={styles.fieldLabel}>Password</Text>
+              <Text style={styles.fieldLabel} accessibilityRole="text">Password</Text>
               <View style={[styles.inputWrapper, !!passwordError && styles.inputError]}>
                 <Ionicons name="lock-closed-outline" size={18} color={Colors.textTertiary} style={styles.inputIcon} />
                 <TextInput
@@ -300,16 +306,24 @@ export default function LoginScreen() {
                   returnKeyType="done"
                   onSubmitEditing={handleLogin}
                   editable={!loading}
+                  accessibilityLabel="Input kata sandi"
+                  accessibilityHint="Masukkan password minimal 6 karakter"
                 />
                 <TouchableOpacity
                   onPress={() => setShowPassword((v) => !v)}
                   style={styles.eyeBtn}
                   hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                  accessibilityRole="button"
+                  accessibilityLabel={showPassword ? 'Sembunyikan password' : 'Lihat password'}
                 >
                   <Ionicons name={showPassword ? 'eye-off-outline' : 'eye-outline'} size={18} color={Colors.textTertiary} />
                 </TouchableOpacity>
               </View>
-              {!!passwordError && <Text style={styles.fieldError}>{passwordError}</Text>}
+              {!!passwordError && (
+                <Text style={styles.fieldError} accessibilityRole="alert">
+                  {passwordError}
+                </Text>
+              )}
             </View>
 
             {/* Login & Biometric Buttons Row */}
@@ -319,6 +333,9 @@ export default function LoginScreen() {
                 onPress={handleLogin}
                 disabled={loading}
                 activeOpacity={0.8}
+                accessibilityRole="button"
+                accessibilityLabel="Tombol Masuk"
+                accessibilityHint="Kirim permintaan login ke API dan simpan token di SecureStore"
               >
                 {loading ? (
                   <ActivityIndicator color={Colors.white} size="small" />
@@ -334,6 +351,7 @@ export default function LoginScreen() {
                 activeOpacity={0.7}
                 accessibilityRole="button"
                 accessibilityLabel="Login dengan Sidik Jari"
+                accessibilityHint="Masuk otomatis menggunakan sensor biometrik"
               >
                 <Ionicons name="finger-print" size={26} color={Colors.primary} />
               </TouchableOpacity>
@@ -367,11 +385,22 @@ export default function LoginScreen() {
 
             {/* Demo Accounts Quick Login */}
             <View style={styles.demoSection}>
-              <Text style={styles.demoTitle}>Akun Demo Cepat:</Text>
+              <Text style={styles.demoTitle} accessibilityRole="text">Akun Demo & Pengujian API:</Text>
               <View style={styles.demoPillsRow}>
+                <TouchableOpacity
+                  style={[styles.demoPill, { borderColor: Colors.primary }]}
+                  onPress={() => handleQuickLogin('user@mail.com', 'password123')}
+                  accessibilityRole="button"
+                  accessibilityLabel="Login dengan akun contoh Slide Task 01"
+                >
+                  <Ionicons name="key-outline" size={14} color={Colors.primary} />
+                  <Text style={[styles.demoPillText, { fontWeight: FontWeight.bold }]}>User (Slide 10)</Text>
+                </TouchableOpacity>
                 <TouchableOpacity
                   style={styles.demoPill}
                   onPress={() => handleQuickLogin('mahasiswa@parkin.campus.id', 'parkin123')}
+                  accessibilityRole="button"
+                  accessibilityLabel="Login dengan akun Mahasiswa"
                 >
                   <Ionicons name="school-outline" size={14} color={Colors.primary} />
                   <Text style={styles.demoPillText}>Mahasiswa</Text>
@@ -379,16 +408,11 @@ export default function LoginScreen() {
                 <TouchableOpacity
                   style={styles.demoPill}
                   onPress={() => handleQuickLogin('dosen@parkin.campus.id', 'parkin123')}
+                  accessibilityRole="button"
+                  accessibilityLabel="Login dengan akun Dosen"
                 >
                   <Ionicons name="person-outline" size={14} color={Colors.primary} />
                   <Text style={styles.demoPillText}>Dosen</Text>
-                </TouchableOpacity>
-                <TouchableOpacity
-                  style={styles.demoPill}
-                  onPress={() => handleQuickLogin('staff@parkin.campus.id', 'parkin123')}
-                >
-                  <Ionicons name="briefcase-outline" size={14} color={Colors.primary} />
-                  <Text style={styles.demoPillText}>Staff</Text>
                 </TouchableOpacity>
               </View>
             </View>

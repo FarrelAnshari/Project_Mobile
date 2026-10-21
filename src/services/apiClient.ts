@@ -107,11 +107,18 @@ export async function apiRequest<T = any>(
     ...(customHeaders as Record<string, string>),
   };
 
-  // 3. Sertakan Authorization Header: Bearer <token>
+  // 3. Sertakan Authorization Header: Bearer <token> (Task 02)
   if (requiresAuth) {
     const token = await getStoredToken();
     if (token) {
       headers['Authorization'] = `Bearer ${token}`;
+    } else {
+      // Task 02 Checklist: Aplikasi hanya bisa mengakses data melalui protected API
+      // Jika token tidak ada di SecureStore, tolak akses dan kembalikan 401
+      if (onUnauthorizedCallback) {
+        onUnauthorizedCallback();
+      }
+      throw new ApiError('Akses ditolak: Token autentikasi tidak ditemukan di SecureStore. Silakan login kembali.', 401);
     }
   }
 

@@ -18,7 +18,6 @@ import { API_CONFIG } from '../config/api';
 import { saveData, getData, STORAGE_KEYS } from './asyncStorageService';
 import {
   saveSecureData,
-  getSecureData,
   clearAllSecureData,
   SECURE_KEYS,
   setAccessToken,
@@ -96,15 +95,27 @@ function hashPassword(password: string): string {
   return 'hp_' + Math.abs(hash).toString(36) + '_' + salted.length;
 }
 
-/** Buat mock token (cross-platform, aman untuk Hermes React Native) */
+/** Buat mock access token berformat JWT nyata (diawali 'eyJh...' sesuai Slide Task 01) */
 function generateMockToken(userId: string): string {
-  const ts = Date.now();
-  const rand = Math.random().toString(36).substring(2, 9);
-  return `parkin_tk_${userId}_${ts}_${rand}`;
+  const ts = Math.floor(Date.now() / 1000);
+  const rand = Math.random().toString(36).substring(2, 8);
+  // Header JWT standard: {"alg":"HS256","typ":"JWT"}
+  const jwtHeader = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9';
+  // Payload JWT simulasi (diawali 'eyJh' / 'eyJp...')
+  const payloadStr = 'eyJuYW1lIjoiVXNlciIsImlkIjoi' + userId + 'IiwiZXhwIjoxNzg5' + ts + 'fQ';
+  const signature = 'SflKxwRJSMeKKF2QT4fwpMeJf36POk6yJV_' + rand;
+  return `${jwtHeader}.${payloadStr}.${signature}`;
 }
 
-// Akun demo bawaan aplikasi
+// Akun demo bawaan aplikasi (termasuk kredensial dari Task 01 Slide)
 const DEFAULT_DEMO_USERS: StoredUser[] = [
+  {
+    id: 'user_demo_presidentku_00',
+    name: 'Farrel Anshari (User)',
+    email: 'user@mail.com',
+    passwordHash: hashPassword('password123'),
+    createdAt: new Date().toISOString(),
+  },
   {
     id: 'user_demo_mahasiswa_01',
     name: 'Farrel Anshari',
@@ -128,6 +139,12 @@ async function getUsers(): Promise<StoredUser[]> {
     // Seed default demo accounts
     await saveData(USERS_KEY, DEFAULT_DEMO_USERS);
     return [...DEFAULT_DEMO_USERS];
+  }
+  // Pastikan akun user@mail.com dari Slide Task 01 selalu tersedia untuk pengujian
+  const hasSlideUser = stored.some((u) => u.email.toLowerCase() === 'user@mail.com');
+  if (!hasSlideUser) {
+    stored.unshift(DEFAULT_DEMO_USERS[0]);
+    await saveData(USERS_KEY, stored);
   }
   return stored;
 }
