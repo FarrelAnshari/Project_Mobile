@@ -40,6 +40,9 @@
   },
   "scripts": {
     "start": "expo start",
+    "server": "node ./scripts/mock-api-server.js",
+    "mock-api": "node ./scripts/mock-api-server.js",
+    "test:api": "node ./scripts/test-token-flow.js",
     "reset-project": "node ./scripts/reset-project.js",
     "android": "expo start --android",
     "ios": "expo start --ios",

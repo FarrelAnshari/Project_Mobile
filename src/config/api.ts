@@ -6,9 +6,22 @@
  * Defaults to production/staging campus API domain.
  */
 
+import { Platform } from 'react-native';
+
+const getBaseUrl = (): string => {
+  if (process.env.EXPO_PUBLIC_API_URL) {
+    return process.env.EXPO_PUBLIC_API_URL;
+  }
+  // Android emulator maps 10.0.2.2 to host machine localhost
+  if (Platform.OS === 'android') {
+    return 'http://10.0.2.2:5000';
+  }
+  return 'http://localhost:5000';
+};
+
 export const API_CONFIG = {
   /** Base URL for all REST API requests */
-  BASE_URL: process.env.EXPO_PUBLIC_API_URL || 'https://jsonplaceholder.typicode.com',
+  BASE_URL: getBaseUrl(),
 
   /** Online testing endpoint to verify REST API connectivity */
   TEST_URL: 'https://jsonplaceholder.typicode.com/posts/1',

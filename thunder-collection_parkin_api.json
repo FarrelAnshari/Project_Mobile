@@ -1,0 +1,221 @@
+{
+  "clientName": "Thunder Client",
+  "collectionName": "PARKIN Auth & API",
+  "collectionId": "col_parkin_auth_api",
+  "dateExported": "2026-10-21",
+  "version": "1.2",
+  "folders": [],
+  "requests": [
+    {
+      "_id": "req_login_valid",
+      "colId": "col_parkin_auth_api",
+      "containerId": "",
+      "name": "1. [Task 01] POST /login - Dapatkan Bearer Token",
+      "url": "{{baseUrl}}/login",
+      "method": "POST",
+      "sortNum": 10000,
+      "created": "2026-10-21T10:00:00.000Z",
+      "modified": "2026-10-21T10:00:00.000Z",
+      "headers": [
+        {
+          "name": "Content-Type",
+          "value": "application/json"
+        },
+        {
+          "name": "Accept",
+          "value": "application/json"
+        }
+      ],
+      "body": {
+        "type": "json",
+        "raw": "{\n  \"email\": \"mahasiswa@parkin.campus.id\",\n  \"password\": \"parkin123\"\n}",
+        "form": []
+      },
+      "tests": [
+        {
+          "type": "res-code",
+          "custom": "",
+          "action": "equal",
+          "value": "200"
+        },
+        {
+          "type": "set-env-var",
+          "custom": "json.access_token",
+          "action": "setto",
+          "value": "token"
+        }
+      ]
+    },
+    {
+      "_id": "req_login_invalid",
+      "colId": "col_parkin_auth_api",
+      "containerId": "",
+      "name": "2. [Task 01] POST /login - Password Salah (Expect 401)",
+      "url": "{{baseUrl}}/login",
+      "method": "POST",
+      "sortNum": 20000,
+      "created": "2026-10-21T10:00:00.000Z",
+      "modified": "2026-10-21T10:00:00.000Z",
+      "headers": [
+        {
+          "name": "Content-Type",
+          "value": "application/json"
+        },
+        {
+          "name": "Accept",
+          "value": "application/json"
+        }
+      ],
+      "body": {
+        "type": "json",
+        "raw": "{\n  \"email\": \"mahasiswa@parkin.campus.id\",\n  \"password\": \"wrongpassword\"\n}",
+        "form": []
+      },
+      "tests": [
+        {
+          "type": "res-code",
+          "custom": "",
+          "action": "equal",
+          "value": "401"
+        }
+      ]
+    },
+    {
+      "_id": "req_programs_unauth",
+      "colId": "col_parkin_auth_api",
+      "containerId": "",
+      "name": "3. [Task 02] GET /programs - Tanpa Token (Expect 401 Unauthorized)",
+      "url": "{{baseUrl}}/programs",
+      "method": "GET",
+      "sortNum": 30000,
+      "created": "2026-10-21T10:00:00.000Z",
+      "modified": "2026-10-21T10:00:00.000Z",
+      "headers": [
+        {
+          "name": "Accept",
+          "value": "application/json"
+        }
+      ],
+      "tests": [
+        {
+          "type": "res-code",
+          "custom": "",
+          "action": "equal",
+          "value": "401"
+        }
+      ]
+    },
+    {
+      "_id": "req_programs_auth",
+      "colId": "col_parkin_auth_api",
+      "containerId": "",
+      "name": "4. [Task 02] GET /programs - Dengan Bearer Token (Expect 200 OK)",
+      "url": "{{baseUrl}}/programs",
+      "method": "GET",
+      "sortNum": 40000,
+      "created": "2026-10-21T10:00:00.000Z",
+      "modified": "2026-10-21T10:00:00.000Z",
+      "headers": [
+        {
+          "name": "Accept",
+          "value": "application/json"
+        }
+      ],
+      "auth": {
+        "type": "bearer",
+        "bearer": "{{token}}"
+      },
+      "tests": [
+        {
+          "type": "res-code",
+          "custom": "",
+          "action": "equal",
+          "value": "200"
+        }
+      ]
+    },
+    {
+      "_id": "req_profile_auth",
+      "colId": "col_parkin_auth_api",
+      "containerId": "",
+      "name": "5. [Task 03] GET /user/profile - Verifikasi Sesi Terproteksi (Expect 200 OK)",
+      "url": "{{baseUrl}}/user/profile",
+      "method": "GET",
+      "sortNum": 50000,
+      "created": "2026-10-21T10:00:00.000Z",
+      "modified": "2026-10-21T10:00:00.000Z",
+      "headers": [
+        {
+          "name": "Accept",
+          "value": "application/json"
+        }
+      ],
+      "auth": {
+        "type": "bearer",
+        "bearer": "{{token}}"
+      },
+      "tests": [
+        {
+          "type": "res-code",
+          "custom": "",
+          "action": "equal",
+          "value": "200"
+        }
+      ]
+    },
+    {
+      "_id": "req_parking_areas",
+      "colId": "col_parkin_auth_api",
+      "containerId": "",
+      "name": "6. GET /parking-areas - Data Live Area Parkir Kampus",
+      "url": "{{baseUrl}}/parking-areas",
+      "method": "GET",
+      "sortNum": 60000,
+      "created": "2026-10-21T10:00:00.000Z",
+      "modified": "2026-10-21T10:00:00.000Z",
+      "headers": [
+        {
+          "name": "Accept",
+          "value": "application/json"
+        }
+      ],
+      "tests": [
+        {
+          "type": "res-code",
+          "custom": "",
+          "action": "equal",
+          "value": "200"
+        }
+      ]
+    },
+    {
+      "_id": "req_logout",
+      "colId": "col_parkin_auth_api",
+      "containerId": "",
+      "name": "7. [Task 03] POST /logout - Hapus Sesi Aktif",
+      "url": "{{baseUrl}}/logout",
+      "method": "POST",
+      "sortNum": 70000,
+      "created": "2026-10-21T10:00:00.000Z",
+      "modified": "2026-10-21T10:00:00.000Z",
+      "headers": [
+        {
+          "name": "Accept",
+          "value": "application/json"
+        }
+      ],
+      "auth": {
+        "type": "bearer",
+        "bearer": "{{token}}"
+      },
+      "tests": [
+        {
+          "type": "res-code",
+          "custom": "",
+          "action": "equal",
+          "value": "200"
+        }
+      ]
+    }
+  ]
+}

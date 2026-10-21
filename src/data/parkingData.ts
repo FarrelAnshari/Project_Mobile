@@ -78,7 +78,6 @@ export const parkingAreas: ParkingArea[] = [
   },
 ];
 
-/** Calculate total campus stats from area array */
 export function getCampusStats(areas: ParkingArea[]) {
   const totalCapacity = areas.reduce((s, a) => s + a.capacity, 0);
   const totalOccupied = areas.reduce((s, a) => s + a.occupied, 0);

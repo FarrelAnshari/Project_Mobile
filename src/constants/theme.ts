@@ -27,7 +27,7 @@ export const Colors = {
   primary: '#615CED',      // Purple-blue from template
   primaryLight: '#8B87FF',
   primaryDark: '#4A46D6',
-  secondary: '#FF8A00',    // Orange accent from template
+  secondary: '#FF8A00',    // Orange accent from template0
   background: '#F8F9FA',
   surface: '#FFFFFF',
   textPrimary: '#1E1E2D',

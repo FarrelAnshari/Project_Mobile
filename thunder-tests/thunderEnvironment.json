@@ -1,0 +1,19 @@
+[
+  {
+    "_id": "env_parkin_local",
+    "name": "PARKIN Local Environment",
+    "default": true,
+    "sortNum": 10000,
+    "created": "2026-10-21T10:00:00.000Z",
+    "variables": [
+      {
+        "name": "baseUrl",
+        "value": "http://localhost:5000"
+      },
+      {
+        "name": "token",
+        "value": ""
+      }
+    ]
+  }
+]
