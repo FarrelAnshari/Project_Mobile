@@ -11,23 +11,23 @@
  * 5. Protected API: Mengembalikan data program
  */
 
-import React, { useEffect, useState, useCallback } from 'react';
-import {
-  View,
-  Text,
-  StyleSheet,
-  TouchableOpacity,
-  ActivityIndicator,
-  Modal,
-  ScrollView,
-  Platform,
-  Alert,
-} from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { Colors, Spacing, FontSize, FontWeight, BorderRadius, Shadow } from '../constants/theme';
+import { useCallback, useEffect, useState } from 'react';
+import {
+  ActivityIndicator,
+  Alert,
+  Modal,
+  Platform,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
+} from 'react-native';
+import { API_CONFIG } from '../config/api';
+import { BorderRadius, Colors, FontSize, FontWeight, Shadow, Spacing } from '../constants/theme';
 import { getPrograms, ProgramItem } from '../services/programService';
 import { getAccessToken } from '../services/secureStorageService';
-import { API_CONFIG } from '../config/api';
 
 interface ProgramsListProps {
   onSelectProgram?: (program: ProgramItem) => void;
@@ -36,7 +36,9 @@ interface ProgramsListProps {
 export default function ProgramsList({ onSelectProgram }: ProgramsListProps) {
   const [programs, setPrograms] = useState<ProgramItem[]>([]);
   const [loading, setLoading] = useState(true);
-  const [filterCategory, setFilterCategory] = useState<'ALL' | 'PRIORITAS' | 'KAMPUS'>('ALL');
+  const [filterCategory, setFilterCategory] = useState<
+    'ALL' | 'MAHASISWA' | 'DOSEN' | 'RAMAH_LINGKUNGAN'
+  >('ALL');
   const [tokenRaw, setTokenRaw] = useState<string | null>(null);
   const [tokenMasked, setTokenMasked] = useState<string>('');
   const [error, setError] = useState<string | null>(null);
@@ -87,9 +89,8 @@ export default function ProgramsList({ onSelectProgram }: ProgramsListProps) {
   };
 
   const filteredPrograms = programs.filter((p) => {
-    if (filterCategory === 'PRIORITAS') return p.category === 'PRIORITAS';
-    if (filterCategory === 'KAMPUS') return p.category !== 'PRIORITAS';
-    return true;
+    if (filterCategory === 'ALL') return true;
+    return p.category === filterCategory;
   });
 
   const renderBadge = (category: ProgramItem['category']) => {
@@ -199,7 +200,11 @@ export default function ProgramsList({ onSelectProgram }: ProgramsListProps) {
       </View>
 
       {/* Filter Tabs */}
-      <View style={styles.filterRow}>
+      <ScrollView
+        horizontal
+        showsHorizontalScrollIndicator={false}
+        contentContainerStyle={styles.filterRow}
+      >
         <TouchableOpacity
           style={[styles.filterChip, filterCategory === 'ALL' && styles.filterChipActive]}
           onPress={() => setFilterCategory('ALL')}
@@ -217,37 +222,53 @@ export default function ProgramsList({ onSelectProgram }: ProgramsListProps) {
         </TouchableOpacity>
 
         <TouchableOpacity
-          style={[styles.filterChip, filterCategory === 'PRIORITAS' && styles.filterChipActive]}
-          onPress={() => setFilterCategory('PRIORITAS')}
+          style={[styles.filterChip, filterCategory === 'MAHASISWA' && styles.filterChipActive]}
+          onPress={() => setFilterCategory('MAHASISWA')}
           accessibilityRole="tab"
-          accessibilityLabel="Tampilkan Program Prioritas"
+          accessibilityLabel="Tampilkan Program Mahasiswa"
         >
           <Text
             style={[
               styles.filterChipText,
-              filterCategory === 'PRIORITAS' && styles.filterChipTextActive,
+              filterCategory === 'MAHASISWA' && styles.filterChipTextActive,
             ]}
           >
-            Program Prioritas (Slide 11)
+            Mahasiswa
           </Text>
         </TouchableOpacity>
 
         <TouchableOpacity
-          style={[styles.filterChip, filterCategory === 'KAMPUS' && styles.filterChipActive]}
-          onPress={() => setFilterCategory('KAMPUS')}
+          style={[styles.filterChip, filterCategory === 'DOSEN' && styles.filterChipActive]}
+          onPress={() => setFilterCategory('DOSEN')}
           accessibilityRole="tab"
-          accessibilityLabel="Tampilkan Program Fasilitas Kampus"
+          accessibilityLabel="Tampilkan Program Dosen & Staf"
         >
           <Text
             style={[
               styles.filterChipText,
-              filterCategory === 'KAMPUS' && styles.filterChipTextActive,
+              filterCategory === 'DOSEN' && styles.filterChipTextActive,
             ]}
           >
-            Layanan Kampus
+            Dosen & Staf
           </Text>
         </TouchableOpacity>
-      </View>
+
+        <TouchableOpacity
+          style={[styles.filterChip, filterCategory === 'RAMAH_LINGKUNGAN' && styles.filterChipActive]}
+          onPress={() => setFilterCategory('RAMAH_LINGKUNGAN')}
+          accessibilityRole="tab"
+          accessibilityLabel="Tampilkan Program Ramah Lingkungan"
+        >
+          <Text
+            style={[
+              styles.filterChipText,
+              filterCategory === 'RAMAH_LINGKUNGAN' && styles.filterChipTextActive,
+            ]}
+          >
+            Ramah Lingkungan
+          </Text>
+        </TouchableOpacity>
+      </ScrollView>
 
       {/* Content Rendering (No nested FlatList inside ScrollView) */}
       {loading ? (

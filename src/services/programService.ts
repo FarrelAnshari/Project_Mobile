@@ -31,53 +31,8 @@ export interface ProgramItem {
   iconName?: string;
 }
 
-// Data program dari Task 02 Slide & Ekosistem PARKIN Kampus
+// Data program fasilitas & layanan parkir kampus PARKIN
 export const ALL_PROGRAMS: ProgramItem[] = [
-  // 4 Program Prioritas (Sesuai Slide 11)
-  {
-    id: 'PRG-PRIO-01',
-    title: 'Indonesia Maju',
-    description: 'Program pembangunan infrastruktur mobilitas cerdas dan fasilitas kampus masa depan.',
-    category: 'PRIORITAS',
-    status: 'ACTIVE',
-    quota: 500,
-    remainingQuota: 142,
-    validUntil: '2026-12-31',
-    iconName: 'flag-outline',
-  },
-  {
-    id: 'PRG-PRIO-02',
-    title: 'Pendidikan Berkualitas',
-    description: 'Peningkatan kualitas fasilitas riset mobilitas dan subsidi transportasi mahasiswa berprestasi.',
-    category: 'PRIORITAS',
-    status: 'ACTIVE',
-    quota: 300,
-    remainingQuota: 85,
-    validUntil: '2027-01-31',
-    iconName: 'school-outline',
-  },
-  {
-    id: 'PRG-PRIO-03',
-    title: 'Ekonomi Kerakyatan',
-    description: 'Mendorong ekonomi inklusif melalui kemitraan UMKM kantin kampus dan parkir terpadu.',
-    category: 'PRIORITAS',
-    status: 'ACTIVE',
-    quota: 200,
-    remainingQuota: 64,
-    validUntil: '2026-11-30',
-    iconName: 'trending-up-outline',
-  },
-  {
-    id: 'PRG-PRIO-04',
-    title: 'Lingkungan Sehat',
-    description: 'Menjaga keberlanjutan lingkungan hidup melalui zona kampus rendah emisi dan sensor kualitas udara.',
-    category: 'PRIORITAS',
-    status: 'ACTIVE',
-    quota: 400,
-    remainingQuota: 210,
-    validUntil: '2027-03-31',
-    iconName: 'leaf-outline',
-  },
   // Program Fasilitas Parkir Kampus
   {
     id: 'PRG-01',
