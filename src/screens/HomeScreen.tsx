@@ -1,23 +1,50 @@
+/**
+ * PARKIN — Smart Campus Parking
+ * Screen: Home / Beranda — Bento Grid Redesign
+ *
+ * Redesign futuristik dengan:
+ *  - Bento Grid layout (2-kolom variasi ukuran)
+ *  - CircularGauge animated radial progress
+ *  - GlowCard dengan ambient glow per kartu
+ *  - StaggerList untuk entrance animation bertahap
+ *  - AnimatedVehicleToggle dengan sliding pill
+ *  - AnimatedPressable spring micro-interaction
+ *  - PulseRing pada PIN widget
+ *  - CountUpText animasi angka naik
+ *  - Page transition FadeInDown pada mount
+ */
+
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
-import { useCallback, useEffect, useState } from 'react';
+import { useState } from 'react';
 import {
-  ActivityIndicator,
+  Platform,
   RefreshControl,
   SafeAreaView,
   ScrollView,
   StatusBar,
   StyleSheet,
   Text,
-  TouchableOpacity,
   View,
 } from 'react-native';
+import Animated, { FadeInDown } from 'react-native-reanimated';
+
+// Components
 import NotificationCard from '../components/NotificationCard';
-import OccupancyBar from '../components/OccupancyBar';
 import ParkingCard from '../components/ParkingCard';
+import ParkingPinWidget from '../components/ParkingPinWidget';
+import PulseIndicator from '../components/PulseIndicator';
 import RecommendationCard from '../components/RecommendationCard';
-import StatusBadge from '../components/StatusBadge';
-import ProgramsList from '../components/ProgramsList';
+import { DashboardSkeleton } from '../components/Skeleton';
+import ErrorState from '../components/ErrorState';
+import CircularGauge from '../components/CircularGauge';
+import GlowCard from '../components/GlowCard';
+import StaggerList from '../components/StaggerList';
+import AnimatedVehicleToggle, { VehicleType } from '../components/AnimatedVehicleToggle';
+import AnimatedPressable from '../components/AnimatedPressable';
+import CountUpText from '../components/CountUpText';
+
+// Utils / Hooks / Data
 import {
   BorderRadius,
   Colors,
@@ -26,14 +53,23 @@ import {
   Spacing,
 } from '../constants/theme';
 import { useAuth } from '../context/AuthContext';
+import { useTheme } from '../context/ThemeContext';
+import { useThemeColors } from '../hooks/useThemeColors';
+import { useFetch } from '../hooks/useFetch';
+import { useOnlineStatus } from '../hooks/useOnlineStatus';
 import { getCampusStats } from '../data/parkingData';
 import { ParkingArea } from '../models/parking';
-import { getDemoParkingAreas, getParkingAreas, ParkingApiError } from '../services/parkingApi';
-import { getOccupancyPercent, getStatusFromOccupancy, needsAlert } from '../utils/parkingStatus';
+import {
+  getDemoParkingAreas,
+  getParkingAreas,
+} from '../services/parkingApi';
+import {
+  getOccupancyPercent,
+  needsAlert,
+} from '../utils/parkingStatus';
 import { getRecommendations } from '../utils/recommendation';
 import { useResponsive } from '../utils/responsive';
 
-// Get greeting based on time of day
 function getGreeting(): string {
   const hour = new Date().getHours();
   if (hour < 11) return 'Selamat Pagi';
@@ -42,59 +78,78 @@ function getGreeting(): string {
   return 'Selamat Malam';
 }
 
+/** Mini stat bento item */
+function StatBentoItem({
+  label,
+  value,
+  suffix,
+  icon,
+  color,
+  glowColor,
+  onPress,
+}: {
+  label: string;
+  value: number;
+  suffix?: string;
+  icon: keyof typeof import('@expo/vector-icons').Ionicons.glyphMap;
+  color: string;
+  glowColor: string;
+  onPress?: () => void;
+}) {
+  const colors = useThemeColors();
+  return (
+    <GlowCard
+      glowColor={glowColor}
+      glowIntensity={0.22}
+      style={styles.statBentoCard}
+      innerStyle={[styles.statBentoInner, { backgroundColor: colors.surface }]}
+      onPress={onPress}
+    >
+      <View style={[styles.statBentoIcon, { backgroundColor: glowColor + '22' }]}>
+        <Ionicons name={icon} size={18} color={color} />
+      </View>
+      <CountUpText
+        value={value}
+        suffix={suffix}
+        style={[styles.statBentoValue, { color: colors.textPrimary }]}
+        duration={1000}
+      />
+      <Text style={[styles.statBentoLabel, { color: colors.textSecondary }]}>{label}</Text>
+    </GlowCard>
+  );
+}
+
 export default function HomeScreen() {
-  const { width, isSmall, isWide, cardWidth, horizontalPadding } = useResponsive();
+  const { isWide, cardWidth, horizontalPadding } = useResponsive();
   const { user } = useAuth();
   const router = useRouter();
+  const colors = useThemeColors();
+  const { isDark } = useTheme();
+  const { isOffline } = useOnlineStatus();
 
-  // API Data & Loading/Error States
-  const [areas, setAreas] = useState<ParkingArea[]>([]);
-  const [loading, setLoading] = useState<boolean>(true);
-  const [error, setError] = useState<string | null>(null);
-  const [refreshing, setRefreshing] = useState(false);
   const [lastRefreshed, setLastRefreshed] = useState('Memuat...');
   const [dismissedAlerts, setDismissedAlerts] = useState<string[]>([]);
+  const [vehicleFilter, setVehicleFilter] = useState<VehicleType>('all');
 
+  const {
+    data: fetchedAreas,
+    isLoading,
+    isRefetching,
+    isError,
+    errorMessage,
+    refetch,
+    setData: setAreas,
+  } = useFetch<ParkingArea[]>(getParkingAreas, {
+    onSuccess: () => setLastRefreshed('Baru saja'),
+    onError: () => setLastRefreshed('Gagal update'),
+  });
+
+  const areas = fetchedAreas ?? [];
   const firstName = user?.name?.split(' ')[0] ?? 'Mahasiswa';
 
-  // Fetch parking areas from REST API
-  const fetchParkingData = useCallback(async (isRefresh = false) => {
-    if (isRefresh) {
-      setRefreshing(true);
-    } else {
-      setLoading(true);
-    }
-    setError(null);
-
-    try {
-      const data = await getParkingAreas();
-      setAreas(data);
-      setLastRefreshed('Baru saja');
-    } catch (err: unknown) {
-      const message =
-        err instanceof ParkingApiError
-          ? err.message
-          : 'Gagal memuat data parkir dari server.';
-      setError(message);
-    } finally {
-      setLoading(false);
-      setRefreshing(false);
-    }
-  }, []);
-
-  useEffect(() => {
-    fetchParkingData();
-  }, [fetchParkingData]);
-
-  const onRefresh = useCallback(() => {
-    fetchParkingData(true);
-  }, [fetchParkingData]);
-
-  // Fallback demo data loader if REST API backend server is offline
   const handleLoadDemoData = () => {
     const demoData = getDemoParkingAreas();
     setAreas(demoData);
-    setError(null);
     setLastRefreshed('Demo API');
   };
 
@@ -102,70 +157,76 @@ export default function HomeScreen() {
   const recommendations = getRecommendations(areas, 1);
   const alertAreas = areas.filter(
     (a) =>
-      needsAlert(typeof a.occupancy === 'number' ? a.occupancy : getOccupancyPercent(a.occupied, a.capacity)) &&
-      !dismissedAlerts.includes(a.id)
+      needsAlert(
+        typeof a.occupancy === 'number'
+          ? a.occupancy
+          : getOccupancyPercent(a.occupied, a.capacity)
+      ) && !dismissedAlerts.includes(a.id)
   );
   const bestAlternative = recommendations[0]?.area;
-  const campusStatus = getStatusFromOccupancy(stats.occupancyPercent);
 
-  // Navigate to parking tab
-  const navigateToParking = () => {
-    router.push('/(tabs)/parking' as any);
-  };
+  const navigateToParking = () => router.push('/(tabs)/parking' as any);
+  const navigateToProfile = () => router.push('/(tabs)/profile' as any);
+  const navigateToScanner = () => router.push('/scanner' as any);
+  const navigateToPrediction = () => router.push('/(tabs)/prediction' as any);
 
-  // Navigate to profile tab
-  const navigateToProfile = () => {
-    router.push('/(tabs)/profile' as any);
-  };
-
-  // Navigate to prediction tab
-  const navigateToPrediction = () => {
-    router.push('/(tabs)/prediction' as any);
-  };
-
-  // Handle parking card press
-  const handleCardPress = (area: ParkingArea) => {
-    navigateToParking();
-  };
-
-  // Handle recommendation press
-  const handleRecommendationPress = () => {
-    navigateToParking();
-  };
-
-  // Dismiss notification
-  const handleDismissAlert = (areaId: string) => {
+  const handleCardPress = (_area: ParkingArea) => navigateToParking();
+  const handleRecommendationPress = () => navigateToParking();
+  const handleDismissAlert = (areaId: string) =>
     setDismissedAlerts((prev) => [...prev, areaId]);
-  };
+
+  // Glow color berdasarkan occupancy
+  const gaugeGlowColor =
+    stats.occupancyPercent < 50
+      ? '#22C55E'
+      : stats.occupancyPercent < 70
+      ? '#F59E0B'
+      : stats.occupancyPercent < 85
+      ? '#F97316'
+      : '#EF4444';
 
   return (
-    <View style={styles.container}>
-      <StatusBar barStyle="light-content" backgroundColor={Colors.primary} />
+    <View style={[styles.container, { backgroundColor: colors.background }]}>
+      <StatusBar barStyle="light-content" />
 
-      {/* PURPLE HEADER SECTION */}
-      <View style={styles.purpleHeader}>
-        {/* Subtle Ambient Decorative Circles */}
+      {/* ── GRADIENT HEADER ── */}
+      <Animated.View
+        entering={FadeInDown.duration(600).springify()}
+        style={[styles.gradientHeader, isDark && { backgroundColor: '#1E1B4B' }]}
+      >
+        <View style={[styles.gradientOverlay1, isDark && { backgroundColor: '#312E81', opacity: 0.4 }]} />
+        <View style={[styles.gradientOverlay2, isDark && { backgroundColor: '#2E1065', opacity: 0.3 }]} />
         <View style={styles.decorCircle1} />
         <View style={styles.decorCircle2} />
+        <View style={styles.decorCircle3} />
 
         <SafeAreaView>
           <View style={[styles.headerInner, { paddingHorizontal: horizontalPadding }]}>
             <View style={styles.headerTop}>
-              <TouchableOpacity
-                style={styles.headerIconBtn}
-                onPress={navigateToParking}
-                accessibilityLabel="Lihat semua area parkir"
-              >
-                <Ionicons name="grid-outline" size={20} color={Colors.white} />
-              </TouchableOpacity>
-              <Text style={styles.headerTitle}>Home</Text>
-              <TouchableOpacity
-                style={styles.headerIconBtn}
-                onPress={navigateToProfile}
-                accessibilityLabel="Profil pengguna"
-              >
-                <Ionicons name="person-outline" size={20} color={Colors.white} />
-              </TouchableOpacity>
+              <View style={styles.logoRow}>
+                <View style={styles.logoMark}>
+                  <Text style={styles.logoMarkText}>P</Text>
+                </View>
+                <Text style={styles.headerBrandText}>PARKIN</Text>
+              </View>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                <AnimatedPressable
+                  onPress={navigateToScanner}
+                  style={[styles.headerIconBtn, { backgroundColor: 'rgba(255,255,255,0.22)' }]}
+                  accessibilityLabel="Pindai QR Tiket Parkir"
+                  pressScale={0.88}
+                >
+                  <Ionicons name="qr-code-outline" size={19} color={Colors.white} />
+                </AnimatedPressable>
+                <AnimatedPressable
+                  onPress={navigateToProfile}
+                  style={styles.headerIconBtn}
+                  accessibilityLabel="Profil pengguna"
+                  pressScale={0.88}
+                >
+                  <Ionicons name="person-outline" size={19} color={Colors.white} />
+                </AnimatedPressable>
+              </View>
             </View>
 
             <View style={styles.greetingRow}>
@@ -174,14 +235,15 @@ export default function HomeScreen() {
                 <Text style={styles.greetingText}>{firstName} 👋</Text>
               </View>
               <View style={styles.headerBadge}>
-                <View style={styles.pulseDot} />
+                <PulseIndicator color="#34D399" size={7} />
                 <Text style={styles.headerBadgeText}>Real-Time</Text>
               </View>
             </View>
           </View>
         </SafeAreaView>
-      </View>
+      </Animated.View>
 
+      {/* ── SCROLLABLE CONTENT ── */}
       <ScrollView
         style={styles.scroll}
         contentContainerStyle={[
@@ -190,247 +252,305 @@ export default function HomeScreen() {
         ]}
         refreshControl={
           <RefreshControl
-            refreshing={refreshing}
-            onRefresh={onRefresh}
-            tintColor={Colors.primary}
-            colors={[Colors.primary]}
+            refreshing={isRefetching}
+            onRefresh={() => {
+              refetch(true);
+            }}
+            tintColor={colors.primary}
+            colors={[colors.primary]}
           />
         }
         showsVerticalScrollIndicator={false}
       >
-        {/* ERROR STATE BANNER */}
-        {error && (
-          <View style={styles.errorBanner}>
+        {/* 1. LOADING STATE */}
+        {isLoading && areas.length === 0 && <DashboardSkeleton />}
+
+        {/* 2. ERROR STATE */}
+        {!isLoading && isError && areas.length === 0 && (
+          <ErrorState
+            type="network"
+            title="Gagal Terhubung ke REST API"
+            message={errorMessage || 'Tidak dapat memuat data parkir.'}
+            onRetry={() => refetch()}
+            isRetrying={isRefetching}
+            onSecondaryAction={handleLoadDemoData}
+            secondaryActionLabel="Gunakan Data Demo"
+          />
+        )}
+
+        {/* 3. PARTIAL ERROR BANNER */}
+        {isError && areas.length > 0 && (
+          <Animated.View entering={FadeInDown.duration(400)} style={[styles.errorBanner, { borderColor: colors.danger + '40' }]}>
             <View style={styles.errorHeaderRow}>
-              <Ionicons name="alert-circle" size={22} color={Colors.danger} />
+              <Ionicons name="alert-circle" size={20} color={colors.danger} />
               <View style={styles.errorTextContainer}>
-                <Text style={styles.errorTitle}>Gagal Terhubung ke REST API</Text>
-                <Text style={styles.errorDesc}>{error}</Text>
+                <Text style={[styles.errorTitle, { color: colors.danger }]}>Pembaruan Terakhir Gagal</Text>
+                <Text style={[styles.errorDesc, { color: colors.textSecondary }]}>{errorMessage}</Text>
               </View>
             </View>
             <View style={styles.errorBtnRow}>
-              <TouchableOpacity
-                style={styles.retryBtn}
-                onPress={() => fetchParkingData()}
-                accessibilityLabel="Coba lagi mengambil data API"
+              <AnimatedPressable
+                style={[styles.retryBtn, { backgroundColor: colors.danger }]}
+                onPress={() => refetch(true)}
               >
-                <Ionicons name="refresh" size={15} color={Colors.white} />
+                <Ionicons name="refresh" size={13} color={Colors.white} />
                 <Text style={styles.retryBtnText}>Coba Lagi</Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={styles.demoBtn}
+              </AnimatedPressable>
+              <AnimatedPressable
+                style={[styles.demoBtn, { backgroundColor: colors.surface, borderColor: colors.border }]}
                 onPress={handleLoadDemoData}
-                accessibilityLabel="Muat data demo API"
               >
-                <Ionicons name="cloud-download-outline" size={15} color={Colors.primary} />
-                <Text style={styles.demoBtnText}>Muat Demo API</Text>
-              </TouchableOpacity>
+                <Ionicons name="cloud-download-outline" size={13} color={colors.primary} />
+                <Text style={[styles.demoBtnText, { color: colors.primary }]}>Demo Data</Text>
+              </AnimatedPressable>
             </View>
-          </View>
+          </Animated.View>
         )}
 
-        {/* LOADING STATE INDICATOR */}
-        {loading && areas.length === 0 && (
-          <View style={styles.loadingBox}>
-            <ActivityIndicator size="small" color={Colors.primary} />
-            <Text style={styles.loadingBoxText}>Mengambil data parkir dari REST API...</Text>
-          </View>
-        )}
+        {/* 4. SUCCESS STATE: Bento Grid Dashboard */}
+        {areas.length > 0 && (
+          <StaggerList staggerDelay={70} initialDelay={100}>
 
-        {/* OVERLAPPING CAMPUS STATUS CARD */}
-        <View style={styles.overlappingCard}>
-          <View style={styles.cardHeaderRow}>
-            <Text style={styles.cardHeaderTitle}>Status Kampus</Text>
-            <TouchableOpacity onPress={onRefresh} style={styles.refreshBtn}>
-              <Ionicons name="refresh-outline" size={16} color={Colors.primary} />
-              <Text style={styles.refreshText}>{lastRefreshed}</Text>
-            </TouchableOpacity>
-          </View>
-
-          {error && areas.length === 0 ? (
-            <View>
-              <View style={styles.campusOccupancyRow}>
-                <View style={styles.campusOccupancyLeft}>
-                  <Text style={[styles.campusPercent, { color: Colors.danger }]}>--</Text>
-                  <Text style={styles.campusPercentLabel}>Tidak Tersedia</Text>
+            {/* ── BENTO ROW 1: Circular Gauge (besar) + 2 Mini Stats ── */}
+            <View style={styles.bentoRow}>
+              {/* Kartu Utama — Circular Gauge */}
+              <GlowCard
+                glowColor={gaugeGlowColor}
+                glowIntensity={0.28}
+                glowRadius={28}
+                style={styles.bentoMainCard}
+                innerStyle={[styles.bentoMainInner, { backgroundColor: colors.surface }]}
+                onPress={navigateToParking}
+              >
+                {/* Header */}
+                <View style={styles.bentoMainHeader}>
+                  <Text style={[styles.bentoMainTitle, { color: colors.textPrimary }]}>Status Kampus</Text>
+                  <AnimatedPressable
+                    onPress={() => refetch(true)}
+                    disabled={isOffline}
+                    style={[styles.refreshBtn, isOffline && { opacity: 0.55 }]}
+                    pressScale={0.85}
+                  >
+                    <Ionicons
+                      name={isOffline ? 'cloud-offline-outline' : 'refresh-outline'}
+                      size={14}
+                      color={isOffline ? colors.warning : colors.primary}
+                    />
+                  </AnimatedPressable>
                 </View>
-                <View style={styles.campusDivider} />
-                <View style={styles.campusOccupancyRight}>
-                  <Text style={[styles.campusAvailableText, { color: Colors.textSecondary }]}>--</Text>
-                  <Text style={styles.campusCapacityText}>Gagal memuat kapasitas parkir</Text>
-                </View>
-              </View>
-              <View style={{ alignSelf: 'flex-start', marginTop: Spacing.md }}>
-                <View style={styles.apiErrorBadge}>
-                  <Ionicons name="cloud-offline-outline" size={14} color={Colors.danger} />
-                  <Text style={styles.apiErrorBadgeText}>Koneksi API Gagal</Text>
-                </View>
-              </View>
-            </View>
-          ) : (
-            <>
-              <View style={styles.campusOccupancyRow}>
-                <View style={styles.campusOccupancyLeft}>
-                  <Text style={styles.campusPercent}>{stats.occupancyPercent}%</Text>
-                  <Text style={styles.campusPercentLabel}>Terisi</Text>
-                </View>
-                <View style={styles.campusDivider} />
-                <View style={styles.campusOccupancyRight}>
-                  <Text style={styles.campusAvailableText}>{stats.totalAvailable}</Text>
-                  <Text style={styles.campusCapacityText}>Slot tersedia dari {stats.totalCapacity}</Text>
-                </View>
-              </View>
 
-              <View style={{ marginTop: Spacing.md, marginBottom: Spacing.sm }}>
-                <OccupancyBar percent={stats.occupancyPercent} height={6} />
+                {/* Circular Gauge */}
+                <View style={styles.gaugeWrapper}>
+                  <CircularGauge
+                    percent={stats.occupancyPercent}
+                    size={120}
+                    strokeWidth={10}
+                    label="Terisi"
+                    sublabel={lastRefreshed}
+                  />
+                </View>
+
+                {/* Available slots */}
+                <View style={styles.availableRow}>
+                  <Text style={[styles.availableNum, { color: colors.textPrimary }]}>
+                    {stats.totalAvailable}
+                  </Text>
+                  <Text style={[styles.availableLabel, { color: colors.textSecondary }]}>
+                    {' '}slot tersedia
+                  </Text>
+                </View>
+              </GlowCard>
+
+              {/* Mini stats kolom kanan */}
+              <View style={styles.bentoSideCol}>
+                <StatBentoItem
+                  label="Total Slot"
+                  value={stats.totalCapacity}
+                  icon="grid-outline"
+                  color={colors.primary}
+                  glowColor={colors.primary}
+                  onPress={navigateToParking}
+                />
+                <StatBentoItem
+                  label="Area Aktif"
+                  value={areas.length}
+                  suffix=" area"
+                  icon="location-outline"
+                  color="#22C55E"
+                  glowColor="#22C55E"
+                  onPress={navigateToParking}
+                />
+                <StatBentoItem
+                  label="Prediksi"
+                  value={stats.occupancyPercent > 70 ? stats.occupancyPercent - 10 : stats.occupancyPercent + 5}
+                  suffix="%"
+                  icon="trending-up-outline"
+                  color="#F59E0B"
+                  glowColor="#F59E0B"
+                  onPress={navigateToPrediction}
+                />
               </View>
-              <View style={{ alignSelf: 'flex-start', marginTop: Spacing.sm }}>
-                <StatusBadge status={campusStatus} size="sm" />
-              </View>
-            </>
-          )}
-        </View>
+            </View>
 
-        {/* QUICK ACTIONS */}
-        <View style={styles.quickActions}>
-          <TouchableOpacity
-            style={styles.quickActionBtn}
-            onPress={navigateToParking}
-            accessibilityLabel="Monitoring parkir"
-          >
-            <View style={[styles.quickActionIcon, { backgroundColor: Colors.primary + '15' }]}>
-              <Ionicons name="car" size={22} color={Colors.primary} />
-            </View>
-            <Text style={styles.quickActionText}>Parkir</Text>
-          </TouchableOpacity>
-          <TouchableOpacity
-            style={styles.quickActionBtn}
-            onPress={navigateToPrediction}
-            accessibilityLabel="Prediksi kepadatan"
-          >
-            <View style={[styles.quickActionIcon, { backgroundColor: Colors.secondary + '15' }]}>
-              <Ionicons name="stats-chart" size={22} color={Colors.secondary} />
-            </View>
-            <Text style={styles.quickActionText}>Prediksi</Text>
-          </TouchableOpacity>
-          <TouchableOpacity
-            style={styles.quickActionBtn}
-            onPress={() => router.push('/(tabs)/history' as any)}
-            accessibilityLabel="Riwayat kepadatan"
-          >
-            <View style={[styles.quickActionIcon, { backgroundColor: Colors.info + '15' }]}>
-              <Ionicons name="time" size={22} color={Colors.info} />
-            </View>
-            <Text style={styles.quickActionText}>Riwayat</Text>
-          </TouchableOpacity>
-          <TouchableOpacity
-            style={styles.quickActionBtn}
-            onPress={navigateToProfile}
-            accessibilityLabel="Pengaturan profil"
-          >
-            <View style={[styles.quickActionIcon, { backgroundColor: Colors.success + '15' }]}>
-              <Ionicons name="settings" size={22} color={Colors.success} />
-            </View>
-            <Text style={styles.quickActionText}>Profil</Text>
-          </TouchableOpacity>
-        </View>
-
-        {/* ALERTS SECTION */}
-        {alertAreas.length > 0 && (
-          <View style={styles.section}>
-            <View style={styles.sectionHeaderRow}>
-              <Text style={styles.sectionTitle}>⚠️ Peringatan</Text>
-              <Text style={styles.alertCount}>{alertAreas.length} area</Text>
-            </View>
-            {alertAreas.map((area) => (
-              <NotificationCard
-                key={area.id}
-                area={area}
-                alternativeArea={bestAlternative?.id !== area.id ? bestAlternative : undefined}
-                onDismiss={() => handleDismissAlert(area.id)}
-                onViewAlternative={navigateToParking}
-              />
-            ))}
-          </View>
-        )}
-
-        {/* AREA PARKIR SECTION */}
-        <View style={styles.section}>
-          <View style={styles.sectionHeaderRow}>
-            <Text style={styles.sectionTitle}>Area Parkir</Text>
-            <TouchableOpacity onPress={navigateToParking}>
-              <Text style={styles.viewAllText}>Lihat Semua →</Text>
-            </TouchableOpacity>
-          </View>
-          {areas.length === 0 && !loading ? (
-            <View style={styles.emptyContainer}>
-              <Ionicons
-                name={error ? "cloud-offline-outline" : "car-outline"}
-                size={36}
-                color={error ? Colors.danger : Colors.textTertiary}
-              />
-              <Text style={styles.emptyText}>
-                {error
-                  ? 'Data area parkir tidak tersedia karena koneksi API gagal.'
-                  : 'Tidak ada data area parkir.'}
-              </Text>
-              {error && (
-                <TouchableOpacity
-                  style={[styles.retryBtn, { marginTop: Spacing.sm }]}
-                  onPress={() => fetchParkingData()}
+            {/* ── QUICK ACTION: SCAN QR TIKET PARKIR ── */}
+            <View style={styles.section}>
+              <GlowCard
+                glowColor="#6366F1"
+                glowIntensity={0.22}
+                glowRadius={22}
+                onPress={navigateToScanner}
+                style={{ width: '100%' }}
+                innerStyle={{
+                  backgroundColor: colors.surface,
+                  flexDirection: 'row',
+                  alignItems: 'center',
+                  padding: 14,
+                  borderRadius: 20,
+                  gap: 12,
+                }}
+              >
+                <View
+                  style={{
+                    width: 44,
+                    height: 44,
+                    borderRadius: 14,
+                    backgroundColor: '#6366F11A',
+                    borderWidth: 1,
+                    borderColor: '#6366F140',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                  }}
                 >
-                  <Ionicons name="refresh" size={15} color={Colors.white} />
-                  <Text style={styles.retryBtnText}>Coba Lagi</Text>
-                </TouchableOpacity>
+                  <Ionicons name="scan-outline" size={24} color="#6366F1" />
+                </View>
+                <View style={{ flex: 1 }}>
+                  <Text style={{ color: colors.textPrimary, fontSize: 14, fontWeight: '700' }}>
+                    Scan QR Tiket Parkir
+                  </Text>
+                  <Text style={{ color: colors.textSecondary, fontSize: 11, marginTop: 2 }}>
+                    Check-in & Check-out instan dengan sensor kamera
+                  </Text>
+                </View>
+                <View
+                  style={{
+                    backgroundColor: '#6366F1',
+                    paddingHorizontal: 12,
+                    paddingVertical: 7,
+                    borderRadius: 10,
+                  }}
+                >
+                  <Text style={{ color: '#fff', fontSize: 12, fontWeight: '700' }}>Pindai</Text>
+                </View>
+              </GlowCard>
+            </View>
+
+            {/* ── VEHICLE FILTER TOGGLE ── */}
+            <View style={styles.section}>
+              <Text style={[styles.sectionTitle, { color: colors.textPrimary }]}>Filter Kendaraan</Text>
+              <AnimatedVehicleToggle value={vehicleFilter} onChange={setVehicleFilter} />
+            </View>
+
+            {/* ── PIN LOKASI PARKIRKU (dengan PulseRing) ── */}
+            <View style={styles.section}>
+              <ParkingPinWidget />
+            </View>
+
+            {/* ── ALERTS ── */}
+            {alertAreas.length > 0 && (
+              <View style={styles.section}>
+                <View style={styles.sectionHeaderRow}>
+                  <Text style={[styles.sectionTitle, { color: colors.textPrimary }]}>⚠️ Peringatan</Text>
+                  <View style={styles.alertCountBadge}>
+                    <Text style={styles.alertCountText}>{alertAreas.length}</Text>
+                  </View>
+                </View>
+                <StaggerList staggerDelay={60}>
+                  {alertAreas.map((area) => (
+                    <NotificationCard
+                      key={area.id}
+                      area={area}
+                      alternativeArea={
+                        bestAlternative?.id !== area.id ? bestAlternative : undefined
+                      }
+                      onDismiss={() => handleDismissAlert(area.id)}
+                      onViewAlternative={navigateToParking}
+                    />
+                  ))}
+                </StaggerList>
+              </View>
+            )}
+
+            {/* ── AREA PARKIR — Horizontal Bento style ── */}
+            <View style={styles.section}>
+              <View style={styles.sectionHeaderRow}>
+                <Text style={[styles.sectionTitle, { color: colors.textPrimary }]}>Area Parkir</Text>
+                <AnimatedPressable onPress={navigateToParking} pressScale={0.92}>
+                  <Text style={[styles.viewAllText, { color: colors.primary }]}>Lihat Semua →</Text>
+                </AnimatedPressable>
+              </View>
+
+              <View style={isWide ? { flexDirection: 'row', flexWrap: 'wrap', gap: 14 } : { gap: 10 }}>
+                {areas.slice(0, isWide ? 6 : 3).map((area) => (
+                  <ParkingCard
+                    key={area.id}
+                    area={area}
+                    onPress={handleCardPress}
+                    compact={false}
+                    vehicleType={vehicleFilter}
+                    style={isWide ? { width: cardWidth } : undefined}
+                  />
+                ))}
+              </View>
+
+              {areas.length > 3 && (
+                <AnimatedPressable
+                  style={[
+                    styles.showMoreBtn,
+                    {
+                      backgroundColor: colors.surface,
+                      borderColor: isDark ? colors.border : colors.borderLight,
+                    },
+                  ]}
+                  onPress={navigateToParking}
+                  pressScale={0.96}
+                >
+                  <Text style={[styles.showMoreText, { color: colors.primary }]}>
+                    +{areas.length - 3} area lainnya
+                  </Text>
+                  <Ionicons name="chevron-forward" size={16} color={colors.primary} />
+                </AnimatedPressable>
               )}
             </View>
-          ) : (
-            <View style={isWide ? { flexDirection: 'row', flexWrap: 'wrap', gap: 16 } : undefined}>
-              {areas.slice(0, isWide ? 6 : 3).map((area) => (
-                <ParkingCard
-                  key={area.id}
-                  area={area}
-                  onPress={handleCardPress}
-                  compact={false}
-                  style={isWide ? { width: cardWidth } : undefined}
+
+            {/* ── RECOMMENDATION ── */}
+            {recommendations.length > 0 && (
+              <View style={styles.section}>
+                <View style={styles.sectionHeaderRow}>
+                  <Text style={[styles.sectionTitle, { color: colors.textPrimary }]}>🎯 Rekomendasi</Text>
+                </View>
+                <RecommendationCard
+                  recommendation={recommendations[0]}
+                  onPress={handleRecommendationPress}
                 />
-              ))}
-            </View>
-          )}
-          {areas.length > 3 && (
-            <TouchableOpacity
-              style={styles.showMoreBtn}
-              onPress={navigateToParking}
-            >
-              <Text style={styles.showMoreText}>+{areas.length - 3} area lainnya</Text>
-              <Ionicons name="chevron-forward" size={16} color={Colors.primary} />
-            </TouchableOpacity>
-          )}
-        </View>
+              </View>
+            )}
 
-        {/* RECOMMENDATION SECTION */}
-        {recommendations.length > 0 && (
-          <View style={styles.section}>
-            <View style={styles.sectionHeaderRow}>
-              <Text style={styles.sectionTitle}>Rekomendasi</Text>
-            </View>
-            <RecommendationCard
-              recommendation={recommendations[0]}
-              onPress={handleRecommendationPress}
-            />
-          </View>
+          </StaggerList>
         )}
-
-        {/* SPRINT 04: PROTECTED PROGRAMS SECTION (GET /programs) */}
-        <View style={styles.section}>
-          <View style={styles.sectionHeaderRow}>
-            <Text style={styles.sectionTitle}>Program Kampus (Protected API)</Text>
-          </View>
-          <ProgramsList />
-        </View>
 
         <View style={styles.bottomSpacer} />
       </ScrollView>
+
+      {/* Floating Action Button: Scan Tiket Parkir */}
+      <AnimatedPressable
+        onPress={navigateToScanner}
+        style={styles.floatingScanFab}
+        pressScale={0.92}
+        accessibilityLabel="Pindai QR Tiket Parkir"
+      >
+        <Ionicons name="scan" size={20} color="#FFFFFF" />
+        <Text style={styles.floatingScanFabText}>Pindai Tiket</Text>
+      </AnimatedPressable>
     </View>
   );
 }
@@ -438,383 +558,276 @@ export default function HomeScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: Colors.background,
   },
-  purpleHeader: {
-    backgroundColor: Colors.primary,
+
+  // ─── Gradient Header ───────────────────────────────────────────
+  gradientHeader: {
+    backgroundColor: '#4338CA',
     borderBottomLeftRadius: 28,
     borderBottomRightRadius: 28,
     paddingBottom: Spacing.xl,
     position: 'relative',
     overflow: 'hidden',
-    shadowColor: Colors.primaryDark,
-    shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.18,
-    shadowRadius: 16,
-    elevation: 6,
+    shadowColor: '#312E81',
+    shadowOffset: { width: 0, height: 10 },
+    shadowOpacity: 0.25,
+    shadowRadius: 20,
+    elevation: 8,
+  },
+  gradientOverlay1: {
+    position: 'absolute',
+    top: 0,
+    right: 0,
+    width: '60%',
+    height: '100%',
+    backgroundColor: '#7C3AED',
+    opacity: 0.55,
+    borderTopLeftRadius: 120,
+    borderBottomLeftRadius: 80,
+  },
+  gradientOverlay2: {
+    position: 'absolute',
+    top: '30%',
+    left: 0,
+    width: '50%',
+    height: '80%',
+    backgroundColor: '#4F46E5',
+    opacity: 0.4,
+    borderTopRightRadius: 100,
   },
   decorCircle1: {
-    position: 'absolute',
-    top: -50,
-    right: -30,
-    width: 180,
-    height: 180,
-    borderRadius: 90,
-    backgroundColor: 'rgba(255, 255, 255, 0.08)',
+    position: 'absolute', top: -60, right: -40,
+    width: 200, height: 200, borderRadius: 100,
+    backgroundColor: 'rgba(255,255,255,0.07)',
   },
   decorCircle2: {
-    position: 'absolute',
-    bottom: -30,
-    left: '15%',
-    width: 120,
-    height: 120,
-    borderRadius: 60,
-    backgroundColor: 'rgba(255, 255, 255, 0.05)',
+    position: 'absolute', bottom: -40, left: '10%',
+    width: 140, height: 140, borderRadius: 70,
+    backgroundColor: 'rgba(255,255,255,0.05)',
   },
+  decorCircle3: {
+    position: 'absolute', top: '20%', left: -30,
+    width: 100, height: 100, borderRadius: 50,
+    backgroundColor: 'rgba(255,255,255,0.06)',
+  },
+  headerInner: { maxWidth: 960, width: '100%', alignSelf: 'center' },
   headerTop: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingTop: 8,
+    flexDirection: 'row', justifyContent: 'space-between',
+    alignItems: 'center', paddingTop: 10,
+  },
+  logoRow: { flexDirection: 'row', alignItems: 'center', gap: Spacing.sm },
+  logoMark: {
+    width: 34, height: 34, borderRadius: 10,
+    backgroundColor: 'rgba(255,255,255,0.22)',
+    borderWidth: 1, borderColor: 'rgba(255,255,255,0.3)',
+    alignItems: 'center', justifyContent: 'center',
+  },
+  logoMarkText: {
+    fontSize: 18, fontWeight: FontWeight.extrabold,
+    color: Colors.white, letterSpacing: 0.5,
+  },
+  headerBrandText: {
+    fontSize: FontSize.lg, fontWeight: FontWeight.extrabold,
+    color: Colors.white, letterSpacing: 2,
   },
   headerIconBtn: {
-    width: 42,
-    height: 42,
-    backgroundColor: 'rgba(255, 255, 255, 0.18)',
-    borderRadius: 14,
-    borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.25)',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  headerTitle: {
-    fontSize: FontSize.lg,
-    fontWeight: FontWeight.bold,
-    color: Colors.white,
-    letterSpacing: 0.3,
+    width: 40, height: 40,
+    backgroundColor: 'rgba(255,255,255,0.15)',
+    borderRadius: 12, borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.22)',
+    alignItems: 'center', justifyContent: 'center',
   },
   greetingRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'flex-end',
-    marginTop: Spacing.md,
-    marginBottom: Spacing.xs,
+    flexDirection: 'row', justifyContent: 'space-between',
+    alignItems: 'flex-end', marginTop: Spacing.xl, marginBottom: Spacing.sm,
   },
-  greetingTextContainer: {
-    flex: 1,
-  },
+  greetingTextContainer: { flex: 1 },
   greetingLabel: {
-    fontSize: FontSize.sm,
-    color: 'rgba(255,255,255,0.8)',
+    fontSize: FontSize.sm, color: 'rgba(255,255,255,0.75)',
     fontWeight: FontWeight.medium,
   },
   greetingText: {
-    fontSize: 26,
-    fontWeight: FontWeight.bold,
-    color: Colors.white,
-    marginTop: 2,
-    letterSpacing: -0.3,
+    fontSize: 26, fontWeight: FontWeight.extrabold,
+    color: Colors.white, marginTop: 2, letterSpacing: -0.5,
   },
   headerBadge: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-    backgroundColor: 'rgba(255, 255, 255, 0.16)',
-    paddingHorizontal: 12,
-    paddingVertical: 6,
+    flexDirection: 'row', alignItems: 'center', gap: 6,
+    backgroundColor: 'rgba(255,255,255,0.15)',
+    paddingHorizontal: 12, paddingVertical: 6,
     borderRadius: BorderRadius.full,
-    borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.22)',
-  },
-  pulseDot: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-    backgroundColor: '#34D399',
+    borderWidth: 1, borderColor: 'rgba(255,255,255,0.2)',
   },
   headerBadgeText: {
-    fontSize: FontSize.xs,
-    color: Colors.white,
-    fontWeight: FontWeight.semibold,
+    fontSize: FontSize.xs, color: Colors.white, fontWeight: FontWeight.semibold,
   },
-  scroll: {
-    flex: 1,
-  },
-  headerInner: {
-    maxWidth: 960,
-    width: '100%',
-    alignSelf: 'center',
-  },
+
+  // ─── Scroll ────────────────────────────────────────────────────
+  scroll: { flex: 1 },
   content: {
-    paddingTop: Spacing.lg,
-    paddingBottom: 120,
-    maxWidth: 960,
-    width: '100%',
-    alignSelf: 'center',
+    paddingTop: Spacing.lg, paddingBottom: 120,
+    maxWidth: 960, width: '100%', alignSelf: 'center',
   },
-  overlappingCard: {
-    backgroundColor: Colors.surface,
-    borderRadius: BorderRadius.xl,
-    padding: Spacing.lg,
-    marginTop: 0,
-    marginBottom: Spacing.lg,
-    borderWidth: 1,
-    borderColor: 'rgba(0, 0, 0, 0.04)',
-    shadowColor: '#1E1E2D',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.06,
-    shadowRadius: 14,
-    elevation: 3,
-  },
-  cardHeaderRow: {
+
+  // ─── Bento Grid ────────────────────────────────────────────────
+  bentoRow: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: Spacing.md,
-  },
-  cardHeaderTitle: {
-    fontSize: FontSize.md,
-    fontWeight: FontWeight.bold,
-    color: Colors.textPrimary,
-  },
-  refreshBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-  },
-  refreshText: {
-    fontSize: FontSize.xs,
-    color: Colors.primary,
-    fontWeight: FontWeight.medium,
-  },
-  campusOccupancyRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  campusOccupancyLeft: {
-    flex: 1,
-  },
-  campusPercent: {
-    fontSize: 32,
-    fontWeight: FontWeight.extrabold,
-    color: Colors.primary,
-  },
-  campusPercentLabel: {
-    fontSize: FontSize.xs,
-    color: Colors.textSecondary,
-    fontWeight: FontWeight.medium,
-  },
-  campusDivider: {
-    width: 1,
-    height: 40,
-    backgroundColor: Colors.border,
-    marginHorizontal: Spacing.lg,
-  },
-  campusOccupancyRight: {
-    flex: 1.5,
-  },
-  campusAvailableText: {
-    fontSize: FontSize.xxl,
-    fontWeight: FontWeight.bold,
-    color: Colors.textPrimary,
-  },
-  campusCapacityText: {
-    fontSize: FontSize.xs,
-    color: Colors.textSecondary,
-    marginTop: 2,
-  },
-  // Quick actions
-  quickActions: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    marginBottom: Spacing.xl,
-    gap: Spacing.sm,
-  },
-  quickActionBtn: {
-    flex: 1,
-    alignItems: 'center',
-    backgroundColor: Colors.surface,
-    borderRadius: BorderRadius.lg,
-    paddingVertical: Spacing.md,
-    paddingHorizontal: Spacing.xs,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.03,
-    shadowRadius: 8,
-    elevation: 1,
-  },
-  quickActionIcon: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: Spacing.xs,
-  },
-  quickActionText: {
-    fontSize: FontSize.xs,
-    fontWeight: FontWeight.semibold,
-    color: Colors.textPrimary,
-  },
-  section: {
+    gap: 12,
     marginBottom: Spacing.xl,
   },
-  sectionHeaderRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'baseline',
-    marginBottom: Spacing.md,
+  // Kartu utama (kiri, lebih lebar)
+  bentoMainCard: {
+    flex: 1.35,
+    minHeight: 240,
   },
-  sectionTitle: {
-    fontSize: FontSize.lg,
-    fontWeight: FontWeight.bold,
-    color: Colors.textPrimary,
-  },
-  alertCount: {
-    fontSize: FontSize.xs,
-    color: Colors.danger,
-    fontWeight: FontWeight.semibold,
-    backgroundColor: Colors.dangerBg,
-    paddingHorizontal: 8,
-    paddingVertical: 2,
-    borderRadius: BorderRadius.full,
-  },
-  viewAllText: {
-    fontSize: FontSize.sm,
-    color: Colors.primary,
-    fontWeight: FontWeight.semibold,
-  },
-  showMoreBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: Spacing.md,
-    gap: 4,
-    backgroundColor: Colors.surface,
-    borderRadius: BorderRadius.lg,
-    borderWidth: 1,
-    borderColor: Colors.border,
-    borderStyle: 'dashed',
-  },
-  showMoreText: {
-    fontSize: FontSize.sm,
-    color: Colors.primary,
-    fontWeight: FontWeight.semibold,
-  },
-  bottomSpacer: {
-    height: 32,
-  },
-  // Error & Loading States
-  errorBanner: {
-    backgroundColor: Colors.dangerBg,
-    borderRadius: BorderRadius.lg,
+  bentoMainInner: {
     padding: Spacing.md,
-    borderWidth: 1,
-    borderColor: Colors.danger + '40',
-    marginBottom: Spacing.lg,
-  },
-  errorHeaderRow: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    gap: Spacing.sm,
-  },
-  errorTextContainer: {
     flex: 1,
+    minHeight: 240,
   },
-  errorTitle: {
+  bentoMainHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: Spacing.sm,
+  },
+  bentoMainTitle: {
     fontSize: FontSize.sm,
     fontWeight: FontWeight.bold,
-    color: Colors.danger,
-    marginBottom: 2,
   },
-  errorDesc: {
-    fontSize: FontSize.xs,
-    color: Colors.textSecondary,
-    lineHeight: 18,
+  gaugeWrapper: {
+    alignItems: 'center',
+    marginVertical: Spacing.sm,
   },
-  errorBtnRow: {
+  availableRow: {
     flexDirection: 'row',
-    gap: Spacing.sm,
+    alignItems: 'baseline',
+    justifyContent: 'center',
     marginTop: Spacing.sm,
   },
-  retryBtn: {
-    flexDirection: 'row',
+  availableNum: {
+    fontSize: FontSize.xl,
+    fontWeight: FontWeight.extrabold,
+  },
+  availableLabel: {
+    fontSize: FontSize.xs,
+    fontWeight: FontWeight.medium,
+  },
+  refreshBtn: {
+    width: 28, height: 28, borderRadius: BorderRadius.sm,
+    alignItems: 'center', justifyContent: 'center',
+  },
+
+  // Kolom kanan (3 mini card vertikal)
+  bentoSideCol: {
+    flex: 1,
+    gap: 10,
+  },
+  statBentoCard: {
+    flex: 1,
+  },
+  statBentoInner: {
+    padding: Spacing.sm,
+    flex: 1,
     alignItems: 'center',
-    gap: 4,
+    justifyContent: 'center',
+    gap: 3,
+    minHeight: 70,
+  },
+  statBentoIcon: {
+    width: 30, height: 30, borderRadius: BorderRadius.sm,
+    alignItems: 'center', justifyContent: 'center',
+    marginBottom: 2,
+  },
+  statBentoValue: {
+    fontSize: FontSize.md,
+    fontWeight: FontWeight.extrabold,
+    textAlign: 'center',
+  },
+  statBentoLabel: {
+    fontSize: 9,
+    fontWeight: FontWeight.medium,
+    textAlign: 'center',
+  },
+
+  // ─── Sections ─────────────────────────────────────────────────
+  section: { marginBottom: Spacing.xl },
+  sectionHeaderRow: {
+    flexDirection: 'row', justifyContent: 'space-between',
+    alignItems: 'center', marginBottom: Spacing.md,
+  },
+  sectionTitle: {
+    fontSize: FontSize.lg, fontWeight: FontWeight.bold,
+  },
+  alertCountBadge: {
+    minWidth: 22, height: 22, borderRadius: 11,
     backgroundColor: Colors.danger,
-    paddingHorizontal: Spacing.md,
-    paddingVertical: 6,
+    alignItems: 'center', justifyContent: 'center',
+    paddingHorizontal: 6,
+  },
+  alertCountText: {
+    fontSize: 11, color: Colors.white, fontWeight: FontWeight.bold,
+  },
+  viewAllText: {
+    fontSize: FontSize.sm, fontWeight: FontWeight.semibold,
+  },
+  showMoreBtn: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
+    paddingVertical: Spacing.md, gap: 4, borderRadius: BorderRadius.lg,
+    borderWidth: 1, borderStyle: 'dashed', marginTop: Spacing.sm,
+  },
+  showMoreText: {
+    fontSize: FontSize.sm, fontWeight: FontWeight.semibold,
+  },
+  bottomSpacer: { height: 32 },
+
+  // ─── Error Banner ──────────────────────────────────────────────
+  errorBanner: {
+    borderRadius: BorderRadius.lg, padding: Spacing.md,
+    borderWidth: 1, marginBottom: Spacing.lg,
+    backgroundColor: 'rgba(239,68,68,0.08)',
+  },
+  errorHeaderRow: { flexDirection: 'row', alignItems: 'flex-start', gap: Spacing.sm },
+  errorTextContainer: { flex: 1 },
+  errorTitle: {
+    fontSize: FontSize.sm, fontWeight: FontWeight.bold, marginBottom: 2,
+  },
+  errorDesc: { fontSize: FontSize.xs, lineHeight: 18 },
+  errorBtnRow: { flexDirection: 'row', gap: Spacing.sm, marginTop: Spacing.sm },
+  retryBtn: {
+    flexDirection: 'row', alignItems: 'center', gap: 4,
+    paddingHorizontal: Spacing.md, paddingVertical: 6,
     borderRadius: BorderRadius.sm,
   },
   retryBtnText: {
-    fontSize: FontSize.xs,
-    color: Colors.white,
-    fontWeight: FontWeight.semibold,
+    fontSize: FontSize.xs, color: Colors.white, fontWeight: FontWeight.semibold,
   },
   demoBtn: {
+    flexDirection: 'row', alignItems: 'center', gap: 4,
+    paddingHorizontal: Spacing.md, paddingVertical: 6,
+    borderRadius: BorderRadius.sm, borderWidth: 1,
+  },
+  demoBtnText: { fontSize: FontSize.xs, fontWeight: FontWeight.semibold },
+  floatingScanFab: {
+    position: 'absolute',
+    bottom: Platform.OS === 'ios' ? 104 : 88,
+    right: 20,
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 4,
-    backgroundColor: Colors.surface,
-    paddingHorizontal: Spacing.md,
-    paddingVertical: 6,
-    borderRadius: BorderRadius.sm,
-    borderWidth: 1,
-    borderColor: Colors.border,
+    gap: 8,
+    backgroundColor: '#6366F1',
+    paddingVertical: 12,
+    paddingHorizontal: 18,
+    borderRadius: 30,
+    shadowColor: '#6366F1',
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.45,
+    shadowRadius: 14,
+    elevation: 8,
+    zIndex: 90,
   },
-  demoBtnText: {
-    fontSize: FontSize.xs,
-    color: Colors.primary,
-    fontWeight: FontWeight.semibold,
-  },
-  loadingBox: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: Spacing.sm,
-    paddingVertical: Spacing.md,
-    marginBottom: Spacing.md,
-    backgroundColor: Colors.surface,
-    borderRadius: BorderRadius.lg,
-    borderWidth: 1,
-    borderColor: Colors.border,
-  },
-  loadingBoxText: {
-    fontSize: FontSize.xs,
-    color: Colors.textSecondary,
-    fontWeight: FontWeight.medium,
-  },
-  emptyContainer: {
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: Spacing.xl,
-    backgroundColor: Colors.surface,
-    borderRadius: BorderRadius.xl,
-    borderWidth: 1,
-    borderColor: Colors.border,
-    marginBottom: Spacing.lg,
-    gap: Spacing.sm,
-  },
-  emptyText: {
-    fontSize: FontSize.sm,
-    color: Colors.textSecondary,
-    textAlign: 'center',
-  },
-  apiErrorBadge: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-    backgroundColor: Colors.dangerBg,
-    paddingHorizontal: 10,
-    paddingVertical: 5,
-    borderRadius: BorderRadius.full,
-    borderWidth: 1,
-    borderColor: Colors.danger + '30',
-  },
-  apiErrorBadgeText: {
-    fontSize: FontSize.xs,
-    color: Colors.danger,
-    fontWeight: FontWeight.semibold,
+  floatingScanFabText: {
+    color: '#FFFFFF',
+    fontWeight: '700',
+    fontSize: 14,
   },
 });
-

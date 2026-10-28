@@ -9,12 +9,14 @@
  *    - Content-Type: application/json
  *    - Accept: application/json
  * 3. Menangani timeout, network error, dan status HTTP (termasuk 401 Unauthorized)
+ * 4. Menampilkan notifikasi toast otomatis untuk setiap error HTTP
  */
 
 import * as SecureStore from 'expo-secure-store';
 import { Platform } from 'react-native';
 import { API_CONFIG } from '../config/api';
 import { SECURE_KEYS, getSecureData } from './secureStorageService';
+import { toast } from '../context/ToastContext';
 
 // ============================================================
 // Types
@@ -49,6 +51,60 @@ let onUnauthorizedCallback: (() => void) | null = null;
 
 export function setOnUnauthorizedCallback(cb: () => void) {
   onUnauthorizedCallback = cb;
+}
+
+/**
+ * Menampilkan toast yang sesuai berdasarkan HTTP status code.
+ * Dipanggil secara otomatis oleh interceptor di apiRequest().
+ *
+ * Status yang ditangani:
+ *  - 401  → Ditangani terpisah (session clear + toast)
+ *  - 403  → Akses ditolak
+ *  - 404  → Data tidak ditemukan
+ *  - 408  → Timeout
+ *  - 5xx  → Server error
+ *  - lainnya → Pesan generik
+ */
+function _handleHttpErrorToast(status: number, serverMessage?: string): void {
+  switch (status) {
+    case 403:
+      toast.error('Akses ditolak. Anda tidak memiliki izin untuk melakukan tindakan ini.', {
+        title: 'Akses Ditolak',
+      });
+      break;
+    case 404:
+      toast.warning('Data yang Anda cari tidak ditemukan.', {
+        title: 'Data Tidak Ditemukan',
+      });
+      break;
+    case 408:
+      toast.error('Permintaan timeout. Silakan coba lagi.', {
+        title: 'Koneksi Timeout',
+      });
+      break;
+    case 422:
+      toast.warning(serverMessage || 'Data yang dikirim tidak valid. Periksa kembali inputan Anda.', {
+        title: 'Data Tidak Valid',
+      });
+      break;
+    case 429:
+      toast.warning('Terlalu banyak permintaan. Silakan tunggu sebentar.', {
+        title: 'Terlalu Banyak Permintaan',
+      });
+      break;
+    default:
+      if (status >= 500) {
+        toast.error('Terjadi kesalahan pada server. Silakan coba lagi nanti.', {
+          title: 'Kesalahan Server',
+          duration: 5000,
+        });
+      } else if (status >= 400) {
+        toast.error(serverMessage || `Permintaan gagal (${status}).`, {
+          title: 'Permintaan Gagal',
+        });
+      }
+      break;
+  }
 }
 
 /**
@@ -118,6 +174,7 @@ export async function apiRequest<T = any>(
       if (onUnauthorizedCallback) {
         onUnauthorizedCallback();
       }
+      toast.error('Sesi Anda telah berakhir. Silakan login kembali.', { title: 'Sesi Berakhir' });
       throw new ApiError('Akses ditolak: Token autentikasi tidak ditemukan di SecureStore. Silakan login kembali.', 401);
     }
   }
@@ -140,6 +197,10 @@ export async function apiRequest<T = any>(
       if (onUnauthorizedCallback) {
         onUnauthorizedCallback();
       }
+      toast.error('Sesi Anda telah berakhir. Silakan login kembali.', {
+        title: 'Sesi Berakhir',
+        duration: 5000,
+      });
       throw new ApiError('Sesi Anda telah berakhir. Silakan login kembali.', 401);
     }
 
@@ -163,6 +224,10 @@ export async function apiRequest<T = any>(
         responseData?.message ||
         responseData?.error ||
         `Request gagal dengan status ${response.status}`;
+
+      // 7. Tampilkan toast berdasarkan HTTP status code
+      _handleHttpErrorToast(response.status, errorMessage);
+
       throw new ApiError(errorMessage, response.status, responseData);
     }
 
@@ -171,11 +236,21 @@ export async function apiRequest<T = any>(
     clearTimeout(timeoutId);
 
     if (error.name === 'AbortError') {
+      toast.error('Koneksi timeout. Silakan periksa jaringan Anda.', {
+        title: 'Koneksi Timeout',
+        duration: 5000,
+      });
       throw new ApiError('Koneksi timeout. Silakan periksa jaringan Anda.', 408);
     }
     if (error instanceof ApiError) {
+      // Error sudah ditangani sebelumnya (401, dst) — jangan tampilkan toast duplikat
       throw error;
     }
+    // Network error (offline, DNS gagal, dsb)
+    toast.error('Gagal terhubung ke server. Periksa koneksi internet Anda.', {
+      title: 'Tidak Ada Koneksi',
+      duration: 5000,
+    });
     throw new ApiError(error.message || 'Terjadi gangguan jaringan.', 0);
   }
 }

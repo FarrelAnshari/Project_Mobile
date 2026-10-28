@@ -10,7 +10,6 @@ import {
   View,
   Text,
   ScrollView,
-  TouchableOpacity,
   StyleSheet,
   SafeAreaView,
 } from 'react-native';
@@ -18,6 +17,10 @@ import { Ionicons } from '@expo/vector-icons';
 import { historyData, weeklyData, DayHistory } from '../data/predictionData';
 import { getStatusFromOccupancy, getOccupancyBarColor } from '../utils/parkingStatus';
 import StatusBadge from '../components/StatusBadge';
+import OccupancyChart from '../components/OccupancyChart';
+import AnimatedPageTransition from '../components/AnimatedPageTransition';
+import AnimatedPressable from '../components/AnimatedPressable';
+import AnimatedOccupancyBar from '../components/AnimatedOccupancyBar';
 import {
   Colors,
   Spacing,
@@ -26,19 +29,24 @@ import {
   BorderRadius,
   Shadow,
 } from '../constants/theme';
+import { useTheme } from '../context/ThemeContext';
+import { useThemeColors } from '../hooks/useThemeColors';
 import { useResponsive } from '../utils/responsive';
 
 type FilterType = 'hari' | 'minggu';
 
 export default function HistoryScreen() {
   const { horizontalPadding } = useResponsive();
+  const colors = useThemeColors();
+  const { isDark } = useTheme();
   const [filter, setFilter] = useState<FilterType>('hari');
   const [selectedDay, setSelectedDay] = useState<DayHistory>(historyData[0]);
 
   return (
-    <View style={styles.container}>
+    <AnimatedPageTransition style={{ flex: 1 }}>
+      <View style={[styles.container, { backgroundColor: colors.background }]}>
       {/* PURPLE HEADER SECTION */}
-      <View style={styles.purpleHeader}>
+      <View style={[styles.purpleHeader, { backgroundColor: isDark ? colors.surface : colors.primary }]}>
         <View style={styles.decorCircle1} />
         <View style={styles.decorCircle2} />
         <SafeAreaView>
@@ -59,36 +67,38 @@ export default function HistoryScreen() {
         showsVerticalScrollIndicator={false}
       >
         {/* Filter tabs (Overlapping) */}
-        <View style={styles.overlappingTabs} accessibilityRole="tablist">
+        <View style={[styles.overlappingTabs, { backgroundColor: isDark ? colors.surface : '#EDE9FE' }]} accessibilityRole="tablist">
           {[
             { id: 'hari' as FilterType, label: 'Per Hari', icon: 'calendar-outline' as const },
             { id: 'minggu' as FilterType, label: 'Per Minggu', icon: 'calendar-number-outline' as const },
           ].map((f) => (
-            <TouchableOpacity
+            <AnimatedPressable
               key={f.id}
+              pressScale={0.95}
               style={[
                 styles.filterTab,
-                filter === f.id && styles.filterTabActive,
+                filter === f.id && [styles.filterTabActive, { backgroundColor: colors.primary }],
               ]}
               onPress={() => setFilter(f.id)}
-              accessibilityRole="tab"
+              accessibilityRole="button"
               accessibilityLabel={f.label}
               accessibilityState={{ selected: filter === f.id }}
             >
               <Ionicons 
                 name={f.icon} 
                 size={16} 
-                color={filter === f.id ? Colors.white : Colors.textSecondary} 
+                color={filter === f.id ? Colors.white : colors.textSecondary} 
               />
               <Text
                 style={[
                   styles.filterTabText,
+                  { color: filter === f.id ? Colors.white : colors.textSecondary },
                   filter === f.id && styles.filterTabTextActive,
                 ]}
               >
                 {f.label}
               </Text>
-            </TouchableOpacity>
+            </AnimatedPressable>
           ))}
         </View>
 
@@ -102,26 +112,33 @@ export default function HistoryScreen() {
               accessibilityRole="tablist"
             >
               {historyData.map((day) => (
-                <TouchableOpacity
+                <AnimatedPressable
                   key={day.date}
+                  pressScale={0.92}
                   style={[
                     styles.dayChip,
-                    selectedDay.date === day.date && styles.dayChipActive,
+                    {
+                      backgroundColor: isDark ? colors.surface : '#EDE9FE',
+                      borderColor: isDark ? colors.border : 'transparent',
+                      borderWidth: isDark ? 1 : 0,
+                    },
+                    selectedDay.date === day.date && [styles.dayChipActive, { backgroundColor: colors.primary }],
                   ]}
                   onPress={() => setSelectedDay(day)}
-                  accessibilityRole="tab"
+                  accessibilityRole="button"
                   accessibilityLabel={day.label}
                   accessibilityState={{ selected: selectedDay.date === day.date }}
                 >
                   <Text
                     style={[
                       styles.dayChipText,
+                      { color: selectedDay.date === day.date ? Colors.white : colors.textSecondary },
                       selectedDay.date === day.date && styles.dayChipTextActive,
                     ]}
                   >
                     {day.label}
                   </Text>
-                </TouchableOpacity>
+                </AnimatedPressable>
               ))}
             </ScrollView>
 
@@ -129,33 +146,51 @@ export default function HistoryScreen() {
             <View style={styles.summaryRow}>
               <SummaryCard
                 icon="bar-chart-outline"
-                iconColor={Colors.primary}
+                iconColor={colors.primary}
                 label="Rata-rata"
                 value={`${selectedDay.avgOccupancy}%`}
                 sub="Kepadatan harian"
               />
               <SummaryCard
                 icon="trending-up"
-                iconColor={Colors.danger}
+                iconColor={colors.danger}
                 label="Paling Padat"
                 value={selectedDay.peakTime}
                 sub="Jam tersibuk"
               />
               <SummaryCard
                 icon="trending-down"
-                iconColor={Colors.success}
+                iconColor={colors.success}
                 label="Paling Sepi"
                 value={selectedDay.quietTime}
                 sub="Jam lengang"
               />
             </View>
 
-            {/* Hourly history chart */}
+            {/* Hourly history chart — animated bar chart */}
             <View style={styles.section}>
-              <Text style={styles.sectionTitle} accessibilityRole="header">
-                Rincian Per Jam — {selectedDay.label}
+              <Text style={[styles.sectionTitle, { color: colors.textSecondary }]} accessibilityRole="header">
+                Kepadatan Per Jam — {selectedDay.label}
               </Text>
-              <View style={[styles.historyTable, Shadow.sm]}>
+              <View style={[{ backgroundColor: colors.surface, borderRadius: BorderRadius.xl, padding: Spacing.md, borderColor: isDark ? colors.border : colors.borderLight, borderWidth: isDark ? 1 : 0 }, Shadow.sm]}>
+                <OccupancyChart
+                  data={selectedDay.points.map((p, idx) => ({
+                    label: p.time,
+                    value: p.occupancy,
+                    highlight: p.occupancy === Math.max(...selectedDay.points.map(x => x.occupancy)),
+                  }))}
+                  height={160}
+                  showYAxis
+                />
+              </View>
+            </View>
+
+            {/* Hourly history detail table */}
+            <View style={styles.section}>
+              <Text style={[styles.sectionTitle, { color: colors.textSecondary }]} accessibilityRole="header">
+                Rincian Per Jam
+              </Text>
+              <View style={[styles.historyTable, Shadow.sm, { backgroundColor: colors.surface, borderColor: isDark ? colors.border : colors.borderLight, borderWidth: isDark ? 1 : 0 }]}>
                 {selectedDay.points.map((point, index) => {
                   const status = getStatusFromOccupancy(point.occupancy);
                   const color = getOccupancyBarColor(point.occupancy);
@@ -164,22 +199,14 @@ export default function HistoryScreen() {
                       key={index}
                       style={[
                         styles.historyRow,
-                        index < selectedDay.points.length - 1 && styles.historyRowBorder,
+                        index < selectedDay.points.length - 1 && [styles.historyRowBorder, { borderBottomColor: colors.borderLight }],
                       ]}
                       accessible={true}
                       accessibilityLabel={`${point.time}: ${point.occupancy} persen kepadatan`}
                     >
-                      <Text style={styles.historyTime}>{point.time}</Text>
-                      <View style={styles.historyBarTrack}>
-                        <View
-                          style={[
-                            styles.historyBar,
-                            {
-                              width: `${point.occupancy}%`,
-                              backgroundColor: color,
-                            },
-                          ]}
-                        />
+                      <Text style={[styles.historyTime, { color: colors.textPrimary }]}>{point.time}</Text>
+                      <View style={{ flex: 1, marginHorizontal: Spacing.sm }}>
+                        <AnimatedOccupancyBar percent={point.occupancy} height={8} />
                       </View>
                       <Text style={[styles.historyValue, { color }]}>
                         {point.occupancy}%
@@ -192,20 +219,20 @@ export default function HistoryScreen() {
             </View>
 
             {/* Insight */}
-            <View style={[styles.insightBox, Shadow.sm]}>
+            <View style={[styles.insightBox, Shadow.sm, { backgroundColor: colors.surface, borderColor: isDark ? colors.border : colors.borderLight, borderWidth: isDark ? 1 : 0 }]}>
               <View style={styles.insightHeader}>
-                <Ionicons name="bulb-outline" size={18} color={Colors.primary} />
-                <Text style={styles.insightTitle}>Insight</Text>
+                <Ionicons name="bulb-outline" size={18} color={colors.primary} />
+                <Text style={[styles.insightTitle, { color: colors.primary }]}>Insight</Text>
               </View>
-              <Text style={styles.insightText}>
+              <Text style={[styles.insightText, { color: colors.textSecondary }]}>
                 Rata-rata kepadatan tertinggi terjadi pukul{' '}
-                <Text style={styles.insightBold}>{selectedDay.peakTime}</Text>
+                <Text style={[styles.insightBold, { color: colors.textPrimary }]}>{selectedDay.peakTime}</Text>
                 {' '}dengan rata-rata kepadatan{' '}
-                <Text style={styles.insightBold}>{selectedDay.avgOccupancy}%</Text>.
+                <Text style={[styles.insightBold, { color: colors.textPrimary }]}>{selectedDay.avgOccupancy}%</Text>.
               </Text>
-              <Text style={styles.insightText}>
+              <Text style={[styles.insightText, { color: colors.textSecondary }]}>
                 Waktu paling sepi: pukul{' '}
-                <Text style={styles.insightBold}>{selectedDay.quietTime}</Text>.
+                <Text style={[styles.insightBold, { color: colors.textPrimary }]}>{selectedDay.quietTime}</Text>.
               </Text>
             </View>
           </>
@@ -213,10 +240,10 @@ export default function HistoryScreen() {
           <>
             {/* Weekly chart */}
             <View style={styles.section}>
-              <Text style={styles.sectionTitle} accessibilityRole="header">
+              <Text style={[styles.sectionTitle, { color: colors.textSecondary }]} accessibilityRole="header">
                 Rata-Rata Kepadatan Per Hari
               </Text>
-              <View style={[styles.weeklyChart, Shadow.sm]}>
+              <View style={[styles.weeklyChart, Shadow.sm, { backgroundColor: colors.surface, borderColor: isDark ? colors.border : colors.borderLight, borderWidth: isDark ? 1 : 0 }]}>
                 {weeklyData.map((day, index) => {
                   const color = getOccupancyBarColor(day.avgOccupancy);
                   const barHeight = (day.avgOccupancy / 100) * 100;
@@ -230,7 +257,7 @@ export default function HistoryScreen() {
                       <Text style={[styles.weeklyValue, { color }]}>
                         {day.avgOccupancy}%
                       </Text>
-                      <View style={styles.weeklyBarTrack}>
+                      <View style={[styles.weeklyBarTrack, { backgroundColor: isDark ? colors.background : '#F3F4F6' }]}>
                         <View
                           style={[
                             styles.weeklyBar,
@@ -241,7 +268,7 @@ export default function HistoryScreen() {
                           ]}
                         />
                       </View>
-                      <Text style={styles.weeklyDay}>{day.day}</Text>
+                      <Text style={[styles.weeklyDay, { color: colors.textSecondary }]}>{day.day}</Text>
                     </View>
                   );
                 })}
@@ -249,22 +276,22 @@ export default function HistoryScreen() {
             </View>
 
             {/* Weekly insight */}
-            <View style={[styles.insightBox, Shadow.sm]}>
+            <View style={[styles.insightBox, Shadow.sm, { backgroundColor: colors.surface, borderColor: isDark ? colors.border : colors.borderLight, borderWidth: isDark ? 1 : 0 }]}>
               <View style={styles.insightHeader}>
-                <Ionicons name="bulb-outline" size={18} color={Colors.primary} />
-                <Text style={styles.insightTitle}>Insight Mingguan</Text>
+                <Ionicons name="bulb-outline" size={18} color={colors.primary} />
+                <Text style={[styles.insightTitle, { color: colors.primary }]}>Insight Mingguan</Text>
               </View>
-              <Text style={styles.insightText}>
+              <Text style={[styles.insightText, { color: colors.textSecondary }]}>
                 Hari dengan kepadatan tertinggi:{' '}
-                <Text style={styles.insightBold}>
+                <Text style={[styles.insightBold, { color: colors.textPrimary }]}>
                   {weeklyData.reduce((a, b) =>
                     a.avgOccupancy > b.avgOccupancy ? a : b,
                   ).day}
                 </Text>
               </Text>
-              <Text style={styles.insightText}>
+              <Text style={[styles.insightText, { color: colors.textSecondary }]}>
                 Hari paling lengang:{' '}
-                <Text style={styles.insightBold}>
+                <Text style={[styles.insightBold, { color: colors.textPrimary }]}>
                   {weeklyData.reduce((a, b) =>
                     a.avgOccupancy < b.avgOccupancy ? a : b,
                   ).day}
@@ -277,6 +304,7 @@ export default function HistoryScreen() {
         <View style={{ height: 32 }} />
       </ScrollView>
     </View>
+    </AnimatedPageTransition>
   );
 }
 
@@ -293,18 +321,27 @@ function SummaryCard({
   value: string;
   sub: string;
 }) {
+  const { colors, isDark } = useTheme();
   return (
     <View
-      style={[styles.summaryCard, Shadow.sm]}
+      style={[
+        styles.summaryCard,
+        Shadow.sm,
+        {
+          backgroundColor: colors.surface,
+          borderColor: isDark ? colors.border : colors.borderLight,
+          borderWidth: isDark ? 1 : 0,
+        },
+      ]}
       accessible={true}
       accessibilityLabel={`${label}: ${value}. ${sub}`}
     >
       <View style={[styles.summaryIconBox, { backgroundColor: iconColor + '15' }]}>
         <Ionicons name={icon} size={18} color={iconColor} />
       </View>
-      <Text style={styles.summaryValue}>{value}</Text>
-      <Text style={styles.summaryLabel}>{label}</Text>
-      <Text style={styles.summarySub}>{sub}</Text>
+      <Text style={[styles.summaryValue, { color: colors.textPrimary }]}>{value}</Text>
+      <Text style={[styles.summaryLabel, { color: colors.textSecondary }]}>{label}</Text>
+      <Text style={[styles.summarySub, { color: colors.textTertiary }]}>{sub}</Text>
     </View>
   );
 }

@@ -10,8 +10,14 @@
 import { Stack, useRouter, useSegments } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
 import { useEffect, useState, useRef } from 'react';
-import { View, ActivityIndicator, StyleSheet, Text, Animated, Easing, Platform } from 'react-native';
+import { View, StyleSheet, Text, Animated, Easing, Platform } from 'react-native';
+import { StatusBar } from 'expo-status-bar';
 import { AuthProvider, useAuth } from '../context/AuthContext';
+import { ThemeProvider, useTheme } from '../context/ThemeContext';
+import { ToastProvider } from '../context/ToastContext';
+import { ErrorBoundary } from '../components/ErrorBoundary';
+import { OnlineStatusProvider } from '../hooks/useOnlineStatus';
+import OfflineBanner from '../components/OfflineBanner';
 import { Colors } from '../constants/theme';
 
 SplashScreen.preventAutoHideAsync().catch(() => {});
@@ -235,6 +241,7 @@ function AnimatedSplash({ onFinish }: { onFinish: () => void }) {
 // ============================================================
 function NavigationGuard({ children }: { children: React.ReactNode }) {
   const { authState } = useAuth();
+  const { isDark, colors } = useTheme();
   const router = useRouter();
   const segments = useSegments();
   const [showSplash, setShowSplash] = useState(true);
@@ -246,25 +253,33 @@ function NavigationGuard({ children }: { children: React.ReactNode }) {
     SplashScreen.hideAsync().catch(() => {});
 
     const firstSegment = segments[0] as string | undefined;
+    // Pada root route '/' (segments kosong), index.tsx menangani navigasi awal
+    if (!firstSegment) return;
+
     const inLoginPage = firstSegment === 'login';
     const inRegisterPage = firstSegment === 'register';
     const isAuthRoute = inLoginPage || inRegisterPage;
 
-    if (authState === 'unauthenticated' && !isAuthRoute) {
-      // User belum login dan sedang berada di luar login/register → redirect ke login
-      router.replace('/login' as any);
-    } else if (authState === 'authenticated' && isAuthRoute) {
-      // User sudah login tapi berada di halaman login/register → redirect ke home
-      router.replace('/(tabs)' as any);
-    }
-  }, [authState, segments]);
+    const navTimer = setTimeout(() => {
+      if (authState === 'unauthenticated' && !isAuthRoute) {
+        // User belum login dan mencoba akses tab/halaman protected → redirect ke login
+        router.replace('/login' as any);
+      } else if (authState === 'authenticated' && isAuthRoute) {
+        // User sudah login tapi berada di halaman login/register → redirect ke home
+        router.replace('/(tabs)' as any);
+      }
+    }, 10);
+
+    return () => clearTimeout(navTimer);
+  }, [authState, segments, router]);
 
   const handleSplashFinish = () => {
     setShowSplash(false);
   };
 
   return (
-    <View style={styles.flexOne}>
+    <View style={[styles.flexOne, { backgroundColor: colors.background }]}>
+      <StatusBar style={isDark ? 'light' : 'dark'} />
       {children}
       {showSplash && (
         <View style={[StyleSheet.absoluteFill, { zIndex: 999 }]}>
@@ -279,31 +294,47 @@ function NavigationGuard({ children }: { children: React.ReactNode }) {
 // Root Layout
 // ============================================================
 export default function RootLayout() {
-
   return (
-    <AuthProvider>
-      <NavigationGuard>
-        <Stack screenOptions={{ headerShown: false }}>
-          <Stack.Screen name="index" options={{ headerShown: false }} />
-          <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-          <Stack.Screen
-            name="login"
-            options={{
-              headerShown: false,
-              // Tidak bisa swipe back ke tabs setelah logout
-              gestureEnabled: false,
-            }}
-          />
-          <Stack.Screen
-            name="register"
-            options={{
-              headerShown: false,
-              presentation: 'card',
-            }}
-          />
-        </Stack>
-      </NavigationGuard>
-    </AuthProvider>
+    <ErrorBoundary>
+      <ThemeProvider>
+        <OnlineStatusProvider>
+          <ToastProvider>
+            <AuthProvider>
+              <NavigationGuard>
+                <Stack screenOptions={{ headerShown: false }}>
+                  <Stack.Screen name="index" options={{ headerShown: false }} />
+                  <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+                  <Stack.Screen
+                    name="scanner"
+                    options={{
+                      headerShown: false,
+                      presentation: 'fullScreenModal',
+                      animation: 'slide_from_bottom',
+                    }}
+                  />
+                  <Stack.Screen
+                    name="login"
+                    options={{
+                      headerShown: false,
+                      // Tidak bisa swipe back ke tabs setelah logout
+                      gestureEnabled: false,
+                    }}
+                  />
+                  <Stack.Screen
+                    name="register"
+                    options={{
+                      headerShown: false,
+                      presentation: 'card',
+                    }}
+                  />
+                </Stack>
+              </NavigationGuard>
+              <OfflineBanner />
+            </AuthProvider>
+          </ToastProvider>
+        </OnlineStatusProvider>
+      </ThemeProvider>
+    </ErrorBoundary>
   );
 }
 

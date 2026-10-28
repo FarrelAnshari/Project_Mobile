@@ -15,6 +15,11 @@
 
 import { API_CONFIG } from '../config/api';
 import { ParkingArea } from '../models/parking';
+import {
+  cacheApiResponse,
+  getCachedApiResponse,
+  CACHE_KEYS,
+} from './cacheService';
 
 // ============================================================
 // DTO (Data Transfer Object) Definition
@@ -397,26 +402,56 @@ async function fetchFromCustomBackend(
 export async function getParkingAreas(
   options: FetchParkingOptions = {}
 ): Promise<ParkingArea[]> {
+  // 1. Cek status koneksi: jika offline, langsung kembalikan data cache terakhir
+  if (typeof navigator !== 'undefined' && navigator.onLine === false) {
+    const cached = await getCachedApiResponse<ParkingArea[]>(CACHE_KEYS.PARKING_AREAS);
+    if (cached && cached.data?.length > 0) {
+      return cached.data.map((area) => ({
+        ...area,
+        lastUpdated: `Offline (${cached.formattedTime})`,
+      }));
+    }
+  }
+
   const hasCustomParkingBackend =
     Boolean(process.env.EXPO_PUBLIC_API_URL) &&
     !process.env.EXPO_PUBLIC_API_URL?.includes('jsonplaceholder');
 
-  if (hasCustomParkingBackend) {
-    return await fetchFromCustomBackend(options);
+  try {
+    let resultAreas: ParkingArea[];
+
+    if (hasCustomParkingBackend) {
+      resultAreas = await fetchFromCustomBackend(options);
+    } else {
+      // Ketentuan 1: Gunakan endpoint online jsonplaceholder untuk menguji konektivitas
+      await testApiConnectivity(options);
+
+      // Ketentuan 5: Setelah tes koneksi berhasil, pertahankan data PARKIRAN 1–5
+      const nowIso = new Date().toISOString();
+      const demoAreas = getDemoParkingAreas();
+      resultAreas = demoAreas.map((area) => ({
+        ...area,
+        updated_at: nowIso,
+        lastUpdated: 'Baru saja',
+      }));
+    }
+
+    // 2. Simpan response sukses ke localStorage (Data Caching Sederhana)
+    await cacheApiResponse(CACHE_KEYS.PARKING_AREAS, resultAreas);
+    return resultAreas;
+  } catch (err) {
+    // 3. Jika fetch gagal (koneksi terputus tiba-tiba), coba fallback ke cache localStorage
+    const cached = await getCachedApiResponse<ParkingArea[]>(CACHE_KEYS.PARKING_AREAS);
+    if (cached && cached.data?.length > 0) {
+      return cached.data.map((area) => ({
+        ...area,
+        lastUpdated: `Offline (${cached.formattedTime})`,
+      }));
+    }
+
+    // Jika tidak ada data di cache sama sekali, lempar error asli
+    throw err;
   }
-
-  // 1. Ketentuan 1: Gunakan endpoint online jsonplaceholder untuk menguji konektivitas
-  await testApiConnectivity(options);
-
-  // 2. Ketentuan 5: Setelah tes koneksi berhasil, pertahankan data PARKIRAN 1–5
-  // dari sumber data parkir yang sudah ada. Jangan memetakan data posts menjadi kapasitas parkir.
-  const nowIso = new Date().toISOString();
-  const demoAreas = getDemoParkingAreas();
-  return demoAreas.map((area) => ({
-    ...area,
-    updated_at: nowIso,
-    lastUpdated: 'Baru saja',
-  }));
 }
 
 

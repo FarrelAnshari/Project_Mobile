@@ -5,31 +5,37 @@
  * Full monitoring view with search, filter, map, and parking detail modal.
  */
 
-import React, { useState, useMemo, useCallback, useEffect } from 'react';
+import React, { useState, useMemo } from 'react';
 import {
   View,
   Text,
   ScrollView,
-  TouchableOpacity,
   Modal,
   StyleSheet,
   SafeAreaView,
   Linking,
   Share,
   RefreshControl,
-  ActivityIndicator,
 } from 'react-native';
+import Animated, { FadeInDown } from 'react-native-reanimated';
 import { Ionicons } from '@expo/vector-icons';
-import { ParkingArea, ParkingStatus } from '../models/parking';
-import { getParkingAreas, getDemoParkingAreas, ParkingApiError } from '../services/parkingApi';
+import { ParkingArea } from '../models/parking';
+import { getParkingAreas, getDemoParkingAreas } from '../services/parkingApi';
 import { predictionDataToday } from '../data/predictionData';
-import { getOccupancyPercent, getStatusFromOccupancy } from '../utils/parkingStatus';
+import { getOccupancyPercent } from '../utils/parkingStatus';
 import ParkingCard from '../components/ParkingCard';
 import ParkingMap from '../components/ParkingMap';
 import SearchBar from '../components/SearchBar';
 import StatusBadge from '../components/StatusBadge';
 import PredictionChart from '../components/PredictionChart';
-import OccupancyBar from '../components/OccupancyBar';
+import AnimatedOccupancyBar from '../components/AnimatedOccupancyBar';
+import AnimatedPageTransition from '../components/AnimatedPageTransition';
+import AnimatedPressable from '../components/AnimatedPressable';
+import PulseRing from '../components/PulseRing';
+import CountUpText from '../components/CountUpText';
+import { SkeletonParkingCard } from '../components/Skeleton';
+import ErrorState from '../components/ErrorState';
+import { useFetch } from '../hooks/useFetch';
 import {
   Colors,
   Spacing,
@@ -38,6 +44,8 @@ import {
   BorderRadius,
   Shadow,
 } from '../constants/theme';
+import { useTheme } from '../context/ThemeContext';
+import { useThemeColors } from '../hooks/useThemeColors';
 import { useResponsive } from '../utils/responsive';
 
 const ALL_STATUSES = [
@@ -50,53 +58,29 @@ const ALL_STATUSES = [
 
 export default function ParkingScreen() {
   const { horizontalPadding, isWide, cardWidth } = useResponsive();
+  const colors = useThemeColors();
+  const { isDark } = useTheme();
   const [search, setSearch] = useState('');
   const [filterStatus, setFilterStatus] = useState<string>('Semua');
   const [selectedArea, setSelectedArea] = useState<ParkingArea | null>(null);
 
-  // API Data & Loading/Error States
-  const [areas, setAreas] = useState<ParkingArea[]>([]);
-  const [loading, setLoading] = useState<boolean>(true);
-  const [error, setError] = useState<string | null>(null);
-  const [refreshing, setRefreshing] = useState(false);
+  // Unified UI State Management using custom useFetch hook
+  const {
+    data: fetchedAreas,
+    isLoading,
+    isRefetching,
+    isError,
+    errorMessage,
+    refetch,
+    setData: setAreas,
+  } = useFetch<ParkingArea[]>(getParkingAreas);
 
-  // Fetch parking areas from REST API
-  const fetchParkingData = useCallback(async (isRefresh = false) => {
-    if (isRefresh) {
-      setRefreshing(true);
-    } else {
-      setLoading(true);
-    }
-    setError(null);
-
-    try {
-      const data = await getParkingAreas();
-      setAreas(data);
-    } catch (err: unknown) {
-      const message =
-        err instanceof ParkingApiError
-          ? err.message
-          : 'Gagal memuat data parkir dari server.';
-      setError(message);
-    } finally {
-      setLoading(false);
-      setRefreshing(false);
-    }
-  }, []);
-
-  useEffect(() => {
-    fetchParkingData();
-  }, [fetchParkingData]);
-
-  const onRefresh = useCallback(() => {
-    fetchParkingData(true);
-  }, [fetchParkingData]);
+  const areas = useMemo(() => fetchedAreas ?? [], [fetchedAreas]);
 
   // Fallback demo data loader if REST API backend server is offline
   const handleLoadDemoData = () => {
     const demoData = getDemoParkingAreas();
     setAreas(demoData);
-    setError(null);
   };
 
   const filteredAreas = useMemo(() => {
@@ -120,184 +104,232 @@ export default function ParkingScreen() {
   };
 
   return (
-    <View style={styles.container}>
-      {/* PURPLE HEADER SECTION */}
-      <View style={styles.purpleHeader}>
-        <View style={styles.decorCircle1} />
-        <View style={styles.decorCircle2} />
-        <SafeAreaView>
-          <View style={[styles.headerInner, { paddingHorizontal: horizontalPadding }]}>
-            <View style={styles.headerTop}>
-              <Text style={styles.headerTitle}>Monitoring Parkir</Text>
-            </View>
-          </View>
-        </SafeAreaView>
-      </View>
-
-      <ScrollView
-        style={styles.scroll}
-        contentContainerStyle={[
-          styles.content,
-          { paddingHorizontal: horizontalPadding },
-        ]}
-        refreshControl={
-          <RefreshControl
-            refreshing={refreshing}
-            onRefresh={onRefresh}
-            tintColor={Colors.primary}
-            colors={[Colors.primary]}
-          />
-        }
-        showsVerticalScrollIndicator={false}
-      >
-        {/* Search */}
-        <View style={styles.overlappingSearch}>
-          <SearchBar
-            value={search}
-            onChangeText={setSearch}
-            onClear={() => setSearch('')}
-          />
-        </View>
-
-        {/* ERROR STATE BANNER */}
-        {error && (
-          <View style={styles.errorBanner}>
-            <View style={styles.errorHeaderRow}>
-              <Ionicons name="alert-circle" size={22} color={Colors.danger} />
-              <View style={styles.errorTextContainer}>
-                <Text style={styles.errorTitle}>Gagal Terhubung ke REST API</Text>
-                <Text style={styles.errorDesc}>{error}</Text>
+    <AnimatedPageTransition style={{ flex: 1 }}>
+      <View style={[styles.container, { backgroundColor: colors.background }]}>
+        {/* PURPLE HEADER SECTION */}
+        <View style={styles.purpleHeader}>
+          <View style={styles.decorCircle1} />
+          <View style={styles.decorCircle2} />
+          <SafeAreaView>
+            <View style={[styles.headerInner, { paddingHorizontal: horizontalPadding }]}>
+              <View style={styles.headerTop}>
+                <Text style={styles.headerTitle}>Monitoring Parkir</Text>
               </View>
             </View>
-            <View style={styles.errorBtnRow}>
-              <TouchableOpacity
-                style={styles.retryBtn}
-                onPress={() => fetchParkingData()}
-                accessibilityLabel="Coba lagi mengambil data API"
-              >
-                <Ionicons name="refresh" size={15} color={Colors.white} />
-                <Text style={styles.retryBtnText}>Coba Lagi</Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={styles.demoBtn}
-                onPress={handleLoadDemoData}
-                accessibilityLabel="Muat data demo API"
-              >
-                <Ionicons name="cloud-download-outline" size={15} color={Colors.primary} />
-                <Text style={styles.demoBtnText}>Muat Demo API</Text>
-              </TouchableOpacity>
-            </View>
-          </View>
-        )}
-
-        {/* LOADING STATE INDICATOR */}
-        {loading && areas.length === 0 && (
-          <View style={styles.loadingBox}>
-            <ActivityIndicator size="small" color={Colors.primary} />
-            <Text style={styles.loadingBoxText}>Mengambil data parkir dari REST API...</Text>
-          </View>
-        )}
-
-        {/* Filter chips */}
-        <ScrollView
-          horizontal
-          showsHorizontalScrollIndicator={false}
-          contentContainerStyle={styles.filterRow}
-          accessible={true}
-          accessibilityRole="tablist"
-          accessibilityLabel="Filter status parkir"
-        >
-          {ALL_STATUSES.map((status) => (
-            <TouchableOpacity
-              key={status}
-              style={[
-                styles.filterChip,
-                filterStatus === status && styles.filterChipActive,
-              ]}
-              onPress={() => setFilterStatus(status)}
-              accessibilityRole="tab"
-              accessibilityLabel={`Filter: ${status}`}
-              accessibilityState={{ selected: filterStatus === status }}
-            >
-              <Text
-                style={[
-                  styles.filterChipText,
-                  filterStatus === status && styles.filterChipTextActive,
-                ]}
-              >
-                {status}
-              </Text>
-            </TouchableOpacity>
-          ))}
-        </ScrollView>
-
-        {/* Map */}
-        <View style={[styles.section, Shadow.sm]}>
-          <ParkingMap areas={filteredAreas} onMarkerPress={handleCardPress} />
+          </SafeAreaView>
         </View>
 
-        {/* Parking list */}
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle} accessibilityRole="header">
-            {error && areas.length === 0 ? 'Area Parkir' : `${filteredAreas.length} Area Parkir`}
-          </Text>
-          {filteredAreas.length === 0 && !loading ? (
-            <View style={styles.emptyContainer}>
-              <Ionicons
-                name={error ? "cloud-offline-outline" : "search-outline"}
-                size={36}
-                color={error ? Colors.danger : Colors.textTertiary}
-              />
-              <Text style={styles.emptyText}>
-                {error && areas.length === 0
-                  ? 'Data area parkir tidak tersedia karena koneksi API gagal.'
-                  : search
-                  ? `Tidak ada hasil pencarian "${search}".`
-                  : 'Tidak ada data area parkir.'}
-              </Text>
-              {error && areas.length === 0 && (
-                <TouchableOpacity
-                  style={[styles.retryBtn, { marginTop: Spacing.sm }]}
-                  onPress={() => fetchParkingData()}
+        <ScrollView
+          style={styles.scroll}
+          contentContainerStyle={[
+            styles.content,
+            { paddingHorizontal: horizontalPadding },
+          ]}
+          refreshControl={
+            <RefreshControl
+              refreshing={isRefetching}
+              onRefresh={() => {
+                refetch(true);
+              }}
+              tintColor={colors.primary}
+              colors={[colors.primary]}
+            />
+          }
+          showsVerticalScrollIndicator={false}
+        >
+          {/* Search */}
+          <View style={[styles.overlappingSearch, { backgroundColor: colors.surface }]}>
+            <SearchBar
+              value={search}
+              onChangeText={setSearch}
+              onClear={() => setSearch('')}
+            />
+          </View>
+
+          {/* 1. FULL ERROR STATE (When no data is loaded yet) */}
+          {!isLoading && isError && areas.length === 0 && (
+            <ErrorState
+              type="network"
+              title="Gagal Terhubung ke REST API"
+              message={errorMessage || 'Tidak dapat memuat daftar area parkir. Pastikan koneksi internet Anda stabil atau gunakan server mock.'}
+              onRetry={() => refetch()}
+              isRetrying={isRefetching}
+              onSecondaryAction={handleLoadDemoData}
+              secondaryActionLabel="Muat Demo API"
+            />
+          )}
+
+          {/* 2. PARTIAL ERROR BANNER (When background refresh fails but data is preserved) */}
+          {isError && areas.length > 0 && (
+            <View
+              style={[
+                styles.errorBanner,
+                {
+                  backgroundColor: isDark ? 'rgba(239, 68, 68, 0.15)' : '#FEF2F2',
+                  borderColor: isDark ? 'rgba(239, 68, 68, 0.35)' : '#FCA5A5',
+                },
+              ]}
+            >
+              <View style={styles.errorHeaderRow}>
+                <Ionicons name="alert-circle" size={22} color={colors.danger} />
+                <View style={styles.errorTextContainer}>
+                  <Text style={[styles.errorTitle, { color: colors.danger }]}>Gagal Memperbarui Data</Text>
+                  <Text style={[styles.errorDesc, { color: isDark ? '#FCA5A5' : '#991B1B' }]}>{errorMessage}</Text>
+                </View>
+              </View>
+              <View style={styles.errorBtnRow}>
+                <AnimatedPressable
+                  pressScale={0.94}
+                  style={styles.retryBtn}
+                  onPress={() => refetch(true)}
+                  accessibilityLabel="Coba lagi mengambil data API"
                 >
-                  <Ionicons name="refresh" size={15} color={Colors.white} />
+                  <Ionicons name="refresh" size={15} color={colors.white} />
                   <Text style={styles.retryBtnText}>Coba Lagi</Text>
-                </TouchableOpacity>
-              )}
-            </View>
-          ) : (
-            <View style={isWide ? { flexDirection: 'row', flexWrap: 'wrap', gap: 16 } : undefined}>
-              {filteredAreas.map((area) => (
-                <ParkingCard
-                  key={area.id}
-                  area={area}
-                  onPress={handleCardPress}
-                  style={isWide ? { width: cardWidth } : undefined}
-                />
-              ))}
+                </AnimatedPressable>
+                <AnimatedPressable
+                  pressScale={0.94}
+                  style={[
+                    styles.demoBtn,
+                    {
+                      backgroundColor: isDark ? colors.surface : Colors.white,
+                      borderColor: isDark ? colors.border : Colors.border,
+                    },
+                  ]}
+                  onPress={handleLoadDemoData}
+                  accessibilityLabel="Muat data demo API"
+                >
+                  <Ionicons name="cloud-download-outline" size={15} color={colors.primary} />
+                  <Text style={[styles.demoBtnText, { color: colors.primary }]}>Muat Demo API</Text>
+                </AnimatedPressable>
+              </View>
             </View>
           )}
-        </View>
 
-        <View style={{ height: 16 }} />
-      </ScrollView>
+          {/* 3. LOADING SKELETON SCREENS */}
+          {isLoading && areas.length === 0 && (
+            <View style={{ marginTop: Spacing.md }}>
+              <SkeletonParkingCard />
+              <SkeletonParkingCard />
+              <SkeletonParkingCard />
+            </View>
+          )}
 
-      {/* Detail Modal */}
-      <Modal
-        visible={!!selectedArea}
-        animationType="slide"
-        presentationStyle="pageSheet"
-        onRequestClose={() => setSelectedArea(null)}
-        accessibilityViewIsModal
-      >
-        {selectedArea && (
-          <ParkingDetailModal
-            area={selectedArea}
-            onClose={() => setSelectedArea(null)}
-          />
-        )}
-      </Modal>
-    </View>
+          {/* Filter chips */}
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={styles.filterRow}
+            accessible={true}
+            accessibilityRole="tablist"
+            accessibilityLabel="Filter status parkir"
+          >
+            {ALL_STATUSES.map((status) => {
+              const isActive = filterStatus === status;
+              return (
+                <AnimatedPressable
+                  key={status}
+                  pressScale={0.92}
+                  style={[
+                    styles.filterChip,
+                    {
+                      backgroundColor: isDark ? colors.surface : Colors.surface,
+                      borderColor: isDark ? colors.border : Colors.border,
+                    },
+                    isActive && [styles.filterChipActive, { backgroundColor: colors.primary, borderColor: colors.primary }],
+                  ]}
+                  onPress={() => setFilterStatus(status)}
+                  accessibilityRole="button"
+                  accessibilityLabel={`Filter: ${status}`}
+                  accessibilityState={{ selected: isActive }}
+                >
+                  <Text
+                    style={[
+                      styles.filterChipText,
+                      { color: isActive ? Colors.white : colors.textSecondary },
+                      isActive && styles.filterChipTextActive,
+                    ]}
+                  >
+                    {status}
+                  </Text>
+                </AnimatedPressable>
+              );
+            })}
+          </ScrollView>
+
+          {/* Map */}
+          <View style={[styles.section, Shadow.sm]}>
+            <ParkingMap areas={filteredAreas} onMarkerPress={handleCardPress} />
+          </View>
+
+          {/* Parking list */}
+          <View style={styles.section}>
+            <Text style={[styles.sectionTitle, { color: colors.textPrimary }]} accessibilityRole="header">
+              {isError && areas.length === 0 ? 'Area Parkir' : `${filteredAreas.length} Area Parkir`}
+            </Text>
+            {filteredAreas.length === 0 && !isLoading ? (
+              <View style={styles.emptyContainer}>
+                <Ionicons
+                  name={isError ? "cloud-offline-outline" : "search-outline"}
+                  size={36}
+                  color={isError ? colors.danger : colors.textTertiary}
+                />
+                <Text style={[styles.emptyText, { color: colors.textSecondary }]}>
+                  {isError && areas.length === 0
+                    ? 'Data area parkir tidak tersedia karena koneksi API gagal.'
+                    : search
+                    ? `Tidak ada hasil pencarian "${search}".`
+                    : 'Tidak ada data area parkir.'}
+                </Text>
+                {isError && areas.length === 0 && (
+                  <AnimatedPressable
+                    pressScale={0.92}
+                    style={[styles.retryBtn, { marginTop: Spacing.sm }]}
+                    onPress={() => refetch()}
+                  >
+                    <Ionicons name="refresh" size={15} color={colors.white} />
+                    <Text style={styles.retryBtnText}>Coba Lagi</Text>
+                  </AnimatedPressable>
+                )}
+              </View>
+            ) : (
+              <View style={isWide ? { flexDirection: 'row', flexWrap: 'wrap', gap: 16 } : undefined}>
+                {filteredAreas.map((area, index) => (
+                  <Animated.View
+                    key={area.id}
+                    entering={FadeInDown.delay(index * 60).springify().damping(16)}
+                    style={isWide ? { width: cardWidth } : undefined}
+                  >
+                    <ParkingCard
+                      area={area}
+                      onPress={handleCardPress}
+                    />
+                  </Animated.View>
+                ))}
+              </View>
+            )}
+          </View>
+
+          <View style={{ height: 16 }} />
+        </ScrollView>
+
+        {/* Detail Modal */}
+        <Modal
+          visible={!!selectedArea}
+          animationType="slide"
+          presentationStyle="pageSheet"
+          onRequestClose={() => setSelectedArea(null)}
+          accessibilityViewIsModal
+        >
+          {selectedArea && (
+            <ParkingDetailModal
+              area={selectedArea}
+              onClose={() => setSelectedArea(null)}
+            />
+          )}
+        </Modal>
+      </View>
+    </AnimatedPageTransition>
   );
 }
 
@@ -309,6 +341,8 @@ function ParkingDetailModal({
   area: ParkingArea;
   onClose: () => void;
 }) {
+  const colors = useThemeColors();
+  const { isDark } = useTheme();
   const percent = typeof area.occupancy === 'number' ? area.occupancy : getOccupancyPercent(area.occupied, area.capacity);
   const [isFavorite, setIsFavorite] = useState(false);
 
@@ -329,19 +363,28 @@ function ParkingDetailModal({
   };
 
   return (
-    <SafeAreaView style={styles.modalSafe}>
-      <View style={styles.modalHeader}>
-        <Text style={styles.modalTitle} numberOfLines={1}>
+    <SafeAreaView style={[styles.modalSafe, { backgroundColor: colors.background }]}>
+      <View
+        style={[
+          styles.modalHeader,
+          {
+            backgroundColor: colors.surface,
+            borderBottomColor: isDark ? colors.border : colors.borderLight,
+          },
+        ]}
+      >
+        <Text style={[styles.modalTitle, { color: colors.textPrimary }]} numberOfLines={1}>
           {area.name}
         </Text>
-        <TouchableOpacity
-          style={styles.closeBtn}
+        <AnimatedPressable
+          pressScale={0.9}
+          style={[styles.closeBtn, { backgroundColor: isDark ? colors.borderLight : Colors.borderLight }]}
           onPress={onClose}
           accessibilityRole="button"
           accessibilityLabel="Tutup detail parkir"
         >
-          <Ionicons name="close" size={18} color={Colors.textSecondary} />
-        </TouchableOpacity>
+          <Ionicons name="close" size={18} color={colors.textSecondary} />
+        </AnimatedPressable>
       </View>
 
       <ScrollView
@@ -351,68 +394,115 @@ function ParkingDetailModal({
       >
         {/* Status + Actions Row */}
         <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
-          <StatusBadge status={area.status} size="lg" />
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: Spacing.sm }}>
+            <PulseRing
+              color={area.status === 'Sepi' || area.status === 'AVAILABLE' ? Colors.success : Colors.warning}
+              size={36}
+            >
+              <StatusBadge status={area.status} size="lg" />
+            </PulseRing>
+          </View>
           <View style={{ flexDirection: 'row', gap: Spacing.sm }}>
-            <TouchableOpacity
-              style={[styles.modalActionCircleBtn, isFavorite && { backgroundColor: Colors.warning + '20' }]}
+            <AnimatedPressable
+              pressScale={0.9}
+              style={[
+                styles.modalActionCircleBtn,
+                {
+                  backgroundColor: colors.surface,
+                  borderColor: isDark ? colors.border : colors.borderLight,
+                },
+                isFavorite && { backgroundColor: isDark ? 'rgba(245, 158, 11, 0.2)' : Colors.warning + '20' },
+              ]}
               onPress={() => setIsFavorite(!isFavorite)}
               accessibilityLabel="Favoritkan area parkir"
             >
               <Ionicons
                 name={isFavorite ? 'star' : 'star-outline'}
                 size={20}
-                color={isFavorite ? Colors.warning : Colors.textSecondary}
+                color={isFavorite ? colors.warning : colors.textSecondary}
               />
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={styles.modalActionCircleBtn}
+            </AnimatedPressable>
+            <AnimatedPressable
+              pressScale={0.9}
+              style={[
+                styles.modalActionCircleBtn,
+                {
+                  backgroundColor: colors.surface,
+                  borderColor: isDark ? colors.border : colors.borderLight,
+                },
+              ]}
               onPress={handleShare}
               accessibilityLabel="Bagikan status parkir"
             >
-              <Ionicons name="share-social-outline" size={20} color={Colors.primary} />
-            </TouchableOpacity>
+              <Ionicons name="share-social-outline" size={20} color={colors.primary} />
+            </AnimatedPressable>
           </View>
         </View>
 
         {/* Description */}
-        <Text style={styles.detailDesc}>{area.description}</Text>
+        <Text style={[styles.detailDesc, { color: colors.textSecondary }]}>{area.description}</Text>
 
         {/* Action Buttons: Directions */}
-        <TouchableOpacity
-          style={styles.directionsBtn}
+        <AnimatedPressable
+          pressScale={0.97}
+          style={[styles.directionsBtn, { backgroundColor: colors.primary }]}
           onPress={handleGetDirections}
-          activeOpacity={0.8}
         >
-          <Ionicons name="navigate" size={18} color={Colors.white} />
+          <Ionicons name="navigate" size={18} color={colors.white} />
           <Text style={styles.directionsBtnText}>Petunjuk Arah (Google Maps)</Text>
-        </TouchableOpacity>
+        </AnimatedPressable>
 
         {/* Stats grid */}
-        <View style={[styles.statsGrid, Shadow.sm]}>
+        <View style={[styles.statsGrid, Shadow.sm, { backgroundColor: colors.surface }]}>
           {[
-            { label: 'Kapasitas', value: area.capacity.toString() },
-            { label: 'Terisi', value: area.occupied.toString() },
-            { label: 'Tersedia', value: area.available.toString() },
-            { label: 'Persentase', value: `${percent}%` },
-          ].map(({ label, value }) => (
-            <View key={label} style={styles.statGridItem}>
-              <Text style={styles.statGridValue}>{value}</Text>
-              <Text style={styles.statGridLabel}>{label}</Text>
+            { label: 'Kapasitas', value: area.capacity, isNumber: true },
+            { label: 'Terisi', value: area.occupied, isNumber: true },
+            { label: 'Tersedia', value: area.available, isNumber: true },
+            { label: 'Persentase', value: `${percent}%`, isNumber: false },
+          ].map(({ label, value, isNumber }) => (
+            <View
+              key={label}
+              style={[
+                styles.statGridItem,
+                { borderColor: isDark ? colors.border : colors.borderLight },
+              ]}
+            >
+              {isNumber ? (
+                <CountUpText
+                  value={typeof value === 'number' ? value : 0}
+                  duration={700}
+                  style={[styles.statGridValue, { color: colors.primary }]}
+                />
+              ) : (
+                <Text style={[styles.statGridValue, { color: colors.primary }]}>{value}</Text>
+              )}
+              <Text style={[styles.statGridLabel, { color: colors.textSecondary }]}>{label}</Text>
             </View>
           ))}
         </View>
 
         {/* Occupancy bar */}
         <View style={styles.detailBarSection}>
-          <Text style={styles.detailBarLabel}>Tingkat Kepadatan</Text>
-          <OccupancyBar percent={percent} height={12} />
+          <Text style={[styles.detailBarLabel, { color: colors.textPrimary }]}>Tingkat Kepadatan</Text>
+          <AnimatedOccupancyBar percent={percent} height={12} />
         </View>
 
         {/* Prediction chart for this area */}
-        <View style={[styles.detailChartSection, { backgroundColor: Colors.surface, borderRadius: BorderRadius.lg, padding: Spacing.md }]}>
+        <View
+          style={[
+            styles.detailChartSection,
+            {
+              backgroundColor: colors.surface,
+              borderRadius: BorderRadius.lg,
+              padding: Spacing.md,
+              borderWidth: isDark ? 1 : 0,
+              borderColor: colors.border,
+            },
+          ]}
+        >
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: Spacing.xs, marginBottom: Spacing.sm }}>
-            <Ionicons name="bar-chart-outline" size={16} color={Colors.primary} />
-            <Text style={styles.detailChartTitle}>
+            <Ionicons name="bar-chart-outline" size={16} color={colors.primary} />
+            <Text style={[styles.detailChartTitle, { color: colors.textPrimary }]}>
               Prediksi Kepadatan Hari Ini
             </Text>
           </View>
@@ -421,8 +511,8 @@ function ParkingDetailModal({
 
         {/* Last updated */}
         <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 4 }}>
-          <Ionicons name="time-outline" size={12} color={Colors.textTertiary} />
-          <Text style={styles.detailUpdated}>
+          <Ionicons name="time-outline" size={12} color={colors.textTertiary} />
+          <Text style={[styles.detailUpdated, { color: colors.textTertiary }]}>
             Terakhir diperbarui: {area.lastUpdated || area.updated_at}
           </Text>
         </View>

@@ -35,6 +35,8 @@ import {
 } from '../constants/theme';
 import { useResponsive } from '../utils/responsive';
 import { useAuth } from '../context/AuthContext';
+import { useTheme } from '../context/ThemeContext';
+import { useOnlineStatus } from '../hooks/useOnlineStatus';
 import { saveData, STORAGE_KEYS } from '../services/asyncStorageService';
 import { getAccessToken } from '../services/secureStorageService';
 
@@ -59,6 +61,8 @@ export default function ProfileScreen() {
   const router = useRouter();
   const { horizontalPadding } = useResponsive();
   const { user, logout, updateProfile, changePassword } = useAuth();
+  const { themeMode, isDark, colors, setThemeMode, toggleTheme } = useTheme();
+  const { isOffline } = useOnlineStatus();
 
   // Settings state
   const [notif, setNotif] = useState<NotifSettings>({
@@ -214,9 +218,9 @@ export default function ProfileScreen() {
     : '?';
 
   return (
-    <View style={styles.container}>
+    <View style={[styles.container, { backgroundColor: colors.background }]}>
       {/* PURPLE HEADER SECTION */}
-      <View style={styles.purpleHeader}>
+      <View style={[styles.purpleHeader, { backgroundColor: isDark ? colors.surface : colors.primary }]}>
         <View style={styles.decorCircle1} />
         <View style={styles.decorCircle2} />
         <SafeAreaView>
@@ -237,28 +241,28 @@ export default function ProfileScreen() {
         showsVerticalScrollIndicator={false}
       >
         {/* ===== Header Profil (Overlapping) ===== */}
-        <View style={styles.overlappingCard}>
-          <View style={styles.avatarCircle}>
+        <View style={[styles.overlappingCard, { backgroundColor: colors.surface, borderColor: colors.borderLight, borderWidth: isDark ? 1 : 0 }]}>
+          <View style={[styles.avatarCircle, { backgroundColor: colors.primary }]}>
             <Text style={styles.avatarText}>{avatarInitial}</Text>
           </View>
           <View style={styles.profileInfo}>
             <Text
-              style={styles.profileName}
+              style={[styles.profileName, { color: colors.textPrimary }]}
               accessibilityRole="header"
               numberOfLines={1}
             >
               {user?.name ?? 'Pengguna'}
             </Text>
-            <Text style={styles.profileEmail} numberOfLines={1}>
+            <Text style={[styles.profileEmail, { color: colors.textSecondary }]} numberOfLines={1}>
               {user?.email ?? '-'}
             </Text>
-            <View style={styles.accountBadge}>
-              <Ionicons name="checkmark-circle" size={12} color={Colors.success} />
-              <Text style={styles.accountBadgeText}>Akun Aktif</Text>
+            <View style={[styles.accountBadge, { backgroundColor: colors.successBg }]}>
+              <Ionicons name="checkmark-circle" size={12} color={colors.success} />
+              <Text style={[styles.accountBadgeText, { color: colors.success }]}>Akun Aktif</Text>
             </View>
           </View>
           <TouchableOpacity
-            style={styles.editProfileBtn}
+            style={[styles.editProfileBtn, { backgroundColor: colors.background, borderColor: colors.border }]}
             onPress={() => {
               setEditName(user?.name ?? '');
               setEditModalVisible(true);
@@ -266,16 +270,16 @@ export default function ProfileScreen() {
             accessibilityRole="button"
             accessibilityLabel="Edit profil pengguna"
           >
-            <Ionicons name="pencil-outline" size={18} color={Colors.primary} />
+            <Ionicons name="pencil-outline" size={18} color={colors.primary} />
           </TouchableOpacity>
         </View>
 
         {/* ===== Akun ===== */}
         <View style={styles.section}>
-          <Text style={styles.sectionTitle} accessibilityRole="header">
+          <Text style={[styles.sectionTitle, { color: colors.textSecondary }]} accessibilityRole="header">
             Akun
           </Text>
-          <View style={[styles.menuList, Shadow.sm]}>
+          <View style={[styles.menuList, Shadow.sm, { backgroundColor: colors.surface, borderColor: colors.borderLight, borderWidth: isDark ? 1 : 0 }]}>
             <MenuRow
               icon="person-outline"
               label="Edit Profil"
@@ -289,12 +293,29 @@ export default function ProfileScreen() {
           </View>
         </View>
 
+        {/* ===== Fitur Cepat ===== */}
+        <View style={styles.section}>
+          <Text style={[styles.sectionTitle, { color: colors.textSecondary }]} accessibilityRole="header">
+            Fitur Cepat
+          </Text>
+          <View style={[styles.menuList, Shadow.sm, { backgroundColor: colors.surface, borderColor: colors.borderLight, borderWidth: isDark ? 1 : 0 }]}>
+            <MenuRow
+              icon="qr-code-outline"
+              label="Pindai QR Tiket Parkir"
+              subtitle="Sensor kamera untuk check-in / check-out otomatis"
+              onPress={() => router.push('/scanner' as any)}
+              isLast
+              accessibilityLabel="Buka pemindai QR tiket parkir"
+            />
+          </View>
+        </View>
+
         {/* ===== Keamanan ===== */}
         <View style={styles.section}>
-          <Text style={styles.sectionTitle} accessibilityRole="header">
+          <Text style={[styles.sectionTitle, { color: colors.textSecondary }]} accessibilityRole="header">
             Keamanan
           </Text>
-          <View style={[styles.menuList, Shadow.sm]}>
+          <View style={[styles.menuList, Shadow.sm, { backgroundColor: colors.surface, borderColor: colors.borderLight, borderWidth: isDark ? 1 : 0 }]}>
             <MenuRow
               icon="lock-closed-outline"
               label="Ubah Password"
@@ -318,12 +339,68 @@ export default function ProfileScreen() {
           </View>
         </View>
 
+        {/* ===== Tampilan (Dark & Light Mode) ===== */}
+        <View style={styles.section}>
+          <Text style={[styles.sectionTitle, { color: colors.textSecondary }]} accessibilityRole="header">
+            Tampilan
+          </Text>
+          <View style={[styles.settingsList, Shadow.sm, { backgroundColor: colors.surface, borderColor: colors.borderLight, borderWidth: isDark ? 1 : 0 }]}>
+            <SettingRow
+              label="Mode Gelap"
+              description={isDark ? "Tema gelap aktif (nyaman di mata & hemat baterai)" : "Tema terang aktif"}
+              value={isDark}
+              onValueChange={toggleTheme}
+              accessibilityLabel="Saklar mode gelap"
+            />
+            <View style={[styles.themePillsRow, { borderTopColor: colors.borderLight }]}>
+              <Text style={[styles.themePillsLabel, { color: colors.textSecondary }]}>Preferensi Tema</Text>
+              <View style={styles.themePillsGroup}>
+                {(['system', 'light', 'dark'] as const).map((mode) => {
+                  const active = themeMode === mode;
+                  const modeLabel = mode === 'system' ? 'Sistem' : mode === 'light' ? 'Terang' : 'Gelap';
+                  const modeIcon = mode === 'system' ? 'phone-portrait-outline' : mode === 'light' ? 'sunny' : 'moon';
+                  return (
+                    <TouchableOpacity
+                      key={mode}
+                      onPress={() => setThemeMode(mode)}
+                      style={[
+                        styles.themePillBtn,
+                        {
+                          borderColor: active ? colors.primary : colors.border,
+                          backgroundColor: active ? (isDark ? colors.primaryDark : colors.primary) : colors.background,
+                        },
+                      ]}
+                      activeOpacity={0.7}
+                      accessibilityRole="button"
+                      accessibilityLabel={`Pilih tema ${modeLabel}`}
+                    >
+                      <Ionicons
+                        name={modeIcon as any}
+                        size={13}
+                        color={active ? '#FFFFFF' : colors.textSecondary}
+                      />
+                      <Text
+                        style={[
+                          styles.themePillBtnText,
+                          { color: active ? '#FFFFFF' : colors.textPrimary },
+                        ]}
+                      >
+                        {modeLabel}
+                      </Text>
+                    </TouchableOpacity>
+                  );
+                })}
+              </View>
+            </View>
+          </View>
+        </View>
+
         {/* ===== Notifikasi ===== */}
         <View style={styles.section}>
-          <Text style={styles.sectionTitle} accessibilityRole="header">
+          <Text style={[styles.sectionTitle, { color: colors.textSecondary }]} accessibilityRole="header">
             Notifikasi
           </Text>
-          <View style={[styles.settingsList, Shadow.sm]}>
+          <View style={[styles.settingsList, Shadow.sm, { backgroundColor: colors.surface, borderColor: colors.borderLight, borderWidth: isDark ? 1 : 0 }]}>
             <SettingRow
               label="Hampir Penuh"
               description="Notifikasi saat area ≥80% terisi"
@@ -351,10 +428,10 @@ export default function ProfileScreen() {
 
         {/* ===== Aksesibilitas ===== */}
         <View style={styles.section}>
-          <Text style={styles.sectionTitle} accessibilityRole="header">
+          <Text style={[styles.sectionTitle, { color: colors.textSecondary }]} accessibilityRole="header">
             Aksesibilitas
           </Text>
-          <View style={[styles.settingsList, Shadow.sm]}>
+          <View style={[styles.settingsList, Shadow.sm, { backgroundColor: colors.surface, borderColor: colors.borderLight, borderWidth: isDark ? 1 : 0 }]}>
             <SettingRow
               label="Teks Lebih Besar"
               description="Perbesar ukuran teks untuk keterbacaan"
@@ -371,7 +448,7 @@ export default function ProfileScreen() {
               isLast
             />
           </View>
-          <Text style={styles.a11yNote}>
+          <Text style={[styles.a11yNote, { color: colors.textTertiary }]}>
             PARKIN dirancang dengan standar aksesibilitas WCAG. Seluruh
             komponen mendukung screen reader dan navigasi keyboard.
           </Text>
@@ -379,21 +456,21 @@ export default function ProfileScreen() {
 
         {/* ===== Tentang PARKIN ===== */}
         <View style={styles.section}>
-          <Text style={styles.sectionTitle} accessibilityRole="header">
+          <Text style={[styles.sectionTitle, { color: colors.textSecondary }]} accessibilityRole="header">
             Tentang PARKIN
           </Text>
-          <View style={[styles.aboutCard, Shadow.sm]}>
+          <View style={[styles.aboutCard, Shadow.sm, { backgroundColor: colors.surface, borderColor: colors.borderLight, borderWidth: isDark ? 1 : 0 }]}>
             <View style={styles.aboutHeader}>
-              <View style={styles.aboutLogoBox}>
+              <View style={[styles.aboutLogoBox, { backgroundColor: colors.primary }]}>
                 <Text style={styles.aboutLogo}>P</Text>
               </View>
               <View>
-                <Text style={styles.aboutAppName}>PARKIN</Text>
-                <Text style={styles.aboutTagline}>Smart Campus Parking</Text>
+                <Text style={[styles.aboutAppName, { color: colors.textPrimary }]}>PARKIN</Text>
+                <Text style={[styles.aboutTagline, { color: colors.textSecondary }]}>Smart Campus Parking</Text>
               </View>
             </View>
-            <Text style={styles.aboutVersion}>Versi 1.0.0 · Sprint 01 + Task 01 & 02</Text>
-            <Text style={styles.aboutDesc}>
+            <Text style={[styles.aboutVersion, { color: colors.textTertiary }]}>Versi 1.0.0 · Light & Dark Mode Ready</Text>
+            <Text style={[styles.aboutDesc, { color: colors.textSecondary }]}>
               PARKIN membantu mahasiswa memantau kondisi parkir kampus secara
               efisien, mengurangi waktu mencari tempat parkir, dan meningkatkan
               mobilitas di lingkungan kampus.
@@ -405,9 +482,9 @@ export default function ProfileScreen() {
               <AboutBadge icon="shield-checkmark-outline" label="SecureStore" />
               <AboutBadge icon="server-outline" label="AsyncStorage" />
             </View>
-            <View style={styles.aboutDisclaimerBox}>
-              <Ionicons name="warning-outline" size={14} color={Colors.warning} />
-              <Text style={styles.aboutDisclaimer}>
+            <View style={[styles.aboutDisclaimerBox, { backgroundColor: colors.warningBg, borderColor: colors.warning + '40', borderWidth: 1 }]}>
+              <Ionicons name="warning-outline" size={14} color={colors.warning} />
+              <Text style={[styles.aboutDisclaimer, { color: colors.warning }]}>
                 Data parkir dan prediksi merupakan simulasi/mock data.
                 Authentication menggunakan mock service (bukan backend nyata).
               </Text>
@@ -418,15 +495,15 @@ export default function ProfileScreen() {
         {/* ===== Logout ===== */}
         <View style={styles.section}>
           <TouchableOpacity
-            style={[styles.logoutBtn, Shadow.sm]}
+            style={[styles.logoutBtn, Shadow.sm, { backgroundColor: colors.surface, borderColor: colors.danger + '35', borderWidth: 1 }]}
             onPress={handleLogout}
             activeOpacity={0.8}
             accessibilityRole="button"
             accessibilityLabel="Keluar dari akun PARKIN"
             accessibilityHint="Tekan untuk logout dari aplikasi"
           >
-            <Ionicons name="log-out-outline" size={20} color={Colors.danger} />
-            <Text style={styles.logoutText}>Keluar dari Akun</Text>
+            <Ionicons name="log-out-outline" size={20} color={colors.danger} />
+            <Text style={[styles.logoutText, { color: colors.danger }]}>Keluar dari Akun</Text>
           </TouchableOpacity>
         </View>
 
@@ -457,14 +534,17 @@ export default function ProfileScreen() {
               <Text style={styles.modalTitle}>Edit Profil</Text>
               <TouchableOpacity
                 onPress={handleSaveProfile}
-                disabled={editLoading}
+                disabled={editLoading || isOffline}
                 accessibilityRole="button"
                 accessibilityLabel="Simpan perubahan profil"
+                style={isOffline && { opacity: 0.4 }}
               >
                 {editLoading ? (
                   <ActivityIndicator size="small" color={Colors.primary} />
                 ) : (
-                  <Text style={styles.modalSave}>Simpan</Text>
+                  <Text style={[styles.modalSave, isOffline && { color: Colors.textTertiary }]}>
+                    {isOffline ? 'Offline' : 'Simpan'}
+                  </Text>
                 )}
               </TouchableOpacity>
             </View>
@@ -473,6 +553,15 @@ export default function ProfileScreen() {
               contentContainerStyle={styles.modalContent}
               keyboardShouldPersistTaps="handled"
             >
+              {isOffline && (
+                <View style={[styles.errorBanner, { backgroundColor: isDark ? 'rgba(239, 68, 68, 0.15)' : '#FEF2F2', borderColor: isDark ? 'rgba(239, 68, 68, 0.35)' : '#FCA5A5', marginBottom: Spacing.md }]}>
+                  <Ionicons name="cloud-offline-outline" size={16} color={Colors.danger} />
+                  <Text style={[styles.errorBannerText, { color: isDark ? '#FCA5A5' : '#991B1B' }]}>
+                    Koneksi offline: Pengiriman data profil dinonaktifkan.
+                  </Text>
+                </View>
+              )}
+
               {/* Avatar preview */}
               <View style={styles.editAvatarRow}>
                 <View style={[styles.avatarCircle, styles.avatarCircleLg]}>
@@ -553,14 +642,17 @@ export default function ProfileScreen() {
               <Text style={styles.modalTitle}>Ubah Password</Text>
               <TouchableOpacity
                 onPress={handleChangePassword}
-                disabled={pwLoading}
+                disabled={pwLoading || isOffline}
                 accessibilityRole="button"
                 accessibilityLabel="Simpan password baru"
+                style={isOffline && { opacity: 0.4 }}
               >
                 {pwLoading ? (
                   <ActivityIndicator size="small" color={Colors.primary} />
                 ) : (
-                  <Text style={styles.modalSave}>Simpan</Text>
+                  <Text style={[styles.modalSave, isOffline && { color: Colors.textTertiary }]}>
+                    {isOffline ? 'Offline' : 'Simpan'}
+                  </Text>
                 )}
               </TouchableOpacity>
             </View>
@@ -569,6 +661,15 @@ export default function ProfileScreen() {
               contentContainerStyle={styles.modalContent}
               keyboardShouldPersistTaps="handled"
             >
+              {isOffline && (
+                <View style={[styles.errorBanner, { backgroundColor: isDark ? 'rgba(239, 68, 68, 0.15)' : '#FEF2F2', borderColor: isDark ? 'rgba(239, 68, 68, 0.35)' : '#FCA5A5', marginBottom: Spacing.md }]}>
+                  <Ionicons name="cloud-offline-outline" size={16} color={Colors.danger} />
+                  <Text style={[styles.errorBannerText, { color: isDark ? '#FCA5A5' : '#991B1B' }]}>
+                    Koneksi offline: Pengubahan password dinonaktifkan.
+                  </Text>
+                </View>
+              )}
+
               {!!pwError && (
                 <View style={styles.errorBanner} accessibilityRole="alert">
                   <Ionicons name="warning-outline" size={16} color={Colors.danger} />
@@ -612,43 +713,43 @@ export default function ProfileScreen() {
         onRequestClose={() => setSessionModalVisible(false)}
         accessibilityViewIsModal
       >
-        <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'center', alignItems: 'center', padding: Spacing.lg }}>
-          <View style={{ backgroundColor: Colors.surface, borderRadius: BorderRadius.xl, padding: Spacing.xl, width: '100%', maxWidth: 440, ...Shadow.md }}>
+        <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.6)', justifyContent: 'center', alignItems: 'center', padding: Spacing.lg }}>
+          <View style={{ backgroundColor: colors.surface, borderRadius: BorderRadius.xl, padding: Spacing.xl, width: '100%', maxWidth: 440, ...Shadow.md, borderWidth: isDark ? 1 : 0, borderColor: colors.borderLight }}>
             <View style={{ alignItems: 'center', marginBottom: Spacing.md }}>
-              <View style={{ width: 56, height: 56, borderRadius: 28, backgroundColor: Colors.success + '15', alignItems: 'center', justifyContent: 'center', marginBottom: Spacing.sm }}>
-                <Ionicons name="shield-checkmark" size={32} color={Colors.success} />
+              <View style={{ width: 56, height: 56, borderRadius: 28, backgroundColor: colors.success + '20', alignItems: 'center', justifyContent: 'center', marginBottom: Spacing.sm }}>
+                <Ionicons name="shield-checkmark" size={32} color={colors.success} />
               </View>
-              <Text style={{ fontSize: FontSize.lg, fontWeight: FontWeight.bold, color: Colors.textPrimary }}>Status Sesi Aktif</Text>
-              <Text style={{ fontSize: FontSize.xs, color: Colors.textSecondary, marginTop: 4 }}>Task 03: Protect the Session (Login, Token, Logout)</Text>
+              <Text style={{ fontSize: FontSize.lg, fontWeight: FontWeight.bold, color: colors.textPrimary }}>Status Sesi Aktif</Text>
+              <Text style={{ fontSize: FontSize.xs, color: colors.textSecondary, marginTop: 4 }}>Task 03: Protect the Session (Login, Token, Logout)</Text>
             </View>
 
-            <View style={{ backgroundColor: Colors.background, borderRadius: BorderRadius.md, padding: Spacing.md, gap: Spacing.sm, marginBottom: Spacing.md }}>
+            <View style={{ backgroundColor: colors.background, borderRadius: BorderRadius.md, padding: Spacing.md, gap: Spacing.sm, marginBottom: Spacing.md }}>
               <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
-                <Text style={{ fontSize: FontSize.xs, color: Colors.textSecondary }}>Pengguna:</Text>
-                <Text style={{ fontSize: FontSize.xs, fontWeight: FontWeight.semibold, color: Colors.textPrimary }}>{user?.email}</Text>
+                <Text style={{ fontSize: FontSize.xs, color: colors.textSecondary }}>Pengguna:</Text>
+                <Text style={{ fontSize: FontSize.xs, fontWeight: FontWeight.semibold, color: colors.textPrimary }}>{user?.email}</Text>
               </View>
               <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
-                <Text style={{ fontSize: FontSize.xs, color: Colors.textSecondary }}>Nama:</Text>
-                <Text style={{ fontSize: FontSize.xs, fontWeight: FontWeight.semibold, color: Colors.textPrimary }}>{user?.name}</Text>
+                <Text style={{ fontSize: FontSize.xs, color: colors.textSecondary }}>Nama:</Text>
+                <Text style={{ fontSize: FontSize.xs, fontWeight: FontWeight.semibold, color: colors.textPrimary }}>{user?.name}</Text>
               </View>
               <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
-                <Text style={{ fontSize: FontSize.xs, color: Colors.textSecondary }}>Penyimpanan Token:</Text>
-                <Text style={{ fontSize: FontSize.xs, fontWeight: FontWeight.bold, color: Colors.primary }}>Expo SecureStore</Text>
+                <Text style={{ fontSize: FontSize.xs, color: colors.textSecondary }}>Penyimpanan Token:</Text>
+                <Text style={{ fontSize: FontSize.xs, fontWeight: FontWeight.bold, color: colors.primary }}>Expo SecureStore</Text>
               </View>
               <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
-                <Text style={{ fontSize: FontSize.xs, color: Colors.textSecondary }}>Kunci SecureStore:</Text>
-                <Text style={{ fontSize: FontSize.xs, fontFamily: 'monospace', fontWeight: FontWeight.semibold, color: Colors.textPrimary }}>{'"access_token"'}</Text>
+                <Text style={{ fontSize: FontSize.xs, color: colors.textSecondary }}>Kunci SecureStore:</Text>
+                <Text style={{ fontSize: FontSize.xs, fontFamily: 'monospace', fontWeight: FontWeight.semibold, color: colors.textPrimary }}>{'"access_token"'}</Text>
               </View>
               <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
-                <Text style={{ fontSize: FontSize.xs, color: Colors.textSecondary }}>Status Autentikasi:</Text>
-                <Text style={{ fontSize: FontSize.xs, fontWeight: FontWeight.bold, color: Colors.success }}>Terautentikasi (Valid)</Text>
+                <Text style={{ fontSize: FontSize.xs, color: colors.textSecondary }}>Status Autentikasi:</Text>
+                <Text style={{ fontSize: FontSize.xs, fontWeight: FontWeight.bold, color: colors.success }}>Terautentikasi (Valid)</Text>
               </View>
             </View>
 
             {/* Token Viewer */}
             <View style={{ marginBottom: Spacing.md }}>
               <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 }}>
-                <Text style={{ fontSize: FontSize.xs, fontWeight: FontWeight.semibold, color: Colors.textSecondary }}>
+                <Text style={{ fontSize: FontSize.xs, fontWeight: FontWeight.semibold, color: colors.textSecondary }}>
                   Access Token di SecureStore:
                 </Text>
                 <TouchableOpacity
@@ -666,14 +767,14 @@ export default function ProfileScreen() {
                   accessibilityRole="button"
                   accessibilityLabel="Salin token sesi"
                 >
-                  <Ionicons name={tokenCopied ? 'checkmark' : 'copy-outline'} size={13} color={Colors.primary} />
-                  <Text style={{ fontSize: 11, fontWeight: FontWeight.semibold, color: Colors.primary }}>
+                  <Ionicons name={tokenCopied ? 'checkmark' : 'copy-outline'} size={13} color={colors.primary} />
+                  <Text style={{ fontSize: 11, fontWeight: FontWeight.semibold, color: colors.primary }}>
                     {tokenCopied ? 'Tersalin' : 'Salin Token'}
                   </Text>
                 </TouchableOpacity>
               </View>
-              <View style={{ backgroundColor: Colors.background, padding: Spacing.sm, borderRadius: BorderRadius.sm, maxHeight: 70, borderWidth: 1, borderColor: Colors.borderLight }}>
-                <Text style={{ fontSize: 10, fontFamily: 'monospace', color: Colors.textSecondary }} numberOfLines={3} selectable>
+              <View style={{ backgroundColor: colors.background, padding: Spacing.sm, borderRadius: BorderRadius.sm, maxHeight: 70, borderWidth: 1, borderColor: colors.borderLight }}>
+                <Text style={{ fontSize: 10, fontFamily: 'monospace', color: colors.textSecondary }} numberOfLines={3} selectable>
                   {sessionToken || 'Tidak ada token aktif'}
                 </Text>
               </View>
@@ -681,16 +782,16 @@ export default function ProfileScreen() {
 
             <View style={{ gap: Spacing.sm }}>
               <TouchableOpacity
-                style={{ backgroundColor: Colors.primary, paddingVertical: Spacing.sm + 2, borderRadius: BorderRadius.md, alignItems: 'center' }}
+                style={{ backgroundColor: colors.primary, paddingVertical: Spacing.sm + 2, borderRadius: BorderRadius.md, alignItems: 'center' }}
                 onPress={() => setSessionModalVisible(false)}
                 accessibilityRole="button"
                 accessibilityLabel="Tutup dialog status sesi"
               >
-                <Text style={{ color: Colors.white, fontWeight: FontWeight.bold, fontSize: FontSize.sm }}>Tutup</Text>
+                <Text style={{ color: '#FFFFFF', fontWeight: FontWeight.bold, fontSize: FontSize.sm }}>Tutup</Text>
               </TouchableOpacity>
 
               <TouchableOpacity
-                style={{ backgroundColor: Colors.danger + '15', borderWidth: 1, borderColor: Colors.danger + '40', paddingVertical: Spacing.sm + 2, borderRadius: BorderRadius.md, alignItems: 'center', flexDirection: 'row', justifyContent: 'center', gap: 6 }}
+                style={{ backgroundColor: colors.danger + '15', borderWidth: 1, borderColor: colors.danger + '40', paddingVertical: Spacing.sm + 2, borderRadius: BorderRadius.md, alignItems: 'center', flexDirection: 'row', justifyContent: 'center', gap: 6 }}
                 onPress={() => {
                   setSessionModalVisible(false);
                   setTimeout(() => handleLogout(), 300);
@@ -698,8 +799,8 @@ export default function ProfileScreen() {
                 accessibilityRole="button"
                 accessibilityLabel="Hapus token dan logout (Task 03)"
               >
-                <Ionicons name="log-out-outline" size={16} color={Colors.danger} />
-                <Text style={{ color: Colors.danger, fontWeight: FontWeight.bold, fontSize: FontSize.sm }}>Hapus Token & Logout (Task 03)</Text>
+                <Ionicons name="log-out-outline" size={16} color={colors.danger} />
+                <Text style={{ color: colors.danger, fontWeight: FontWeight.bold, fontSize: FontSize.sm }}>Hapus Token & Logout (Task 03)</Text>
               </TouchableOpacity>
             </View>
           </View>
@@ -728,6 +829,7 @@ function MenuRow({
   isLast?: boolean;
   accessibilityLabel?: string;
 }) {
+  const { colors } = useTheme();
   const Wrapper = onPress ? TouchableOpacity : View;
   const wrapperProps = onPress
     ? {
@@ -741,18 +843,21 @@ function MenuRow({
 
   return (
     <Wrapper
-      style={[styles.menuRow, !isLast && styles.menuRowBorder]}
+      style={[
+        styles.menuRow,
+        !isLast && [styles.menuRowBorder, { borderBottomColor: colors.borderLight }],
+      ]}
       {...wrapperProps}
     >
-      <View style={styles.menuIconBox} accessibilityElementsHidden>
-        <Ionicons name={icon} size={18} color={Colors.primary} />
+      <View style={[styles.menuIconBox, { backgroundColor: colors.primary + '18' }]} accessibilityElementsHidden>
+        <Ionicons name={icon} size={18} color={colors.primary} />
       </View>
       <View style={styles.menuTextBlock}>
-        <Text style={styles.menuLabel}>{label}</Text>
-        {!!subtitle && <Text style={styles.menuSubtitle}>{subtitle}</Text>}
+        <Text style={[styles.menuLabel, { color: colors.textPrimary }]}>{label}</Text>
+        {!!subtitle && <Text style={[styles.menuSubtitle, { color: colors.textSecondary }]}>{subtitle}</Text>}
       </View>
       {onPress && (
-        <Ionicons name="chevron-forward" size={16} color={Colors.textTertiary} accessibilityElementsHidden />
+        <Ionicons name="chevron-forward" size={16} color={colors.textTertiary} accessibilityElementsHidden />
       )}
     </Wrapper>
   );
@@ -773,17 +878,18 @@ function SettingRow({
   accessibilityLabel: string;
   isLast?: boolean;
 }) {
+  const { colors } = useTheme();
   return (
-    <View style={[styles.settingRow, !isLast && styles.settingRowBorder]}>
+    <View style={[styles.settingRow, !isLast && [styles.settingRowBorder, { borderBottomColor: colors.borderLight }]]}>
       <View style={styles.settingTextBlock}>
-        <Text style={styles.settingLabel}>{label}</Text>
-        <Text style={styles.settingDesc}>{description}</Text>
+        <Text style={[styles.settingLabel, { color: colors.textPrimary }]}>{label}</Text>
+        <Text style={[styles.settingDesc, { color: colors.textSecondary }]}>{description}</Text>
       </View>
       <Switch
         value={value}
         onValueChange={onValueChange}
-        trackColor={{ false: Colors.border, true: Colors.primaryLight }}
-        thumbColor={value ? Colors.primary : Colors.textTertiary}
+        trackColor={{ false: colors.border, true: colors.primaryLight }}
+        thumbColor={value ? colors.primary : colors.textTertiary}
         accessibilityLabel={accessibilityLabel}
         accessibilityRole="switch"
         accessibilityState={{ checked: value }}
@@ -793,10 +899,11 @@ function SettingRow({
 }
 
 function AboutBadge({ icon, label }: { icon: React.ComponentProps<typeof Ionicons>['name']; label: string }) {
+  const { colors } = useTheme();
   return (
-    <View style={styles.aboutBadge} accessible accessibilityLabel={label}>
-      <Ionicons name={icon} size={12} color={Colors.textSecondary} accessibilityElementsHidden />
-      <Text style={styles.aboutBadgeLabel}>{label}</Text>
+    <View style={[styles.aboutBadge, { backgroundColor: colors.background, borderColor: colors.borderLight }]} accessible accessibilityLabel={label}>
+      <Ionicons name={icon} size={12} color={colors.textSecondary} accessibilityElementsHidden />
+      <Text style={[styles.aboutBadgeLabel, { color: colors.textSecondary }]}>{label}</Text>
     </View>
   );
 }
@@ -816,17 +923,18 @@ function PwField({
   toggleShow: () => void;
   placeholder?: string;
 }) {
+  const { colors } = useTheme();
   return (
     <View style={styles.fieldGroup}>
-      <Text style={styles.fieldLabel}>{label}</Text>
-      <View style={styles.inputWrapper}>
+      <Text style={[styles.fieldLabel, { color: colors.textPrimary }]}>{label}</Text>
+      <View style={[styles.inputWrapper, { backgroundColor: colors.background, borderColor: colors.border }]}>
         <TextInput
-          style={styles.input}
+          style={[styles.input, { color: colors.textPrimary }]}
           value={value}
           onChangeText={onChange}
           secureTextEntry={!show}
           placeholder={placeholder}
-          placeholderTextColor={Colors.textTertiary}
+          placeholderTextColor={colors.textTertiary}
           accessibilityLabel={label}
         />
         <TouchableOpacity
@@ -836,7 +944,7 @@ function PwField({
           accessibilityLabel={show ? 'Sembunyikan password' : 'Tampilkan password'}
           hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
         >
-          <Ionicons name={show ? 'eye-off-outline' : 'eye-outline'} size={18} color={Colors.textTertiary} />
+          <Ionicons name={show ? 'eye-off-outline' : 'eye-outline'} size={18} color={colors.textTertiary} />
         </TouchableOpacity>
       </View>
     </View>
@@ -1053,6 +1161,35 @@ const styles = StyleSheet.create({
   settingRowBorder: {
     borderBottomWidth: 1,
     borderBottomColor: Colors.borderLight,
+  },
+  themePillsRow: {
+    paddingHorizontal: Spacing.lg,
+    paddingVertical: Spacing.md,
+    borderTopWidth: 1,
+    gap: Spacing.sm,
+  },
+  themePillsLabel: {
+    fontSize: FontSize.xs,
+    fontWeight: FontWeight.medium,
+    marginBottom: 4,
+  },
+  themePillsGroup: {
+    flexDirection: 'row',
+    gap: Spacing.sm,
+  },
+  themePillBtn: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+    paddingVertical: 8,
+    borderRadius: BorderRadius.md,
+    borderWidth: 1,
+  },
+  themePillBtnText: {
+    fontSize: FontSize.xs,
+    fontWeight: FontWeight.semibold,
   },
   settingTextBlock: { flex: 1 },
   settingLabel: {

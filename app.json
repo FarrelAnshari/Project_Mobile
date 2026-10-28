@@ -7,6 +7,12 @@
     "icon": "./assets/images/icon.png",
     "scheme": "parkin",
     "userInterfaceStyle": "light",
+    "ios": {
+      "supportsTablet": true,
+      "infoPlist": {
+        "NSCameraUsageDescription": "Izinkan PARKIN mengakses kamera untuk memindai tiket QR Code parkir."
+      }
+    },
     "android": {
       "adaptiveIcon": {
         "backgroundColor": "#2563EB",
@@ -14,6 +20,9 @@
         "backgroundImage": "./assets/images/android-icon-background.png",
         "monochromeImage": "./assets/images/android-icon-monochrome.png"
       },
+      "permissions": [
+        "android.permission.CAMERA"
+      ],
       "predictiveBackGestureEnabled": false
     },
     "web": {
@@ -30,7 +39,13 @@
           "imageWidth": 76
         }
       ],
-      "expo-secure-store"
+      "expo-secure-store",
+      [
+        "expo-camera",
+        {
+          "cameraPermission": "Izinkan PARKIN mengakses kamera untuk memindai tiket QR Code parkir."
+        }
+      ]
     ],
     "experiments": {
       "typedRoutes": true,

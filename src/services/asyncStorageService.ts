@@ -24,6 +24,7 @@ export const STORAGE_KEYS = {
   FAVORITE_PARKING: 'parkin_favorite_parking',
   ONBOARDING_COMPLETED: 'parkin_onboarding_completed',
   ACCESSIBILITY_SETTINGS: 'parkin_accessibility_settings',
+  THEME_MODE: 'parkin_theme_mode',
 } as const;
 
 /**

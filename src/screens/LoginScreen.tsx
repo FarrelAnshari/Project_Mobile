@@ -64,7 +64,7 @@ export default function LoginScreen() {
   const pulseAnim = useRef(new Animated.Value(1)).current;
   const scanLineAnim = useRef(new Animated.Value(0)).current;
 
-  const passwordRef = useRef<TextInput>(null);
+  const passwordRef = useRef<any>(null);
 
   // Animate biometric scanner modal
   useEffect(() => {

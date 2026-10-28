@@ -23,7 +23,7 @@ export const Fonts = {
 export const BottomTabInset = 80;
 export const MaxContentWidth = 600;
 
-export const Colors = {
+export const LightColors = {
   primary: '#615CED',      // Purple-blue from template
   primaryLight: '#8B87FF',
   primaryDark: '#4A46D6',
@@ -76,6 +76,65 @@ export const Colors = {
   white: '#FFFFFF',
   transparent: 'transparent',
 };
+
+export const DarkColors = {
+  primary: '#7C6FF7',      // Slightly lighter & more vibrant purple-blue for dark mode
+  primaryLight: '#9D96FF',
+  primaryDark: '#5A56E0',
+  secondary: '#FF9A20',
+  background: '#0D0D18',   // Deep dark midnight
+  surface: '#171727',      // Dark slate card surface
+  textPrimary: '#F1F1F8',  // Crisp high-contrast text
+  textSecondary: '#9A9EB2',// Muted text
+  textTertiary: '#5C6079', // Subtle text
+  border: '#28283F',      // Card and row borders
+  borderLight: '#1F1F35',
+
+  // Status colors with dark-mode friendly translucent/tinted backgrounds
+  success: '#22C55E',
+  successBg: 'rgba(34, 197, 94, 0.16)',
+  successLight: '#4ADE80',
+  warning: '#F59E0B',
+  warningBg: 'rgba(245, 158, 11, 0.16)',
+  warningLight: '#FCD34D',
+  danger: '#EF4444',
+  dangerBg: 'rgba(239, 68, 68, 0.18)',
+  dangerLight: '#FCA5A5',
+  info: '#38BDF8',
+  infoBg: 'rgba(56, 189, 248, 0.16)',
+
+  // Parking status colors
+  available: '#22C55E',
+  availableBg: 'rgba(34, 197, 94, 0.16)',
+  busy: '#F59E0B',
+  busyBg: 'rgba(245, 158, 11, 0.16)',
+  nearFull: '#F97316',
+  nearFullBg: 'rgba(249, 115, 22, 0.16)',
+  full: '#EF4444',
+  fullBg: 'rgba(239, 68, 68, 0.18)',
+
+  // Legacy status colors
+  sepi: '#22C55E',
+  sepiBg: 'rgba(34, 197, 94, 0.16)',
+  sedang: '#38BDF8',
+  sedangBg: 'rgba(56, 189, 248, 0.16)',
+  ramai: '#F59E0B',
+  ramaiBg: 'rgba(245, 158, 11, 0.16)',
+  hampirPenuh: '#F97316',
+  hampirPenuhBg: 'rgba(249, 115, 22, 0.16)',
+  penuh: '#EF4444',
+  penuhBg: 'rgba(239, 68, 68, 0.18)',
+
+  shadow: 'rgba(0, 0, 0, 0.5)',
+  overlay: 'rgba(0, 0, 0, 0.75)',
+  white: '#FFFFFF',
+  transparent: 'transparent',
+};
+
+// Default export alias for backward compatibility
+export const Colors = LightColors;
+export type ColorPalette = typeof LightColors;
+
 
 export const Spacing = {
   xs: 4,

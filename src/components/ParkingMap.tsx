@@ -26,12 +26,17 @@ import {
   Shadow,
 } from '../constants/theme';
 
+import { useTheme } from '../context/ThemeContext';
+import { useThemeColors } from '../hooks/useThemeColors';
+
 interface Props {
   areas: ParkingArea[];
   onMarkerPress?: (area: ParkingArea) => void;
 }
 
 export default function ParkingMap({ areas, onMarkerPress }: Props) {
+  const colors = useThemeColors();
+  const { isDark } = useTheme();
   const { width } = useWindowDimensions();
   const mapWidth = Math.min(width - Spacing.lg * 2, 860);
   const mapHeight = width > 768 ? 260 : 220;
@@ -43,27 +48,34 @@ export default function ParkingMap({ areas, onMarkerPress }: Props) {
   };
 
   return (
-    <View style={styles.wrapper}>
+    <View style={[styles.wrapper, { backgroundColor: colors.surface }]}>
       {/* Map header */}
-      <View style={styles.mapHeader}>
-        <Text style={styles.mapTitle}>🗺️ Peta Parkir Kampus</Text>
-        <Text style={styles.mapSubtitle}>Visual — tanpa API key</Text>
+      <View style={[styles.mapHeader, { borderBottomColor: isDark ? colors.border : colors.borderLight }]}>
+        <Text style={[styles.mapTitle, { color: colors.textPrimary }]}>🗺️ Peta Parkir Kampus</Text>
+        <Text style={[styles.mapSubtitle, { color: colors.textTertiary }]}>Visual — tanpa API key</Text>
       </View>
 
       {/* Map canvas */}
       <View
-        style={[styles.mapCanvas, { width: mapWidth, height: mapHeight }]}
+        style={[
+          styles.mapCanvas,
+          {
+            width: mapWidth,
+            height: mapHeight,
+            backgroundColor: isDark ? '#14182B' : '#EEF4FF',
+          },
+        ]}
         accessible={true}
         accessibilityRole="image"
         accessibilityLabel="Peta visual lokasi area parkir kampus"
       >
         {/* Campus grid lines */}
-        <View style={styles.gridLine1} />
-        <View style={styles.gridLine2} />
+        <View style={[styles.gridLine1, { backgroundColor: isDark ? '#232D4D' : '#C7D7F5' }]} />
+        <View style={[styles.gridLine2, { backgroundColor: isDark ? '#232D4D' : '#C7D7F5' }]} />
 
         {/* Campus label */}
         <View style={styles.campusLabel}>
-          <Text style={styles.campusLabelText}>🏫 Kampus</Text>
+          <Text style={[styles.campusLabelText, { color: colors.textSecondary }]}>🏫 Kampus</Text>
         </View>
 
         {/* Parking markers */}
@@ -84,7 +96,7 @@ export default function ParkingMap({ areas, onMarkerPress }: Props) {
                   left: x - 16,
                   top: y - 16,
                   borderColor: statusColor,
-                  backgroundColor: isSelected ? statusColor : Colors.surface,
+                  backgroundColor: isSelected ? statusColor : colors.surface,
                 },
                 isSelected && styles.markerSelected,
               ]}
@@ -115,12 +127,19 @@ export default function ParkingMap({ areas, onMarkerPress }: Props) {
         const color = getStatusColor(selectedArea.status);
         return (
           <View
-            style={[styles.popup, Shadow.md, { borderLeftColor: color }]}
+            style={[
+              styles.popup,
+              Shadow.md,
+              {
+                borderLeftColor: color,
+                backgroundColor: colors.surface,
+              },
+            ]}
             accessibilityRole="none"
             accessibilityLabel={`Info: ${selectedArea.name}. ${percent} persen terisi. ${selectedArea.available} slot tersedia.`}
           >
             <Text style={[styles.popupName, { color }]}>{selectedArea.name}</Text>
-            <Text style={styles.popupDetails}>
+            <Text style={[styles.popupDetails, { color: colors.textSecondary }]}>
               {selectedArea.occupied} / {selectedArea.capacity} kendaraan · {percent}%
             </Text>
             <Text style={styles.popupSlot}>
@@ -131,7 +150,7 @@ export default function ParkingMap({ areas, onMarkerPress }: Props) {
       })()}
 
       {/* Legend */}
-      <View style={styles.legend} accessibilityElementsHidden>
+      <View style={[styles.legend, { borderTopColor: isDark ? colors.border : colors.borderLight }]} accessibilityElementsHidden>
         {[
           { label: 'Sepi', color: Colors.sepi },
           { label: 'Sedang', color: Colors.sedang },
@@ -141,7 +160,7 @@ export default function ParkingMap({ areas, onMarkerPress }: Props) {
         ].map(({ label, color }) => (
           <View key={label} style={styles.legendItem}>
             <View style={[styles.legendDot, { backgroundColor: color }]} />
-            <Text style={styles.legendLabel}>{label}</Text>
+            <Text style={[styles.legendLabel, { color: colors.textSecondary }]}>{label}</Text>
           </View>
         ))}
       </View>

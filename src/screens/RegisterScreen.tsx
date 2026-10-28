@@ -59,9 +59,9 @@ export default function RegisterScreen() {
   const [confirmError, setConfirmError] = useState('');
   const [generalError, setGeneralError] = useState('');
 
-  const emailRef = useRef<TextInput>(null);
-  const passwordRef = useRef<TextInput>(null);
-  const confirmRef = useRef<TextInput>(null);
+  const emailRef = useRef<any>(null);
+  const passwordRef = useRef<any>(null);
+  const confirmRef = useRef<any>(null);
 
   function validate(): boolean {
     let valid = true;

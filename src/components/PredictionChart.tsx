@@ -20,6 +20,9 @@ import {
   Spacing,
 } from '../constants/theme';
 
+import { useTheme } from '../context/ThemeContext';
+import { useThemeColors } from '../hooks/useThemeColors';
+
 interface Props {
   data: PredictionPoint[];
   title?: string;
@@ -31,6 +34,8 @@ export default function PredictionChart({
   title,
   compact = false,
 }: Props) {
+  const colors = useThemeColors();
+  const { isDark } = useTheme();
   const { width } = useWindowDimensions();
   const maxOccupancy = Math.max(...data.map((d) => d.occupancy));
   const minOccupancy = Math.min(...data.map((d) => d.occupancy));
@@ -41,13 +46,13 @@ export default function PredictionChart({
 
   return (
     <View
-      style={styles.container}
+      style={[styles.container, { backgroundColor: colors.surface }]}
       accessible={true}
       accessibilityRole="none"
       accessibilityLabel={`Grafik prediksi kepadatan parkir ${title ?? ''}`}
     >
       {title && (
-        <Text style={styles.chartTitle}>{title}</Text>
+        <Text style={[styles.chartTitle, { color: colors.textPrimary }]}>{title}</Text>
       )}
 
       {/* Chart bars */}
@@ -63,7 +68,7 @@ export default function PredictionChart({
               <Text style={[styles.valueLabel, { color }]}>
                 {compact ? '' : `${point.occupancy}%`}
               </Text>
-              <View style={[styles.barTrack, { height: barHeight }]}>
+              <View style={[styles.barTrack, { height: barHeight, backgroundColor: isDark ? 'rgba(255,255,255,0.08)' : Colors.borderLight }]}>
                 <View
                   style={[
                     styles.bar,
@@ -74,7 +79,7 @@ export default function PredictionChart({
                   ]}
                 />
               </View>
-              <Text style={styles.timeLabel} numberOfLines={1}>
+              <Text style={[styles.timeLabel, { color: colors.textTertiary }]} numberOfLines={1}>
                 {compact
                   ? point.time.replace(':00', '')
                   : point.time}
@@ -87,22 +92,22 @@ export default function PredictionChart({
       {/* Highlights (Only when not compact) */}
       {!compact && mostBusy && leastBusy && (
         <View style={styles.highlightsContainer}>
-          <View style={styles.highlightCard}>
+          <View style={[styles.highlightCard, { backgroundColor: isDark ? colors.background : Colors.background }]}>
             <View style={[styles.highlightIcon, { backgroundColor: Colors.danger + '15' }]}>
               <Ionicons name="trending-up" size={16} color={Colors.danger} />
             </View>
             <View>
-              <Text style={styles.highlightLabel}>Puncak Kepadatan</Text>
-              <Text style={styles.highlightValue}>{mostBusy.time} ({mostBusy.occupancy}%)</Text>
+              <Text style={[styles.highlightLabel, { color: colors.textSecondary }]}>Puncak Kepadatan</Text>
+              <Text style={[styles.highlightValue, { color: colors.textPrimary }]}>{mostBusy.time} ({mostBusy.occupancy}%)</Text>
             </View>
           </View>
-          <View style={styles.highlightCard}>
+          <View style={[styles.highlightCard, { backgroundColor: isDark ? colors.background : Colors.background }]}>
             <View style={[styles.highlightIcon, { backgroundColor: Colors.success + '15' }]}>
               <Ionicons name="trending-down" size={16} color={Colors.success} />
             </View>
             <View>
-              <Text style={styles.highlightLabel}>Paling Sepi</Text>
-              <Text style={styles.highlightValue}>{leastBusy.time} ({leastBusy.occupancy}%)</Text>
+              <Text style={[styles.highlightLabel, { color: colors.textSecondary }]}>Paling Sepi</Text>
+              <Text style={[styles.highlightValue, { color: colors.textPrimary }]}>{leastBusy.time} ({leastBusy.occupancy}%)</Text>
             </View>
           </View>
         </View>
@@ -110,8 +115,8 @@ export default function PredictionChart({
 
       {/* Simulation disclaimer */}
       <View style={styles.disclaimer}>
-        <Ionicons name="information-circle-outline" size={14} color={Colors.info} />
-        <Text style={styles.disclaimerText}>
+        <Ionicons name="information-circle-outline" size={14} color={colors.info} />
+        <Text style={[styles.disclaimerText, { color: colors.textTertiary }]}>
           Prediksi berdasarkan data historis
         </Text>
       </View>

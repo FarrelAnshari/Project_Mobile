@@ -11,7 +11,6 @@ import {
   View,
   Text,
   ScrollView,
-  TouchableOpacity,
   StyleSheet,
   SafeAreaView,
 } from 'react-native';
@@ -21,8 +20,12 @@ import { predictionDataToday, predictionDataTomorrow } from '../data/predictionD
 import { parkingAreas } from '../data/parkingData';
 import { getStatusFromOccupancy, getStatusColor } from '../utils/parkingStatus';
 import { getRecommendations } from '../utils/recommendation';
-import PredictionChart from '../components/PredictionChart';
+import OccupancyChart, { ChartDataPoint } from '../components/OccupancyChart';
 import StatusBadge from '../components/StatusBadge';
+import AnimatedPageTransition from '../components/AnimatedPageTransition';
+import AnimatedPressable from '../components/AnimatedPressable';
+import GlowCard from '../components/GlowCard';
+import AnimatedOccupancyBar from '../components/AnimatedOccupancyBar';
 import {
   Colors,
   Spacing,
@@ -31,6 +34,8 @@ import {
   BorderRadius,
   Shadow,
 } from '../constants/theme';
+import { useTheme } from '../context/ThemeContext';
+import { useThemeColors } from '../hooks/useThemeColors';
 import { useResponsive } from '../utils/responsive';
 
 type DayTab = 'today' | 'tomorrow';
@@ -38,6 +43,8 @@ type DayTab = 'today' | 'tomorrow';
 export default function PredictionScreen() {
   const router = useRouter();
   const { horizontalPadding } = useResponsive();
+  const colors = useThemeColors();
+  const { isDark } = useTheme();
   const [activeDay, setActiveDay] = useState<DayTab>('today');
 
   const predictionData = activeDay === 'today' ? predictionDataToday : predictionDataTomorrow;
@@ -46,155 +53,163 @@ export default function PredictionScreen() {
   const recommendation = getRecommendations(parkingAreas, 1)[0];
 
   return (
-    <View style={styles.container}>
-      {/* PURPLE HEADER SECTION */}
-      <View style={styles.purpleHeader}>
-        <View style={styles.decorCircle1} />
-        <View style={styles.decorCircle2} />
-        <SafeAreaView>
-          <View style={[styles.headerInner, { paddingHorizontal: horizontalPadding }]}>
-            <View style={styles.headerTop}>
-              <Text style={styles.headerTitle}>Prediksi Kepadatan</Text>
+    <AnimatedPageTransition style={{ flex: 1 }}>
+      <View style={[styles.container, { backgroundColor: colors.background }]}>
+        {/* PURPLE HEADER SECTION */}
+        <View style={[styles.purpleHeader, { backgroundColor: isDark ? colors.surface : colors.primary }]}>
+          <View style={styles.decorCircle1} />
+          <View style={styles.decorCircle2} />
+          <SafeAreaView>
+            <View style={[styles.headerInner, { paddingHorizontal: horizontalPadding }]}>
+              <View style={styles.headerTop}>
+                <Text style={styles.headerTitle}>Prediksi Kepadatan</Text>
+              </View>
             </View>
-          </View>
-        </SafeAreaView>
-      </View>
-
-      <ScrollView
-        style={styles.scroll}
-        contentContainerStyle={[
-          styles.content,
-          { paddingHorizontal: horizontalPadding },
-        ]}
-        showsVerticalScrollIndicator={false}
-      >
-        {/* ML Disclaimer banner (Overlapping) */}
-        <View style={styles.overlappingBanner}>
-          <View style={styles.disclaimerIconBox}>
-             <Ionicons name="hardware-chip-outline" size={20} color={Colors.primary} />
-          </View>
-          <View style={styles.disclaimerTextBlock}>
-            <Text style={styles.disclaimerTitle}>Prediksi Simulasi</Text>
-            <Text style={styles.disclaimerBody}>
-              Data ini merupakan estimasi berdasarkan data historis/simulasi. Model machine learning akan diintegrasikan pada sprint berikutnya.
-            </Text>
-          </View>
+          </SafeAreaView>
         </View>
 
-        {/* Day tabs */}
-        <View style={styles.tabs} accessibilityRole="tablist">
-          {[
-            { id: 'today' as DayTab, label: 'Hari Ini' },
-            { id: 'tomorrow' as DayTab, label: 'Besok' },
-          ].map((tab) => (
-            <TouchableOpacity
-              key={tab.id}
-              style={[
-                styles.tab,
-                activeDay === tab.id && styles.tabActive,
-              ]}
-              onPress={() => setActiveDay(tab.id)}
-              accessibilityRole="tab"
-              accessibilityLabel={tab.label}
-              accessibilityState={{ selected: activeDay === tab.id }}
-            >
-              <Text
+        <ScrollView
+          style={styles.scroll}
+          contentContainerStyle={[
+            styles.content,
+            { paddingHorizontal: horizontalPadding },
+          ]}
+          showsVerticalScrollIndicator={false}
+        >
+          {/* ML Disclaimer banner (Overlapping) */}
+          <View style={[styles.overlappingBanner, { backgroundColor: colors.surface, borderColor: isDark ? colors.border : colors.borderLight, borderWidth: isDark ? 1 : 0 }]}>
+            <View style={[styles.disclaimerIconBox, { backgroundColor: colors.primary + (isDark ? '25' : '15') }]}>
+               <Ionicons name="hardware-chip-outline" size={20} color={colors.primary} />
+            </View>
+            <View style={styles.disclaimerTextBlock}>
+              <Text style={[styles.disclaimerTitle, { color: colors.textPrimary }]}>Prediksi Simulasi</Text>
+              <Text style={[styles.disclaimerBody, { color: colors.textSecondary }]}>
+                Data ini merupakan estimasi berdasarkan data historis/simulasi. Model machine learning akan diintegrasikan pada sprint berikutnya.
+              </Text>
+            </View>
+          </View>
+
+          {/* Day tabs */}
+          <View style={[styles.tabs, { backgroundColor: isDark ? colors.surface : '#EDE9FE' }]} accessibilityRole="tablist">
+            {[
+              { id: 'today' as DayTab, label: 'Hari Ini' },
+              { id: 'tomorrow' as DayTab, label: 'Besok' },
+            ].map((tab) => (
+              <AnimatedPressable
+                key={tab.id}
+                pressScale={0.95}
                 style={[
-                  styles.tabText,
-                  activeDay === tab.id && styles.tabTextActive,
+                  styles.tab,
+                  activeDay === tab.id && [styles.tabActive, { backgroundColor: colors.primary }],
                 ]}
+                onPress={() => setActiveDay(tab.id)}
+                accessibilityRole="button"
+                accessibilityLabel={tab.label}
+                accessibilityState={{ selected: activeDay === tab.id }}
               >
-                {tab.label}
-              </Text>
-            </TouchableOpacity>
-          ))}
-        </View>
-
-        {/* Full prediction chart */}
-        <View style={[Shadow.sm, styles.chartContainer]}>
-          <PredictionChart
-            data={predictionData}
-            compact={false}
-          />
-        </View>
-
-        {/* Per-hour details */}
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle} accessibilityRole="header">
-            Rincian Per Jam
-          </Text>
-          <View style={[styles.hourlyTable, Shadow.sm]}>
-            {predictionData.map((point, index) => {
-              const status = getStatusFromOccupancy(point.occupancy);
-              const color = getStatusColor(status);
-              return (
-                <View
-                  key={index}
+                <Text
                   style={[
-                    styles.hourRow,
-                    index < predictionData.length - 1 && styles.hourRowBorder,
+                    styles.tabText,
+                    { color: activeDay === tab.id ? Colors.white : colors.textSecondary },
+                    activeDay === tab.id && styles.tabTextActive,
                   ]}
-                  accessible={true}
-                  accessibilityLabel={`Pukul ${point.time}: ${point.occupancy} persen — ${point.label}`}
                 >
-                  <Text style={styles.hourTime}>{point.time}</Text>
-                  <View style={styles.hourBarTrack}>
-                    <View
-                      style={[
-                        styles.hourBar,
-                        {
-                          width: `${point.occupancy}%`,
-                          backgroundColor: color,
-                        },
-                      ]}
-                    />
-                  </View>
-                  <Text style={[styles.hourValue, { color }]}>
-                    {point.occupancy}%
-                  </Text>
-                  <StatusBadge status={status} size="sm" />
-                </View>
-              );
-            })}
+                  {tab.label}
+                </Text>
+              </AnimatedPressable>
+            ))}
           </View>
-        </View>
 
-        {/* Suggestion */}
-        {recommendation && (
-          <TouchableOpacity
-            style={[styles.suggestionCard, Shadow.sm]}
-            onPress={() => router.push('/(tabs)/parking' as any)}
-            activeOpacity={0.8}
-            accessibilityRole="button"
-            accessibilityLabel={`Saran: pilih area ${recommendation.area.name}`}
-          >
-            <View style={styles.suggestionHeader}>
-              <Ionicons name="bulb-outline" size={18} color={Colors.primary} />
-              <Text style={styles.suggestionTitle}>Saran Kepadatan</Text>
-            </View>
-            <Text style={styles.suggestionBody}>
-              Disarankan datang sebelum{' '}
-              <Text style={styles.suggestionHighlight}>
-                {predictionData.find((p) => p.occupancy > 60)?.time ?? '10:00'}
-              </Text>{' '}
-              atau memilih area{' '}
-              <Text style={styles.suggestionHighlight}>
-                {recommendation.area.name}
-              </Text>
-              .
+          {/* Full prediction chart — OccupancyChart (animated bars) */}
+          <View style={[Shadow.sm, styles.chartContainer, { backgroundColor: colors.surface, borderColor: isDark ? colors.border : colors.borderLight, borderWidth: isDark ? 1 : 0 }]}>
+            <OccupancyChart
+              data={predictionData.map((p, idx) => ({
+                label: p.time,
+                value: p.occupancy,
+                // Highlight the current-ish hour
+                highlight: idx === Math.floor(predictionData.length / 2),
+              } as ChartDataPoint))}
+              height={180}
+              showYAxis
+            />
+          </View>
+
+          {/* Per-hour details */}
+          <View style={styles.section}>
+            <Text style={[styles.sectionTitle, { color: colors.textSecondary }]} accessibilityRole="header">
+              Rincian Per Jam
             </Text>
-            <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: Spacing.sm, gap: 4 }}>
-              <Text style={{ fontSize: FontSize.xs, fontWeight: FontWeight.bold, color: Colors.primary }}>
-                Lihat Area Parkir Ini
-              </Text>
-              <Ionicons name="arrow-forward" size={14} color={Colors.primary} />
+            <View style={[styles.hourlyTable, Shadow.sm, { backgroundColor: colors.surface, borderColor: isDark ? colors.border : colors.borderLight, borderWidth: isDark ? 1 : 0 }]}>
+              {predictionData.map((point, index) => {
+                const status = getStatusFromOccupancy(point.occupancy);
+                const color = getStatusColor(status);
+                return (
+                  <View
+                    key={index}
+                    style={[
+                      styles.hourRow,
+                      index < predictionData.length - 1 && [styles.hourRowBorder, { borderBottomColor: colors.borderLight }],
+                    ]}
+                    accessible={true}
+                    accessibilityLabel={`Pukul ${point.time}: ${point.occupancy} persen — ${point.label}`}
+                  >
+                    <Text style={[styles.hourTime, { color: colors.textPrimary }]}>{point.time}</Text>
+                    <View style={{ flex: 1, marginHorizontal: Spacing.sm }}>
+                      <AnimatedOccupancyBar percent={point.occupancy} height={8} />
+                    </View>
+                    <Text style={[styles.hourValue, { color }]}>
+                      {point.occupancy}%
+                    </Text>
+                    <StatusBadge status={status} size="sm" />
+                  </View>
+                );
+              })}
             </View>
-          </TouchableOpacity>
-        )}
+          </View>
 
-        <View style={{ height: 32 }} />
-      </ScrollView>
-    </View>
+          {/* Suggestion */}
+          {recommendation && (
+            <GlowCard
+              glowColor="rgba(99, 102, 241, 0.22)"
+              glowRadius={16}
+              style={{ marginHorizontal: 0, marginTop: Spacing.sm }}
+            >
+              <AnimatedPressable
+                pressScale={0.98}
+                style={[styles.suggestionCard, { backgroundColor: colors.surface, borderColor: isDark ? colors.border : colors.borderLight, borderWidth: isDark ? 1 : 0 }]}
+                onPress={() => router.push('/(tabs)/parking' as any)}
+                accessibilityRole="button"
+                accessibilityLabel={`Saran: pilih area ${recommendation.area.name}`}
+              >
+                <View style={styles.suggestionHeader}>
+                  <Ionicons name="bulb-outline" size={18} color={colors.primary} />
+                  <Text style={[styles.suggestionTitle, { color: colors.textPrimary }]}>Saran Kepadatan</Text>
+                </View>
+                <Text style={[styles.suggestionBody, { color: colors.textSecondary }]}>
+                  Disarankan datang sebelum{' '}
+                  <Text style={[styles.suggestionHighlight, { color: colors.primary }]}>
+                    {predictionData.find((p) => p.occupancy > 60)?.time ?? '10:00'}
+                  </Text>{' '}
+                  atau memilih area{' '}
+                  <Text style={[styles.suggestionHighlight, { color: colors.primary }]}>
+                    {recommendation.area.name}
+                  </Text>
+                  .
+                </Text>
+                <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: Spacing.sm, gap: 4 }}>
+                  <Text style={{ fontSize: FontSize.xs, fontWeight: FontWeight.bold, color: colors.primary }}>
+                    Lihat Area Parkir Ini
+                  </Text>
+                  <Ionicons name="arrow-forward" size={14} color={colors.primary} />
+                </View>
+              </AnimatedPressable>
+            </GlowCard>
+          )}
+
+          <View style={{ height: 32 }} />
+        </ScrollView>
+      </View>
+    </AnimatedPageTransition>
   );
 }
 
