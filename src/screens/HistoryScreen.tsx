@@ -36,7 +36,7 @@ import { useResponsive } from '../utils/responsive';
 type FilterType = 'hari' | 'minggu';
 
 export default function HistoryScreen() {
-  const { horizontalPadding } = useResponsive();
+  const { horizontalPadding, isWide, cardWidth } = useResponsive();
   const colors = useThemeColors();
   const { isDark } = useTheme();
   const [filter, setFilter] = useState<FilterType>('hari');

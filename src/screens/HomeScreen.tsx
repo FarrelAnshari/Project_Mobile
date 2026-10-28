@@ -538,13 +538,13 @@ export default function HomeScreen() {
           </StaggerList>
         )}
 
-        <View style={styles.bottomSpacer} />
+        <View style={[styles.bottomSpacer, isWide ? styles.bottomSpacerDesktop : styles.bottomSpacerMobile]} />
       </ScrollView>
 
       {/* Floating Action Button: Scan Tiket Parkir */}
       <AnimatedPressable
         onPress={navigateToScanner}
-        style={styles.floatingScanFab}
+        style={[styles.floatingScanFab, isWide ? styles.floatingScanFabDesktop : styles.floatingScanFabMobile]}
         pressScale={0.92}
         accessibilityLabel="Pindai QR Tiket Parkir"
       >
@@ -664,7 +664,7 @@ const styles = StyleSheet.create({
   // ─── Scroll ────────────────────────────────────────────────────
   scroll: { flex: 1 },
   content: {
-    paddingTop: Spacing.lg, paddingBottom: 120,
+    paddingTop: Spacing.lg, paddingBottom: 0,
     maxWidth: 960, width: '100%', alignSelf: 'center',
   },
 
@@ -779,6 +779,9 @@ const styles = StyleSheet.create({
     fontSize: FontSize.sm, fontWeight: FontWeight.semibold,
   },
   bottomSpacer: { height: 32 },
+  // Extra clearance for bottom tab bar (64+8 = 72) + FAB (44) + gap (16) = 132; round to 140
+  bottomSpacerMobile: { height: 140 },
+  bottomSpacerDesktop: { height: 50 },
 
   // ─── Error Banner ──────────────────────────────────────────────
   errorBanner: {
@@ -809,8 +812,6 @@ const styles = StyleSheet.create({
   demoBtnText: { fontSize: FontSize.xs, fontWeight: FontWeight.semibold },
   floatingScanFab: {
     position: 'absolute',
-    bottom: Platform.OS === 'ios' ? 104 : 88,
-    right: 20,
     flexDirection: 'row',
     alignItems: 'center',
     gap: 8,
@@ -824,6 +825,15 @@ const styles = StyleSheet.create({
     shadowRadius: 14,
     elevation: 8,
     zIndex: 90,
+  },
+  floatingScanFabMobile: {
+    // Above bottom nav bar: iOS bar=84px, Android bar=72px; add 8px gap
+    bottom: Platform.OS === 'ios' ? 96 : 84,
+    right: 20,
+  },
+  floatingScanFabDesktop: {
+    bottom: 28,
+    right: 28,
   },
   floatingScanFabText: {
     color: '#FFFFFF',

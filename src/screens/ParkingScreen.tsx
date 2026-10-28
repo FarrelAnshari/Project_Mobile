@@ -123,7 +123,7 @@ export default function ParkingScreen() {
           style={styles.scroll}
           contentContainerStyle={[
             styles.content,
-            { paddingHorizontal: horizontalPadding },
+            { paddingHorizontal: horizontalPadding, paddingBottom: isWide ? 48 : 120 },
           ]}
           refreshControl={
             <RefreshControl

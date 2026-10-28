@@ -3,7 +3,8 @@
  * Screen: Register
  *
  * Halaman pendaftaran akun PARKIN.
- * Setelah berhasil → arahkan ke Login.
+ * Dilengkapi validasi form, ikon modern tanpa OS emoji,
+ * card container tegas, tema dinamis, dan toast notification.
  */
 
 import React, { useState, useRef } from 'react';
@@ -20,17 +21,18 @@ import {
   Platform,
 } from 'react-native';
 import { useRouter } from 'expo-router';
+import { Ionicons } from '@expo/vector-icons';
 import { useAuth } from '../context/AuthContext';
+import { useTheme } from '../context/ThemeContext';
+import { useToast } from '../context/ToastContext';
 import {
-  Colors,
   Spacing,
   FontSize,
   FontWeight,
   BorderRadius,
-  Shadow,
 } from '../constants/theme';
 
-// Validasi
+// Validasi form
 function isValidEmail(email: string): boolean {
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim());
 }
@@ -42,6 +44,8 @@ function isStrongPassword(password: string): boolean {
 export default function RegisterScreen() {
   const router = useRouter();
   const { register } = useAuth();
+  const { colors, isDark } = useTheme();
+  const toast = useToast();
 
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
@@ -121,23 +125,27 @@ export default function RegisterScreen() {
       });
 
       if (result.success) {
-        setSuccessMsg('Akun berhasil dibuat! Silakan masuk.');
-        // Delay sedikit untuk user baca pesan, lalu ke login
+        setSuccessMsg('Akun berhasil dibuat! Mengarahkan ke halaman masuk...');
+        toast.success('Registrasi Berhasil! Silakan masuk dengan akun baru Anda.');
         setTimeout(() => {
           router.replace('/login');
-        }, 1500);
+        }, 1200);
       } else {
-        setGeneralError(result.error ?? 'Registrasi gagal. Coba lagi.');
+        const err = result.error ?? 'Registrasi gagal. Silakan coba kembali.';
+        setGeneralError(err);
+        toast.error(err);
       }
     } catch {
-      setGeneralError('Terjadi kesalahan. Periksa koneksi dan coba lagi.');
+      const err = 'Terjadi kesalahan sistem. Periksa koneksi dan coba lagi.';
+      setGeneralError(err);
+      toast.error(err);
     } finally {
       setLoading(false);
     }
   }
 
   return (
-    <SafeAreaView style={styles.safeArea}>
+    <SafeAreaView style={[styles.safeArea, { backgroundColor: colors.background }]}>
       <KeyboardAvoidingView
         style={styles.flex}
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
@@ -149,54 +157,108 @@ export default function RegisterScreen() {
         >
           {/* Back button */}
           <TouchableOpacity
-            style={styles.backBtn}
+            style={[
+              styles.backBtn,
+              {
+                backgroundColor: isDark ? colors.surface : '#FFFFFF',
+                borderColor: colors.border,
+              },
+            ]}
             onPress={() => router.back()}
             accessibilityRole="button"
             accessibilityLabel="Kembali ke halaman login"
           >
-            <Text style={styles.backBtnText}>← Kembali</Text>
+            <Ionicons name="arrow-back" size={18} color={colors.textPrimary} />
+            <Text style={[styles.backBtnText, { color: colors.textPrimary }]}>Kembali</Text>
           </TouchableOpacity>
 
           {/* Header */}
           <View style={styles.headerSection}>
-            <View style={styles.logoContainer}>
-              <Text style={styles.logoEmoji}>🅿️</Text>
+            <View
+              style={[
+                styles.logoContainer,
+                {
+                  backgroundColor: colors.primary,
+                  shadowColor: colors.primary,
+                },
+              ]}
+            >
+              <Ionicons name="car-sport" size={32} color="#FFFFFF" />
             </View>
-            <Text style={styles.appName}>Buat Akun PARKIN</Text>
-            <Text style={styles.appTagline}>
-              Daftar dan mulai pantau parkir kampus
+            <Text style={[styles.appName, { color: colors.textPrimary }]}>Buat Akun PARKIN</Text>
+            <Text style={[styles.appTagline, { color: colors.textSecondary }]}>
+              Daftar dan mulai pantau ketersediaan parkir kampus
             </Text>
           </View>
 
-          {/* Card */}
-          <View style={[styles.card, Shadow.md]}>
+          {/* Card Form */}
+          <View
+            style={[
+              styles.card,
+              {
+                backgroundColor: colors.surface,
+                borderColor: colors.border,
+                shadowColor: '#000000',
+              },
+            ]}
+          >
             {/* Success banner */}
             {!!successMsg && (
-              <View style={styles.successBanner} accessibilityRole="alert">
-                <Text style={styles.successIcon}>✅</Text>
-                <Text style={styles.successText}>{successMsg}</Text>
+              <View
+                style={[
+                  styles.successBanner,
+                  { backgroundColor: colors.successBg, borderColor: colors.success },
+                ]}
+                accessibilityRole="alert"
+              >
+                <Ionicons name="checkmark-circle" size={18} color={colors.success} />
+                <Text style={[styles.successText, { color: colors.success }]}>{successMsg}</Text>
               </View>
             )}
 
             {/* General error */}
             {!!generalError && (
-              <View style={styles.errorBanner} accessibilityRole="alert">
-                <Text style={styles.errorIcon}>⚠️</Text>
-                <Text style={styles.errorText}>{generalError}</Text>
+              <View
+                style={[
+                  styles.errorBanner,
+                  { backgroundColor: colors.dangerBg, borderColor: colors.danger },
+                ]}
+                accessibilityRole="alert"
+              >
+                <Ionicons name="alert-circle" size={18} color={colors.danger} />
+                <Text style={[styles.errorText, { color: colors.danger }]}>{generalError}</Text>
               </View>
             )}
 
             {/* Nama Lengkap */}
             <View style={styles.fieldGroup}>
-              <Text style={styles.fieldLabel}>Nama Lengkap</Text>
-              <View style={[styles.inputWrapper, !!nameError && styles.inputError]}>
-                <Text style={styles.inputIcon} accessibilityElementsHidden>👤</Text>
+              <Text style={[styles.fieldLabel, { color: colors.textSecondary }]}>
+                Nama Lengkap
+              </Text>
+              <View
+                style={[
+                  styles.inputWrapper,
+                  {
+                    backgroundColor: isDark ? colors.background : '#F8FAFC',
+                    borderColor: nameError ? colors.danger : colors.border,
+                  },
+                ]}
+              >
+                <Ionicons
+                  name="person-outline"
+                  size={18}
+                  color={nameError ? colors.danger : colors.textTertiary}
+                  style={styles.inputIcon}
+                />
                 <TextInput
-                  style={styles.input}
+                  style={[styles.input, { color: colors.textPrimary }]}
                   placeholder="Nama lengkap kamu"
-                  placeholderTextColor={Colors.textTertiary}
+                  placeholderTextColor={colors.textTertiary}
                   value={name}
-                  onChangeText={(t) => { setName(t); if (nameError) setNameError(''); }}
+                  onChangeText={(t) => {
+                    setName(t);
+                    if (nameError) setNameError('');
+                  }}
                   returnKeyType="next"
                   onSubmitEditing={() => emailRef.current?.focus()}
                   accessibilityLabel="Nama Lengkap"
@@ -204,22 +266,42 @@ export default function RegisterScreen() {
                 />
               </View>
               {!!nameError && (
-                <Text style={styles.fieldError} accessibilityRole="alert">{nameError}</Text>
+                <Text style={[styles.fieldError, { color: colors.danger }]} accessibilityRole="alert">
+                  {nameError}
+                </Text>
               )}
             </View>
 
             {/* Email */}
             <View style={styles.fieldGroup}>
-              <Text style={styles.fieldLabel}>Email Mahasiswa</Text>
-              <View style={[styles.inputWrapper, !!emailError && styles.inputError]}>
-                <Text style={styles.inputIcon} accessibilityElementsHidden>✉️</Text>
+              <Text style={[styles.fieldLabel, { color: colors.textSecondary }]}>
+                Email Mahasiswa / Kampus
+              </Text>
+              <View
+                style={[
+                  styles.inputWrapper,
+                  {
+                    backgroundColor: isDark ? colors.background : '#F8FAFC',
+                    borderColor: emailError ? colors.danger : colors.border,
+                  },
+                ]}
+              >
+                <Ionicons
+                  name="mail-outline"
+                  size={18}
+                  color={emailError ? colors.danger : colors.textTertiary}
+                  style={styles.inputIcon}
+                />
                 <TextInput
                   ref={emailRef}
-                  style={styles.input}
+                  style={[styles.input, { color: colors.textPrimary }]}
                   placeholder="email@student.ac.id"
-                  placeholderTextColor={Colors.textTertiary}
+                  placeholderTextColor={colors.textTertiary}
                   value={email}
-                  onChangeText={(t) => { setEmail(t); if (emailError) setEmailError(''); }}
+                  onChangeText={(t) => {
+                    setEmail(t);
+                    if (emailError) setEmailError('');
+                  }}
                   keyboardType="email-address"
                   autoCapitalize="none"
                   autoCorrect={false}
@@ -230,90 +312,146 @@ export default function RegisterScreen() {
                 />
               </View>
               {!!emailError && (
-                <Text style={styles.fieldError} accessibilityRole="alert">{emailError}</Text>
+                <Text style={[styles.fieldError, { color: colors.danger }]} accessibilityRole="alert">
+                  {emailError}
+                </Text>
               )}
             </View>
 
             {/* Password */}
             <View style={styles.fieldGroup}>
-              <Text style={styles.fieldLabel}>Password</Text>
-              <View style={[styles.inputWrapper, !!passwordError && styles.inputError]}>
-                <Text style={styles.inputIcon} accessibilityElementsHidden>🔒</Text>
+              <Text style={[styles.fieldLabel, { color: colors.textSecondary }]}>
+                Kata Sandi
+              </Text>
+              <View
+                style={[
+                  styles.inputWrapper,
+                  {
+                    backgroundColor: isDark ? colors.background : '#F8FAFC',
+                    borderColor: passwordError ? colors.danger : colors.border,
+                  },
+                ]}
+              >
+                <Ionicons
+                  name="lock-closed-outline"
+                  size={18}
+                  color={passwordError ? colors.danger : colors.textTertiary}
+                  style={styles.inputIcon}
+                />
                 <TextInput
                   ref={passwordRef}
-                  style={styles.input}
+                  style={[styles.input, { color: colors.textPrimary }]}
                   placeholder="Minimal 6 karakter"
-                  placeholderTextColor={Colors.textTertiary}
+                  placeholderTextColor={colors.textTertiary}
                   value={password}
-                  onChangeText={(t) => { setPassword(t); if (passwordError) setPasswordError(''); }}
+                  onChangeText={(t) => {
+                    setPassword(t);
+                    if (passwordError) setPasswordError('');
+                  }}
                   secureTextEntry={!showPassword}
                   returnKeyType="next"
                   onSubmitEditing={() => confirmRef.current?.focus()}
-                  accessibilityLabel="Password"
+                  accessibilityLabel="Kata Sandi"
                   editable={!loading}
                 />
                 <TouchableOpacity
                   onPress={() => setShowPassword((v) => !v)}
                   style={styles.eyeBtn}
-                  accessibilityRole="button"
-                  accessibilityLabel={showPassword ? 'Sembunyikan password' : 'Tampilkan password'}
                   hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                  accessibilityRole="button"
+                  accessibilityLabel={showPassword ? 'Sembunyikan password' : 'Lihat password'}
                 >
-                  <Text style={styles.eyeIcon}>{showPassword ? '🙈' : '👁️'}</Text>
+                  <Ionicons
+                    name={showPassword ? 'eye-off-outline' : 'eye-outline'}
+                    size={19}
+                    color={colors.textTertiary}
+                  />
                 </TouchableOpacity>
               </View>
               {!!passwordError && (
-                <Text style={styles.fieldError} accessibilityRole="alert">{passwordError}</Text>
+                <Text style={[styles.fieldError, { color: colors.danger }]} accessibilityRole="alert">
+                  {passwordError}
+                </Text>
               )}
             </View>
 
             {/* Konfirmasi Password */}
             <View style={styles.fieldGroup}>
-              <Text style={styles.fieldLabel}>Konfirmasi Password</Text>
-              <View style={[styles.inputWrapper, !!confirmError && styles.inputError]}>
-                <Text style={styles.inputIcon} accessibilityElementsHidden>🔑</Text>
+              <Text style={[styles.fieldLabel, { color: colors.textSecondary }]}>
+                Konfirmasi Kata Sandi
+              </Text>
+              <View
+                style={[
+                  styles.inputWrapper,
+                  {
+                    backgroundColor: isDark ? colors.background : '#F8FAFC',
+                    borderColor: confirmError ? colors.danger : colors.border,
+                  },
+                ]}
+              >
+                <Ionicons
+                  name="shield-checkmark-outline"
+                  size={18}
+                  color={confirmError ? colors.danger : colors.textTertiary}
+                  style={styles.inputIcon}
+                />
                 <TextInput
                   ref={confirmRef}
-                  style={styles.input}
-                  placeholder="Ulangi password"
-                  placeholderTextColor={Colors.textTertiary}
+                  style={[styles.input, { color: colors.textPrimary }]}
+                  placeholder="Ulangi kata sandi"
+                  placeholderTextColor={colors.textTertiary}
                   value={confirmPassword}
-                  onChangeText={(t) => { setConfirmPassword(t); if (confirmError) setConfirmError(''); }}
+                  onChangeText={(t) => {
+                    setConfirmPassword(t);
+                    if (confirmError) setConfirmError('');
+                  }}
                   secureTextEntry={!showConfirm}
                   returnKeyType="done"
                   onSubmitEditing={handleRegister}
-                  accessibilityLabel="Konfirmasi Password"
+                  accessibilityLabel="Konfirmasi Kata Sandi"
                   editable={!loading}
                 />
                 <TouchableOpacity
                   onPress={() => setShowConfirm((v) => !v)}
                   style={styles.eyeBtn}
-                  accessibilityRole="button"
-                  accessibilityLabel={showConfirm ? 'Sembunyikan konfirmasi password' : 'Tampilkan konfirmasi password'}
                   hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                  accessibilityRole="button"
+                  accessibilityLabel={showConfirm ? 'Sembunyikan konfirmasi password' : 'Lihat konfirmasi password'}
                 >
-                  <Text style={styles.eyeIcon}>{showConfirm ? '🙈' : '👁️'}</Text>
+                  <Ionicons
+                    name={showConfirm ? 'eye-off-outline' : 'eye-outline'}
+                    size={19}
+                    color={colors.textTertiary}
+                  />
                 </TouchableOpacity>
               </View>
               {!!confirmError && (
-                <Text style={styles.fieldError} accessibilityRole="alert">{confirmError}</Text>
+                <Text style={[styles.fieldError, { color: colors.danger }]} accessibilityRole="alert">
+                  {confirmError}
+                </Text>
               )}
             </View>
 
-            {/* Tombol Daftar */}
+            {/* Tombol Register */}
             <TouchableOpacity
-              style={[styles.registerBtn, loading && styles.registerBtnDisabled]}
+              style={[
+                styles.registerBtn,
+                { backgroundColor: colors.primary },
+                loading && styles.registerBtnDisabled,
+              ]}
               onPress={handleRegister}
               disabled={loading}
-              activeOpacity={0.8}
+              activeOpacity={0.85}
               accessibilityRole="button"
-              accessibilityLabel="Daftar akun PARKIN"
-              accessibilityState={{ disabled: loading }}
+              accessibilityLabel="Daftar Akun"
             >
               {loading ? (
-                <ActivityIndicator color={Colors.white} size="small" />
+                <ActivityIndicator color="#FFFFFF" size="small" />
               ) : (
-                <Text style={styles.registerBtnText}>Daftar</Text>
+                <>
+                  <Text style={styles.registerBtnText}>Daftar Sekarang</Text>
+                  <Ionicons name="arrow-forward" size={18} color="#FFFFFF" />
+                </>
               )}
             </TouchableOpacity>
 
@@ -322,19 +460,14 @@ export default function RegisterScreen() {
               style={styles.loginLink}
               onPress={() => router.replace('/login')}
               disabled={loading}
-              accessibilityRole="button"
-              accessibilityLabel="Sudah punya akun? Masuk"
+              activeOpacity={0.7}
             >
-              <Text style={styles.loginLinkText}>
+              <Text style={[styles.loginLinkText, { color: colors.textSecondary }]}>
                 Sudah punya akun?{' '}
-                <Text style={styles.loginLinkBold}>Masuk</Text>
+                <Text style={[styles.loginLinkBold, { color: colors.primary }]}>Masuk di sini</Text>
               </Text>
             </TouchableOpacity>
           </View>
-
-          <Text style={styles.disclaimer}>
-            ⚠️ Demo Prototype — Data tersimpan lokal di perangkat ini
-          </Text>
         </ScrollView>
       </KeyboardAvoidingView>
     </SafeAreaView>
@@ -342,155 +475,167 @@ export default function RegisterScreen() {
 }
 
 const styles = StyleSheet.create({
-  safeArea: { flex: 1, backgroundColor: Colors.background },
-  flex: { flex: 1 },
+  safeArea: {
+    flex: 1,
+  },
+  flex: {
+    flex: 1,
+  },
   content: {
     flexGrow: 1,
-    paddingHorizontal: Spacing.xxl,
-    paddingTop: Spacing.lg,
+    paddingHorizontal: Spacing.xl,
+    paddingTop: Platform.OS === 'web' ? 40 : 28,
     paddingBottom: Spacing.xxxl,
     maxWidth: 480,
     width: '100%',
     alignSelf: 'center',
+    justifyContent: 'center',
   },
   backBtn: {
-    paddingVertical: Spacing.sm,
-    marginBottom: Spacing.md,
+    flexDirection: 'row',
+    alignItems: 'center',
     alignSelf: 'flex-start',
+    paddingVertical: 8,
+    paddingHorizontal: 14,
+    borderRadius: BorderRadius.full,
+    borderWidth: 1,
+    marginBottom: Spacing.lg,
+    gap: 6,
   },
   backBtnText: {
-    fontSize: FontSize.md,
-    color: Colors.primary,
+    fontSize: FontSize.sm,
     fontWeight: FontWeight.medium,
   },
   headerSection: {
     alignItems: 'center',
-    marginBottom: Spacing.xxl,
+    marginBottom: 20,
   },
   logoContainer: {
     width: 68,
     height: 68,
-    borderRadius: BorderRadius.xl,
-    backgroundColor: Colors.primary,
+    borderRadius: 22,
     alignItems: 'center',
     justifyContent: 'center',
     marginBottom: Spacing.md,
-    ...Shadow.md,
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.35,
+    shadowRadius: 14,
+    elevation: 8,
   },
-  logoEmoji: { fontSize: 34 },
   appName: {
-    fontSize: FontSize.xxl,
-    fontWeight: FontWeight.bold,
-    color: Colors.textPrimary,
+    fontSize: 24,
+    fontWeight: FontWeight.extrabold,
+    letterSpacing: 1,
   },
   appTagline: {
     fontSize: FontSize.sm,
-    color: Colors.textSecondary,
     marginTop: 4,
+    fontWeight: FontWeight.medium,
     textAlign: 'center',
   },
   card: {
-    backgroundColor: Colors.surface,
-    borderRadius: BorderRadius.xl,
-    padding: Spacing.xxl,
-    marginBottom: Spacing.lg,
+    borderRadius: 24,
+    padding: Platform.OS === 'web' ? 32 : 24,
+    borderWidth: 1,
+    shadowOffset: { width: 0, height: 10 },
+    shadowOpacity: 0.12,
+    shadowRadius: 24,
+    elevation: 6,
   },
   successBanner: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: Colors.successBg,
     borderRadius: BorderRadius.md,
     padding: Spacing.md,
     marginBottom: Spacing.lg,
+    borderWidth: 1,
     gap: Spacing.sm,
   },
-  successIcon: { fontSize: 16 },
   successText: {
     flex: 1,
     fontSize: FontSize.sm,
-    color: Colors.success,
     fontWeight: FontWeight.medium,
   },
   errorBanner: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: Colors.dangerBg,
     borderRadius: BorderRadius.md,
     padding: Spacing.md,
     marginBottom: Spacing.lg,
+    borderWidth: 1,
     gap: Spacing.sm,
   },
-  errorIcon: { fontSize: 16 },
   errorText: {
     flex: 1,
     fontSize: FontSize.sm,
-    color: Colors.danger,
     fontWeight: FontWeight.medium,
   },
-  fieldGroup: { marginBottom: Spacing.md },
+  fieldGroup: {
+    marginBottom: Spacing.md,
+  },
   fieldLabel: {
-    fontSize: FontSize.sm,
+    fontSize: FontSize.xs,
     fontWeight: FontWeight.semibold,
-    color: Colors.textPrimary,
-    marginBottom: Spacing.sm,
+    marginBottom: Spacing.xs,
+    marginLeft: 4,
   },
   inputWrapper: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: Colors.background,
-    borderRadius: BorderRadius.md,
-    borderWidth: 1.5,
-    borderColor: Colors.border,
+    borderRadius: BorderRadius.lg,
+    borderWidth: 1,
     paddingHorizontal: Spacing.md,
-    minHeight: 52,
+    minHeight: 50,
   },
-  inputError: {
-    borderColor: Colors.danger,
-    backgroundColor: Colors.dangerBg + '40',
+  inputIcon: {
+    marginRight: Spacing.sm,
   },
-  inputIcon: { fontSize: 16, marginRight: Spacing.sm },
   input: {
     flex: 1,
     fontSize: FontSize.md,
-    color: Colors.textPrimary,
-    paddingVertical: Spacing.md,
+    paddingVertical: 12,
   },
-  eyeBtn: { padding: 4 },
-  eyeIcon: { fontSize: 18 },
+  eyeBtn: {
+    padding: Spacing.xs,
+  },
   fieldError: {
     fontSize: FontSize.xs,
-    color: Colors.danger,
-    marginTop: 6,
-    marginLeft: 2,
+    marginTop: 4,
+    marginLeft: 4,
+    fontWeight: FontWeight.medium,
   },
   registerBtn: {
-    backgroundColor: Colors.primary,
-    borderRadius: BorderRadius.md,
-    paddingVertical: Spacing.lg,
+    flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
     minHeight: 52,
-    marginTop: Spacing.sm,
-    ...Shadow.sm,
+    borderRadius: BorderRadius.lg,
+    marginTop: Spacing.md,
+    gap: 8,
+    shadowColor: '#6366F1',
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.35,
+    shadowRadius: 12,
+    elevation: 5,
   },
-  registerBtnDisabled: { backgroundColor: Colors.textTertiary },
+  registerBtnDisabled: {
+    opacity: 0.65,
+  },
   registerBtnText: {
     fontSize: FontSize.md,
     fontWeight: FontWeight.bold,
-    color: Colors.white,
+    color: '#FFFFFF',
     letterSpacing: 0.5,
   },
   loginLink: {
     alignItems: 'center',
-    marginTop: Spacing.lg,
-    paddingVertical: Spacing.sm,
+    paddingVertical: Spacing.md,
+    marginTop: Spacing.xs,
   },
-  loginLinkText: { fontSize: FontSize.sm, color: Colors.textSecondary },
-  loginLinkBold: { color: Colors.primary, fontWeight: FontWeight.bold },
-  disclaimer: {
-    fontSize: FontSize.xs,
-    color: Colors.textTertiary,
-    textAlign: 'center',
-    lineHeight: 18,
+  loginLinkText: {
+    fontSize: FontSize.sm,
+  },
+  loginLinkBold: {
+    fontWeight: FontWeight.bold,
   },
 });

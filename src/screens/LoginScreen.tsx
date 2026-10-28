@@ -4,7 +4,8 @@
  *
  * Authentication screen — gerbang masuk aplikasi.
  * Setiap kali web/app dibuka, user harus melewati layar ini.
- * Fitur: Form Login, Sensor Sidik Jari (Biometrik), dan Quick Demo Login.
+ * Fitur: Form Login Modern, Sensor Sidik Jari (Biometrik), Quick Demo Login,
+ * Loading Screen / Verifying Overlay, dan Toast Notifications.
  */
 
 import React, { useState, useRef, useEffect } from 'react';
@@ -19,7 +20,6 @@ import {
   ActivityIndicator,
   KeyboardAvoidingView,
   Platform,
-  Alert,
   Modal,
   Animated,
   Easing,
@@ -28,13 +28,13 @@ import { useRouter } from 'expo-router';
 import * as LocalAuthentication from 'expo-local-authentication';
 import { Ionicons } from '@expo/vector-icons';
 import { useAuth } from '../context/AuthContext';
+import { useTheme } from '../context/ThemeContext';
+import { useToast } from '../context/ToastContext';
 import {
-  Colors,
   Spacing,
   FontSize,
   FontWeight,
   BorderRadius,
-  Shadow,
 } from '../constants/theme';
 
 // Validasi email sederhana
@@ -45,11 +45,15 @@ function isValidEmail(email: string): boolean {
 export default function LoginScreen() {
   const router = useRouter();
   const { login } = useAuth();
+  const { colors, isDark } = useTheme();
+  const toast = useToast();
 
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [isVerifying, setIsVerifying] = useState(false);
+  const [verificationSuccess, setVerificationSuccess] = useState(false);
 
   // Field errors
   const [emailError, setEmailError] = useState('');
@@ -64,7 +68,48 @@ export default function LoginScreen() {
   const pulseAnim = useRef(new Animated.Value(1)).current;
   const scanLineAnim = useRef(new Animated.Value(0)).current;
 
+  // Verifying loader animations
+  const spinValue = useRef(new Animated.Value(0)).current;
+  const verifyScale = useRef(new Animated.Value(0.9)).current;
+  const verifyOpacity = useRef(new Animated.Value(0)).current;
+
   const passwordRef = useRef<any>(null);
+
+  // Animate verifying overlay
+  useEffect(() => {
+    if (isVerifying) {
+      Animated.parallel([
+        Animated.timing(verifyOpacity, {
+          toValue: 1,
+          duration: 250,
+          useNativeDriver: true,
+        }),
+        Animated.spring(verifyScale, {
+          toValue: 1,
+          friction: 6,
+          useNativeDriver: true,
+        }),
+      ]).start();
+
+      const spinAnimation = Animated.loop(
+        Animated.timing(spinValue, {
+          toValue: 1,
+          duration: 1000,
+          easing: Easing.linear,
+          useNativeDriver: true,
+        })
+      );
+      spinAnimation.start();
+
+      return () => {
+        spinAnimation.stop();
+      };
+    } else {
+      verifyOpacity.setValue(0);
+      verifyScale.setValue(0.9);
+      spinValue.setValue(0);
+    }
+  }, [isVerifying]);
 
   // Animate biometric scanner modal
   useEffect(() => {
@@ -141,45 +186,51 @@ export default function LoginScreen() {
     return valid;
   }
 
-  async function handleLogin() {
-    if (!validateFields()) return;
-
+  async function performLogin(targetEmail: string, targetPass: string) {
     setLoading(true);
+    setIsVerifying(true);
+    setVerificationSuccess(false);
     setGeneralError('');
 
     try {
-      const result = await login({ email: email.trim(), password });
-      if (!result.success) {
-        setGeneralError(result.error ?? 'Login gagal. Coba lagi.');
+      const result = await login({ email: targetEmail.trim(), password: targetPass });
+      if (result.success) {
+        setVerificationSuccess(true);
+        toast.success('Login Berhasil! Selamat datang di PARKIN.');
+        setTimeout(() => {
+          setIsVerifying(false);
+          router.replace('/(tabs)');
+        }, 750);
+      } else {
+        setIsVerifying(false);
+        const errMsg = result.error ?? 'Login gagal. Periksa email dan password.';
+        setGeneralError(errMsg);
+        toast.error(errMsg);
       }
     } catch {
-      setGeneralError('Terjadi kesalahan. Periksa koneksi dan coba lagi.');
+      setIsVerifying(false);
+      const errMsg = 'Terjadi kesalahan sistem. Periksa koneksi internet Anda.';
+      setGeneralError(errMsg);
+      toast.error(errMsg);
     } finally {
       setLoading(false);
     }
+  }
+
+  async function handleLogin() {
+    if (!validateFields()) return;
+    await performLogin(email, password);
   }
 
   // Quick login helper
   async function handleQuickLogin(userEmail: string, userPass: string) {
     setEmail(userEmail);
     setPassword(userPass);
-    setLoading(true);
-    setGeneralError('');
-    try {
-      const result = await login({ email: userEmail, password: userPass });
-      if (!result.success) {
-        setGeneralError(result.error ?? 'Login gagal.');
-      }
-    } catch {
-      setGeneralError('Terjadi kesalahan saat login.');
-    } finally {
-      setLoading(false);
-    }
+    await performLogin(userEmail, userPass);
   }
 
   // Handle biometric authentication
   async function handleBiometricAuth() {
-    // If native device supports LocalAuthentication, try native prompt first
     if (Platform.OS !== 'web') {
       try {
         const hasHardware = await LocalAuthentication.hasHardwareAsync();
@@ -193,12 +244,7 @@ export default function LoginScreen() {
           });
 
           if (auth.success) {
-            setLoading(true);
-            await login({
-              email: 'mahasiswa@parkin.campus.id',
-              password: 'parkin123',
-            });
-            setLoading(false);
+            await performLogin('mahasiswa@parkin.campus.id', 'parkin123');
             return;
           }
         }
@@ -211,26 +257,22 @@ export default function LoginScreen() {
     setScanStatus('scanning');
     setBiometricModalVisible(true);
 
-    // Simulate authenticating biometric fingerprint
     setTimeout(async () => {
       setScanStatus('success');
       setTimeout(async () => {
         setBiometricModalVisible(false);
-        setLoading(true);
-        const result = await login({
-          email: 'mahasiswa@parkin.campus.id',
-          password: 'parkin123',
-        });
-        if (!result.success) {
-          setGeneralError(result.error ?? 'Verifikasi sidik jari gagal.');
-        }
-        setLoading(false);
+        await performLogin('mahasiswa@parkin.campus.id', 'parkin123');
       }, 700);
-    }, 1500);
+    }, 1400);
   }
 
+  const spin = spinValue.interpolate({
+    inputRange: [0, 1],
+    outputRange: ['0deg', '360deg'],
+  });
+
   return (
-    <SafeAreaView style={styles.safeArea}>
+    <SafeAreaView style={[styles.safeArea, { backgroundColor: colors.background }]}>
       <KeyboardAvoidingView
         style={styles.flex}
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
@@ -240,32 +282,82 @@ export default function LoginScreen() {
           keyboardShouldPersistTaps="handled"
           showsVerticalScrollIndicator={false}
         >
-          {/* Header */}
+          {/* Header section */}
           <View style={styles.headerSection}>
-            <View style={styles.logoBadge}>
-              <Text style={styles.logoLetter}>P</Text>
+            <View
+              style={[
+                styles.logoBadge,
+                {
+                  backgroundColor: colors.primary,
+                  shadowColor: colors.primary,
+                },
+              ]}
+            >
+              <Ionicons name="car-sport" size={32} color="#FFFFFF" />
             </View>
-            <Text style={styles.appName}>PARKIN</Text>
-            <Text style={styles.appTagline}>Smart Campus Parking</Text>
+            <Text style={[styles.appName, { color: colors.textPrimary }]}>PARKIN</Text>
+            <Text style={[styles.appTagline, { color: colors.textSecondary }]}>
+              Smart Campus Parking
+            </Text>
           </View>
 
-          {/* Form */}
-          <View style={styles.formContainer}>
+          {/* Form Card Container */}
+          <View
+            style={[
+              styles.cardContainer,
+              {
+                backgroundColor: colors.surface,
+                borderColor: colors.border,
+                shadowColor: '#000000',
+              },
+            ]}
+          >
+            <Text style={[styles.cardTitle, { color: colors.textPrimary }]}>
+              Selamat Datang
+            </Text>
+            <Text style={[styles.cardSubtitle, { color: colors.textSecondary }]}>
+              Masuk untuk memantau ketersediaan parkir kampus
+            </Text>
+
             {!!generalError && (
-              <View style={styles.errorBanner} accessibilityRole="alert">
-                <Ionicons name="warning-outline" size={16} color={Colors.danger} />
-                <Text style={styles.errorBannerText}>{generalError}</Text>
+              <View
+                style={[
+                  styles.errorBanner,
+                  { backgroundColor: colors.dangerBg, borderColor: colors.danger },
+                ]}
+                accessibilityRole="alert"
+              >
+                <Ionicons name="alert-circle" size={18} color={colors.danger} />
+                <Text style={[styles.errorBannerText, { color: colors.danger }]}>
+                  {generalError}
+                </Text>
               </View>
             )}
 
+            {/* Email Field */}
             <View style={styles.fieldGroup}>
-              <Text style={styles.fieldLabel} accessibilityRole="text">Email</Text>
-              <View style={[styles.inputWrapper, !!emailError && styles.inputError]}>
-                <Ionicons name="mail-outline" size={18} color={Colors.textTertiary} style={styles.inputIcon} />
+              <Text style={[styles.fieldLabel, { color: colors.textSecondary }]}>
+                Email Mahasiswa / Kampus
+              </Text>
+              <View
+                style={[
+                  styles.inputWrapper,
+                  {
+                    backgroundColor: isDark ? colors.background : '#F8FAFC',
+                    borderColor: emailError ? colors.danger : colors.border,
+                  },
+                ]}
+              >
+                <Ionicons
+                  name="mail-outline"
+                  size={19}
+                  color={emailError ? colors.danger : colors.textTertiary}
+                  style={styles.inputIcon}
+                />
                 <TextInput
-                  style={styles.input}
+                  style={[styles.input, { color: colors.textPrimary }]}
                   placeholder="user@mail.com"
-                  placeholderTextColor={Colors.textTertiary}
+                  placeholderTextColor={colors.textTertiary}
                   value={email}
                   onChangeText={(t) => {
                     setEmail(t);
@@ -278,25 +370,40 @@ export default function LoginScreen() {
                   onSubmitEditing={() => passwordRef.current?.focus()}
                   editable={!loading}
                   accessibilityLabel="Input alamat email"
-                  accessibilityHint="Masukkan email untuk autentikasi API"
                 />
               </View>
               {!!emailError && (
-                <Text style={styles.fieldError} accessibilityRole="alert">
+                <Text style={[styles.fieldError, { color: colors.danger }]} accessibilityRole="alert">
                   {emailError}
                 </Text>
               )}
             </View>
 
+            {/* Password Field */}
             <View style={styles.fieldGroup}>
-              <Text style={styles.fieldLabel} accessibilityRole="text">Password</Text>
-              <View style={[styles.inputWrapper, !!passwordError && styles.inputError]}>
-                <Ionicons name="lock-closed-outline" size={18} color={Colors.textTertiary} style={styles.inputIcon} />
+              <Text style={[styles.fieldLabel, { color: colors.textSecondary }]}>
+                Kata Sandi
+              </Text>
+              <View
+                style={[
+                  styles.inputWrapper,
+                  {
+                    backgroundColor: isDark ? colors.background : '#F8FAFC',
+                    borderColor: passwordError ? colors.danger : colors.border,
+                  },
+                ]}
+              >
+                <Ionicons
+                  name="lock-closed-outline"
+                  size={19}
+                  color={passwordError ? colors.danger : colors.textTertiary}
+                  style={styles.inputIcon}
+                />
                 <TextInput
                   ref={passwordRef}
-                  style={styles.input}
+                  style={[styles.input, { color: colors.textPrimary }]}
                   placeholder="••••••••"
-                  placeholderTextColor={Colors.textTertiary}
+                  placeholderTextColor={colors.textTertiary}
                   value={password}
                   onChangeText={(t) => {
                     setPassword(t);
@@ -307,7 +414,6 @@ export default function LoginScreen() {
                   onSubmitEditing={handleLogin}
                   editable={!loading}
                   accessibilityLabel="Input kata sandi"
-                  accessibilityHint="Masukkan password minimal 6 karakter"
                 />
                 <TouchableOpacity
                   onPress={() => setShowPassword((v) => !v)}
@@ -316,119 +422,181 @@ export default function LoginScreen() {
                   accessibilityRole="button"
                   accessibilityLabel={showPassword ? 'Sembunyikan password' : 'Lihat password'}
                 >
-                  <Ionicons name={showPassword ? 'eye-off-outline' : 'eye-outline'} size={18} color={Colors.textTertiary} />
+                  <Ionicons
+                    name={showPassword ? 'eye-off-outline' : 'eye-outline'}
+                    size={20}
+                    color={colors.textTertiary}
+                  />
                 </TouchableOpacity>
               </View>
               {!!passwordError && (
-                <Text style={styles.fieldError} accessibilityRole="alert">
+                <Text style={[styles.fieldError, { color: colors.danger }]} accessibilityRole="alert">
                   {passwordError}
                 </Text>
               )}
             </View>
 
-            {/* Login & Biometric Buttons Row */}
+            {/* Tombol Masuk & Biometrik */}
             <View style={styles.buttonsContainer}>
               <TouchableOpacity
-                style={[styles.loginBtn, loading && styles.loginBtnDisabled]}
+                style={[
+                  styles.loginBtn,
+                  { backgroundColor: colors.primary },
+                  loading && styles.loginBtnDisabled,
+                ]}
                 onPress={handleLogin}
                 disabled={loading}
-                activeOpacity={0.8}
+                activeOpacity={0.85}
                 accessibilityRole="button"
                 accessibilityLabel="Tombol Masuk"
-                accessibilityHint="Kirim permintaan login ke API dan simpan token di SecureStore"
               >
                 {loading ? (
-                  <ActivityIndicator color={Colors.white} size="small" />
+                  <ActivityIndicator color="#FFFFFF" size="small" />
                 ) : (
-                  <Text style={styles.loginBtnText}>Masuk</Text>
+                  <>
+                    <Text style={styles.loginBtnText}>Masuk</Text>
+                    <Ionicons name="arrow-forward" size={18} color="#FFFFFF" />
+                  </>
                 )}
               </TouchableOpacity>
-              
+
               <TouchableOpacity
-                style={styles.biometricIconBtn}
+                style={[
+                  styles.biometricIconBtn,
+                  {
+                    backgroundColor: isDark ? colors.background : '#EEF2FF',
+                    borderColor: colors.primary,
+                  },
+                ]}
                 onPress={handleBiometricAuth}
                 disabled={loading}
                 activeOpacity={0.7}
                 accessibilityRole="button"
                 accessibilityLabel="Login dengan Sidik Jari"
-                accessibilityHint="Masuk otomatis menggunakan sensor biometrik"
               >
-                <Ionicons name="finger-print" size={26} color={Colors.primary} />
+                <Ionicons name="finger-print" size={24} color={colors.primary} />
               </TouchableOpacity>
             </View>
 
-            {/* Divider */}
+            {/* Pembatas ATAU */}
             <View style={styles.dividerRow}>
-              <View style={styles.dividerLine} />
-              <Text style={styles.dividerText}>ATAU</Text>
-              <View style={styles.dividerLine} />
+              <View style={[styles.dividerLine, { backgroundColor: colors.border }]} />
+              <Text style={[styles.dividerText, { color: colors.textTertiary }]}>ATAU</Text>
+              <View style={[styles.dividerLine, { backgroundColor: colors.border }]} />
             </View>
 
-            {/* Prominent Biometric / Fingerprint Card */}
-            <TouchableOpacity
-              style={[styles.biometricCard, Shadow.sm]}
-              onPress={handleBiometricAuth}
-              disabled={loading}
-              activeOpacity={0.8}
-              accessibilityRole="button"
-              accessibilityLabel="Masuk dengan Sidik Jari / Biometrik"
-            >
-              <View style={styles.biometricIconCircle}>
-                <Ionicons name="finger-print" size={28} color={Colors.primary} />
-              </View>
-              <View style={styles.biometricTextContainer}>
-                <Text style={styles.biometricTitle}>Masuk dengan Sidik Jari</Text>
-                <Text style={styles.biometricSubtitle}>Verifikasi cepat biometrik satu sentuhan</Text>
-              </View>
-              <Ionicons name="chevron-forward" size={18} color={Colors.textTertiary} />
-            </TouchableOpacity>
-
-            {/* Demo Accounts Quick Login */}
+            {/* Quick Demo Accounts */}
             <View style={styles.demoSection}>
-              <Text style={styles.demoTitle} accessibilityRole="text">Akun Demo & Pengujian API:</Text>
+              <Text style={[styles.demoTitle, { color: colors.textSecondary }]}>
+                Akun Demo & Pengujian API:
+              </Text>
               <View style={styles.demoPillsRow}>
                 <TouchableOpacity
-                  style={[styles.demoPill, { borderColor: Colors.primary }]}
+                  style={[
+                    styles.demoPill,
+                    {
+                      backgroundColor: isDark ? colors.background : '#F1F5F9',
+                      borderColor: colors.primary,
+                    },
+                  ]}
                   onPress={() => handleQuickLogin('user@mail.com', 'password123')}
                   accessibilityRole="button"
-                  accessibilityLabel="Login dengan akun contoh Slide Task 01"
+                  accessibilityLabel="Login dengan akun user"
                 >
-                  <Ionicons name="key-outline" size={14} color={Colors.primary} />
-                  <Text style={[styles.demoPillText, { fontWeight: FontWeight.bold }]}>User (Slide 10)</Text>
+                  <Ionicons name="key-outline" size={14} color={colors.primary} />
+                  <Text style={[styles.demoPillText, { color: colors.textPrimary, fontWeight: FontWeight.bold }]}>
+                    User (Default)
+                  </Text>
                 </TouchableOpacity>
+
                 <TouchableOpacity
-                  style={styles.demoPill}
+                  style={[
+                    styles.demoPill,
+                    {
+                      backgroundColor: isDark ? colors.background : '#F1F5F9',
+                      borderColor: colors.border,
+                    },
+                  ]}
                   onPress={() => handleQuickLogin('mahasiswa@parkin.campus.id', 'parkin123')}
                   accessibilityRole="button"
                   accessibilityLabel="Login dengan akun Mahasiswa"
                 >
-                  <Ionicons name="school-outline" size={14} color={Colors.primary} />
-                  <Text style={styles.demoPillText}>Mahasiswa</Text>
+                  <Ionicons name="school-outline" size={14} color={colors.primary} />
+                  <Text style={[styles.demoPillText, { color: colors.textSecondary }]}>
+                    Mahasiswa
+                  </Text>
                 </TouchableOpacity>
+
                 <TouchableOpacity
-                  style={styles.demoPill}
+                  style={[
+                    styles.demoPill,
+                    {
+                      backgroundColor: isDark ? colors.background : '#F1F5F9',
+                      borderColor: colors.border,
+                    },
+                  ]}
                   onPress={() => handleQuickLogin('dosen@parkin.campus.id', 'parkin123')}
                   accessibilityRole="button"
                   accessibilityLabel="Login dengan akun Dosen"
                 >
-                  <Ionicons name="person-outline" size={14} color={Colors.primary} />
-                  <Text style={styles.demoPillText}>Dosen</Text>
+                  <Ionicons name="person-outline" size={14} color={colors.primary} />
+                  <Text style={[styles.demoPillText, { color: colors.textSecondary }]}>
+                    Dosen
+                  </Text>
                 </TouchableOpacity>
               </View>
             </View>
 
+            {/* Navigasi Register */}
             <TouchableOpacity
               style={styles.registerLink}
               onPress={() => router.push('/register')}
               disabled={loading}
+              activeOpacity={0.7}
             >
-              <Text style={styles.registerLinkText}>
-                Belum punya akun? <Text style={styles.registerLinkBold}>Daftar</Text>
+              <Text style={[styles.registerLinkText, { color: colors.textSecondary }]}>
+                Belum punya akun?{' '}
+                <Text style={[styles.registerLinkBold, { color: colors.primary }]}>Daftar Sekarang</Text>
               </Text>
             </TouchableOpacity>
           </View>
         </ScrollView>
       </KeyboardAvoidingView>
+
+      {/* ===== LOADING / VERIFYING OVERLAY ===== */}
+      {isVerifying && (
+        <View style={styles.verifyingBackdrop}>
+          <Animated.View
+            style={[
+              styles.verifyingCard,
+              {
+                backgroundColor: colors.surface,
+                borderColor: colors.border,
+                opacity: verifyOpacity,
+                transform: [{ scale: verifyScale }],
+              },
+            ]}
+          >
+            {verificationSuccess ? (
+              <View style={[styles.verifyingIconCircle, { backgroundColor: colors.successBg }]}>
+                <Ionicons name="checkmark-circle" size={44} color={colors.success} />
+              </View>
+            ) : (
+              <Animated.View style={{ transform: [{ rotate: spin }] }}>
+                <Ionicons name="sync-circle-outline" size={52} color={colors.primary} />
+              </Animated.View>
+            )}
+            <Text style={[styles.verifyingTitle, { color: colors.textPrimary }]}>
+              {verificationSuccess ? 'Login Berhasil!' : 'Memverifikasi Kredensial...'}
+            </Text>
+            <Text style={[styles.verifyingSubtitle, { color: colors.textSecondary }]}>
+              {verificationSuccess
+                ? 'Mempersiapkan dashboard parkir...'
+                : 'Mengamankan sesi autentikasi Anda'}
+            </Text>
+          </Animated.View>
+        </View>
+      )}
 
       {/* ===== MODAL SCANNER SIDIK JARI ===== */}
       <Modal
@@ -439,10 +607,22 @@ export default function LoginScreen() {
         accessibilityViewIsModal
       >
         <View style={styles.modalOverlay}>
-          <View style={[styles.modalCard, Shadow.md]}>
+          <View
+            style={[
+              styles.modalCard,
+              {
+                backgroundColor: colors.surface,
+                borderColor: colors.border,
+              },
+            ]}
+          >
             <View style={styles.modalHeader}>
-              <Text style={styles.modalTitle}>Autentikasi Biometrik</Text>
-              <Text style={styles.modalSubtitle}>Sensor Sidik Jari PARKIN</Text>
+              <Text style={[styles.modalTitle, { color: colors.textPrimary }]}>
+                Autentikasi Biometrik
+              </Text>
+              <Text style={[styles.modalSubtitle, { color: colors.textSecondary }]}>
+                Sensor Sidik Jari PARKIN
+              </Text>
             </View>
 
             {/* Fingerprint Visual Scanner */}
@@ -452,63 +632,68 @@ export default function LoginScreen() {
                   styles.pulseRing,
                   {
                     transform: [{ scale: pulseAnim }],
-                    borderColor: scanStatus === 'success' ? Colors.success : Colors.primary,
+                    borderColor: scanStatus === 'success' ? colors.success : colors.primary,
                   },
                 ]}
               />
               <View
                 style={[
                   styles.fingerprintCircle,
-                  scanStatus === 'success' && { backgroundColor: Colors.success + '15', borderColor: Colors.success },
+                  {
+                    backgroundColor: isDark ? colors.background : '#F1F5F9',
+                    borderColor: scanStatus === 'success' ? colors.success : colors.primary,
+                  },
                 ]}
               >
-                {scanStatus === 'success' ? (
-                  <Ionicons name="checkmark-circle" size={54} color={Colors.success} />
-                ) : (
-                  <>
-                    <Ionicons name="finger-print" size={54} color={Colors.primary} />
-                    {/* Animated laser line */}
-                    <Animated.View
-                      style={[
-                        styles.laserLine,
-                        {
-                          transform: [{ translateY: scanLineAnim }],
-                        },
-                      ]}
-                    />
-                  </>
+                <Ionicons
+                  name="finger-print"
+                  size={52}
+                  color={scanStatus === 'success' ? colors.success : colors.primary}
+                />
+                {scanStatus === 'scanning' && (
+                  <Animated.View
+                    style={[
+                      styles.scanLine,
+                      {
+                        backgroundColor: colors.primary,
+                        transform: [{ translateY: scanLineAnim }],
+                      },
+                    ]}
+                  />
                 )}
               </View>
             </View>
 
-            {/* Scan Status Text */}
-            <View style={styles.statusBox}>
-              {scanStatus === 'scanning' ? (
+            {/* Status message */}
+            <View style={styles.modalStatusBox}>
+              {scanStatus === 'scanning' && (
                 <>
-                  <Text style={styles.statusTitle}>Memindai Sidik Jari...</Text>
-                  <Text style={styles.statusDescription}>
-                    Tempelkan jari Anda pada sensor untuk verifikasi instan.
+                  <Text style={[styles.modalStatusText, { color: colors.textPrimary }]}>
+                    Memindai Sidik Jari...
+                  </Text>
+                  <Text style={[styles.modalInstructionText, { color: colors.textTertiary }]}>
+                    Posisikan jari Anda pada sensor perangkat
                   </Text>
                 </>
-              ) : (
+              )}
+              {scanStatus === 'success' && (
                 <>
-                  <Text style={[styles.statusTitle, { color: Colors.success }]}>
+                  <Text style={[styles.modalStatusText, { color: colors.success }]}>
                     Sidik Jari Terverifikasi!
                   </Text>
-                  <Text style={styles.statusDescription}>
-                    Autentikasi berhasil. Mengalihkan ke dashboard...
+                  <Text style={[styles.modalInstructionText, { color: colors.textTertiary }]}>
+                    Menyiapkan akses ke sistem PARKIN...
                   </Text>
                 </>
               )}
             </View>
 
-            {/* Cancel Button */}
             {scanStatus === 'scanning' && (
               <TouchableOpacity
-                style={styles.cancelBtn}
+                style={[styles.cancelBtn, { borderColor: colors.border }]}
                 onPress={() => setBiometricModalVisible(false)}
               >
-                <Text style={styles.cancelBtnText}>Batal</Text>
+                <Text style={[styles.cancelBtnText, { color: colors.textSecondary }]}>Batal</Text>
               </TouchableOpacity>
             )}
           </View>
@@ -521,7 +706,6 @@ export default function LoginScreen() {
 const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
-    backgroundColor: Colors.background,
   },
   flex: {
     flex: 1,
@@ -529,62 +713,70 @@ const styles = StyleSheet.create({
   content: {
     flexGrow: 1,
     paddingHorizontal: Spacing.xl,
-    paddingTop: 60,
+    paddingTop: Platform.OS === 'web' ? 48 : 36,
     paddingBottom: Spacing.xxxl,
     maxWidth: 480,
     width: '100%',
     alignSelf: 'center',
+    justifyContent: 'center',
   },
   headerSection: {
     alignItems: 'center',
-    marginBottom: 40,
+    marginBottom: 24,
   },
   logoBadge: {
-    width: 64,
-    height: 64,
-    borderRadius: 20,
-    backgroundColor: Colors.primary,
+    width: 68,
+    height: 68,
+    borderRadius: 22,
     alignItems: 'center',
     justifyContent: 'center',
     marginBottom: Spacing.md,
-    shadowColor: Colors.primary,
-    shadowOffset: { width: 0, height: 6 },
+    shadowOffset: { width: 0, height: 8 },
     shadowOpacity: 0.35,
-    shadowRadius: 10,
-    elevation: 6,
-  },
-  logoLetter: {
-    fontSize: 32,
-    fontWeight: FontWeight.bold,
-    color: Colors.white,
+    shadowRadius: 14,
+    elevation: 8,
   },
   appName: {
-    fontSize: 24,
-    fontWeight: FontWeight.bold,
-    color: Colors.textPrimary,
-    letterSpacing: 1.5,
+    fontSize: 26,
+    fontWeight: FontWeight.extrabold,
+    letterSpacing: 2,
   },
   appTagline: {
     fontSize: FontSize.sm,
-    color: Colors.textSecondary,
     marginTop: 4,
+    fontWeight: FontWeight.medium,
   },
-  formContainer: {
-    flex: 1,
+  cardContainer: {
+    borderRadius: 24,
+    padding: Platform.OS === 'web' ? 32 : 24,
+    borderWidth: 1,
+    shadowOffset: { width: 0, height: 10 },
+    shadowOpacity: 0.12,
+    shadowRadius: 24,
+    elevation: 6,
+  },
+  cardTitle: {
+    fontSize: FontSize.xl,
+    fontWeight: FontWeight.bold,
+    marginBottom: 4,
+  },
+  cardSubtitle: {
+    fontSize: FontSize.sm,
+    marginBottom: Spacing.xl,
+    lineHeight: 20,
   },
   errorBanner: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: Colors.dangerBg,
     borderRadius: BorderRadius.md,
     padding: Spacing.md,
     marginBottom: Spacing.lg,
+    borderWidth: 1,
     gap: Spacing.sm,
   },
   errorBannerText: {
     flex: 1,
     fontSize: FontSize.sm,
-    color: Colors.danger,
     fontWeight: FontWeight.medium,
   },
   fieldGroup: {
@@ -593,77 +785,70 @@ const styles = StyleSheet.create({
   fieldLabel: {
     fontSize: FontSize.xs,
     fontWeight: FontWeight.semibold,
-    color: Colors.textSecondary,
     marginBottom: Spacing.xs,
     marginLeft: 4,
   },
   inputWrapper: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: Colors.surface,
     borderRadius: BorderRadius.lg,
     borderWidth: 1,
-    borderColor: Colors.borderLight,
     paddingHorizontal: Spacing.md,
     minHeight: 52,
   },
   inputIcon: {
     marginRight: Spacing.sm,
   },
-  inputError: {
-    borderColor: Colors.danger,
-  },
   input: {
     flex: 1,
     fontSize: FontSize.md,
-    color: Colors.textPrimary,
+    paddingVertical: 12,
   },
   eyeBtn: {
-    padding: 6,
+    padding: Spacing.xs,
   },
   fieldError: {
     fontSize: FontSize.xs,
-    color: Colors.danger,
-    marginTop: 6,
+    marginTop: 4,
     marginLeft: 4,
+    fontWeight: FontWeight.medium,
   },
   buttonsContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginTop: Spacing.md,
-    gap: Spacing.sm,
+    gap: 12,
+    marginTop: Spacing.sm,
   },
   loginBtn: {
     flex: 1,
-    backgroundColor: Colors.primary,
-    borderRadius: BorderRadius.lg,
-    paddingVertical: Spacing.md,
+    flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
     minHeight: 52,
-    shadowColor: Colors.primary,
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.25,
-    shadowRadius: 8,
-    elevation: 4,
+    borderRadius: BorderRadius.lg,
+    gap: 8,
+    shadowColor: '#6366F1',
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.35,
+    shadowRadius: 12,
+    elevation: 5,
   },
   loginBtnDisabled: {
-    backgroundColor: Colors.textTertiary,
+    opacity: 0.65,
   },
   loginBtnText: {
     fontSize: FontSize.md,
     fontWeight: FontWeight.bold,
-    color: Colors.white,
+    color: '#FFFFFF',
+    letterSpacing: 0.5,
   },
   biometricIconBtn: {
     width: 52,
     height: 52,
     borderRadius: BorderRadius.lg,
-    backgroundColor: Colors.primary + '14',
+    borderWidth: 1.5,
     alignItems: 'center',
     justifyContent: 'center',
-    borderWidth: 1.5,
-    borderColor: Colors.primary + '35',
   },
   dividerRow: {
     flexDirection: 'row',
@@ -674,102 +859,111 @@ const styles = StyleSheet.create({
   dividerLine: {
     flex: 1,
     height: 1,
-    backgroundColor: Colors.borderLight,
   },
   dividerText: {
     fontSize: FontSize.xs,
     fontWeight: FontWeight.semibold,
-    color: Colors.textTertiary,
     letterSpacing: 1,
   },
-  biometricCard: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: Colors.surface,
-    borderRadius: BorderRadius.xl,
-    padding: Spacing.md,
-    borderWidth: 1,
-    borderColor: Colors.borderLight,
-    gap: Spacing.md,
-  },
-  biometricIconCircle: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
-    backgroundColor: Colors.primary + '15',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  biometricTextContainer: {
-    flex: 1,
-  },
-  biometricTitle: {
-    fontSize: FontSize.sm,
-    fontWeight: FontWeight.bold,
-    color: Colors.textPrimary,
-  },
-  biometricSubtitle: {
-    fontSize: FontSize.xs,
-    color: Colors.textSecondary,
-    marginTop: 2,
-  },
   demoSection: {
-    marginTop: Spacing.xl,
-    alignItems: 'center',
+    marginBottom: Spacing.lg,
   },
   demoTitle: {
     fontSize: FontSize.xs,
-    color: Colors.textTertiary,
+    fontWeight: FontWeight.semibold,
     marginBottom: Spacing.sm,
   },
   demoPillsRow: {
     flexDirection: 'row',
-    gap: Spacing.sm,
+    flexWrap: 'wrap',
+    gap: 8,
   },
   demoPill: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 4,
-    paddingHorizontal: Spacing.md,
-    paddingVertical: 6,
+    gap: 6,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
     borderRadius: BorderRadius.full,
-    backgroundColor: Colors.surface,
     borderWidth: 1,
-    borderColor: Colors.borderLight,
   },
   demoPillText: {
     fontSize: FontSize.xs,
-    fontWeight: FontWeight.medium,
-    color: Colors.textSecondary,
   },
   registerLink: {
     alignItems: 'center',
-    marginTop: Spacing.xl,
-    paddingVertical: Spacing.sm,
+    paddingVertical: Spacing.md,
+    marginTop: Spacing.xs,
   },
   registerLinkText: {
     fontSize: FontSize.sm,
-    color: Colors.textSecondary,
   },
   registerLinkBold: {
-    color: Colors.primary,
     fontWeight: FontWeight.bold,
   },
-  // Modal styles
-  modalOverlay: {
-    flex: 1,
+
+  // Verifying overlay
+  verifyingBackdrop: {
+    position: 'absolute', top: 0, left: 0, right: 0, bottom: 0,
     backgroundColor: 'rgba(0, 0, 0, 0.6)',
     alignItems: 'center',
     justifyContent: 'center',
-    padding: Spacing.lg,
+    zIndex: 9999,
+    padding: Spacing.xl,
+  },
+  verifyingCard: {
+    width: '100%',
+    maxWidth: 340,
+    borderRadius: 24,
+    padding: 32,
+    alignItems: 'center',
+    borderWidth: 1,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 16 },
+    shadowOpacity: 0.3,
+    shadowRadius: 28,
+    elevation: 12,
+  },
+  verifyingIconCircle: {
+    width: 64,
+    height: 64,
+    borderRadius: 32,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 8,
+  },
+  verifyingTitle: {
+    fontSize: FontSize.lg,
+    fontWeight: FontWeight.bold,
+    marginTop: 16,
+    textAlign: 'center',
+  },
+  verifyingSubtitle: {
+    fontSize: FontSize.sm,
+    marginTop: 6,
+    textAlign: 'center',
+  },
+
+  // Biometric Modal
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.65)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: Spacing.xl,
   },
   modalCard: {
-    backgroundColor: Colors.surface,
-    borderRadius: BorderRadius.xxl,
-    padding: Spacing.xl,
     width: '100%',
     maxWidth: 360,
+    borderRadius: 24,
+    padding: Spacing.xl,
     alignItems: 'center',
+    borderWidth: 1,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 12 },
+    shadowOpacity: 0.25,
+    shadowRadius: 24,
+    elevation: 8,
   },
   modalHeader: {
     alignItems: 'center',
@@ -778,19 +972,18 @@ const styles = StyleSheet.create({
   modalTitle: {
     fontSize: FontSize.lg,
     fontWeight: FontWeight.bold,
-    color: Colors.textPrimary,
   },
   modalSubtitle: {
     fontSize: FontSize.xs,
-    color: Colors.textSecondary,
     marginTop: 4,
   },
   fingerprintBox: {
     width: 120,
     height: 120,
-    alignItems: 'center',
     justifyContent: 'center',
-    marginBottom: Spacing.lg,
+    alignItems: 'center',
+    position: 'relative',
+    marginVertical: Spacing.md,
   },
   pulseRing: {
     position: 'absolute',
@@ -801,52 +994,44 @@ const styles = StyleSheet.create({
     opacity: 0.4,
   },
   fingerprintCircle: {
-    width: 90,
-    height: 90,
-    borderRadius: 45,
-    backgroundColor: Colors.primary + '10',
-    alignItems: 'center',
+    width: 88,
+    height: 88,
+    borderRadius: 44,
+    borderWidth: 2,
     justifyContent: 'center',
-    borderWidth: 1.5,
-    borderColor: Colors.primary + '40',
+    alignItems: 'center',
     overflow: 'hidden',
   },
-  laserLine: {
+  scanLine: {
     position: 'absolute',
-    top: 10,
-    left: 10,
-    right: 10,
+    top: 6,
+    left: 8,
+    right: 8,
     height: 2,
-    backgroundColor: Colors.primary,
-    shadowColor: Colors.primary,
-    shadowOffset: { width: 0, height: 0 },
-    shadowOpacity: 0.9,
-    shadowRadius: 6,
+    borderRadius: 1,
   },
-  statusBox: {
+  modalStatusBox: {
     alignItems: 'center',
-    marginBottom: Spacing.xl,
+    marginVertical: Spacing.lg,
   },
-  statusTitle: {
+  modalStatusText: {
     fontSize: FontSize.md,
     fontWeight: FontWeight.bold,
-    color: Colors.textPrimary,
-    marginBottom: 4,
   },
-  statusDescription: {
+  modalInstructionText: {
     fontSize: FontSize.xs,
-    color: Colors.textSecondary,
+    marginTop: 4,
     textAlign: 'center',
-    lineHeight: 18,
   },
   cancelBtn: {
-    paddingVertical: Spacing.sm,
-    paddingHorizontal: Spacing.xl,
+    width: '100%',
+    paddingVertical: 12,
     borderRadius: BorderRadius.md,
+    borderWidth: 1,
+    alignItems: 'center',
   },
   cancelBtnText: {
     fontSize: FontSize.sm,
-    color: Colors.textSecondary,
     fontWeight: FontWeight.semibold,
   },
 });

@@ -42,7 +42,7 @@ type DayTab = 'today' | 'tomorrow';
 
 export default function PredictionScreen() {
   const router = useRouter();
-  const { horizontalPadding } = useResponsive();
+  const { horizontalPadding, isWide, cardWidth } = useResponsive();
   const colors = useThemeColors();
   const { isDark } = useTheme();
   const [activeDay, setActiveDay] = useState<DayTab>('today');
@@ -72,7 +72,7 @@ export default function PredictionScreen() {
           style={styles.scroll}
           contentContainerStyle={[
             styles.content,
-            { paddingHorizontal: horizontalPadding },
+            { paddingHorizontal: horizontalPadding, paddingBottom: isWide ? 48 : 120 },
           ]}
           showsVerticalScrollIndicator={false}
         >

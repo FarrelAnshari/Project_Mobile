@@ -24,17 +24,17 @@ export const BottomTabInset = 80;
 export const MaxContentWidth = 600;
 
 export const LightColors = {
-  primary: '#615CED',      // Purple-blue from template
-  primaryLight: '#8B87FF',
-  primaryDark: '#4A46D6',
-  secondary: '#FF8A00',    // Orange accent from template0
-  background: '#F8F9FA',
+  primary: '#6366F1',      // Purple/Violet #6366F1
+  primaryLight: '#818CF8',
+  primaryDark: '#4F46E5',
+  secondary: '#F59E0B',    // Amber accent
+  background: '#F8FAFC',   // Clean Light Gray
   surface: '#FFFFFF',
-  textPrimary: '#1E1E2D',
-  textSecondary: '#8F92A1',
-  textTertiary: '#BDBDBD',
-  border: '#E8E8E8',
-  borderLight: '#F3F3F3',
+  textPrimary: '#0F172A',
+  textSecondary: '#64748B',
+  textTertiary: '#94A3B8',
+  border: '#E2E8F0',
+  borderLight: '#F1F5F9',
 
   // Status colors
   success: '#16A34A',
@@ -60,15 +60,15 @@ export const LightColors = {
   fullBg: '#FEE2E2',
 
   // Legacy status colors
-  sepi: '#16A34A',    // Sepi — green
+  sepi: '#16A34A',
   sepiBg: '#DCFCE7',
-  sedang: '#0EA5E9',  // Sedang — blue
+  sedang: '#0EA5E9',
   sedangBg: '#E0F2FE',
-  ramai: '#F59E0B',   // Ramai — amber
+  ramai: '#F59E0B',
   ramaiBg: '#FEF3C7',
-  hampirPenuh: '#EA580C', // Hampir Penuh — orange
+  hampirPenuh: '#EA580C',
   hampirPenuhBg: '#FFF7ED',
-  penuh: '#DC2626',   // Penuh — red
+  penuh: '#DC2626',
   penuhBg: '#FEE2E2',
 
   shadow: 'rgba(15, 23, 42, 0.08)',
@@ -78,17 +78,17 @@ export const LightColors = {
 };
 
 export const DarkColors = {
-  primary: '#7C6FF7',      // Slightly lighter & more vibrant purple-blue for dark mode
-  primaryLight: '#9D96FF',
-  primaryDark: '#5A56E0',
-  secondary: '#FF9A20',
-  background: '#0D0D18',   // Deep dark midnight
-  surface: '#171727',      // Dark slate card surface
-  textPrimary: '#F1F1F8',  // Crisp high-contrast text
-  textSecondary: '#9A9EB2',// Muted text
-  textTertiary: '#5C6079', // Subtle text
-  border: '#28283F',      // Card and row borders
-  borderLight: '#1F1F35',
+  primary: '#6366F1',      // Purple/Violet #6366F1
+  primaryLight: '#818CF8',
+  primaryDark: '#4F46E5',
+  secondary: '#F59E0B',
+  background: '#1A1C2E',   // Deep Navy / Indigo #1A1C2E
+  surface: '#232742',      // Dark slate card surface with high contrast
+  textPrimary: '#F8FAFC',  // Crisp high-contrast text
+  textSecondary: '#94A3B8',// Muted text
+  textTertiary: '#64748B', // Subtle text
+  border: '#2E3456',       // Card and row borders
+  borderLight: '#262A46',
 
   // Status colors with dark-mode friendly translucent/tinted backgrounds
   success: '#22C55E',
@@ -134,7 +134,6 @@ export const DarkColors = {
 // Default export alias for backward compatibility
 export const Colors = LightColors;
 export type ColorPalette = typeof LightColors;
-
 
 export const Spacing = {
   xs: 4,

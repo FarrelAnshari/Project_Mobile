@@ -59,7 +59,7 @@ interface A11ySettings {
 // ============================================================
 export default function ProfileScreen() {
   const router = useRouter();
-  const { horizontalPadding } = useResponsive();
+  const { horizontalPadding, isWide, cardWidth } = useResponsive();
   const { user, logout, updateProfile, changePassword } = useAuth();
   const { themeMode, isDark, colors, setThemeMode, toggleTheme } = useTheme();
   const { isOffline } = useOnlineStatus();

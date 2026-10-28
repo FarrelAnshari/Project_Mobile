@@ -9,18 +9,18 @@
 
 import { Stack, useRouter, useSegments } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
-import { useEffect, useState, useRef } from 'react';
-import { View, StyleSheet, Text, Animated, Easing, Platform } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
+import { useEffect, useRef, useState } from 'react';
+import { Animated, Easing, Platform, StyleSheet, Text, View } from 'react-native';
+import { ErrorBoundary } from '../components/ErrorBoundary';
+import OfflineBanner from '../components/OfflineBanner';
+import { Colors } from '../constants/theme';
 import { AuthProvider, useAuth } from '../context/AuthContext';
 import { ThemeProvider, useTheme } from '../context/ThemeContext';
 import { ToastProvider } from '../context/ToastContext';
-import { ErrorBoundary } from '../components/ErrorBoundary';
 import { OnlineStatusProvider } from '../hooks/useOnlineStatus';
-import OfflineBanner from '../components/OfflineBanner';
-import { Colors } from '../constants/theme';
 
-SplashScreen.preventAutoHideAsync().catch(() => {});
+SplashScreen.preventAutoHideAsync().catch(() => { });
 
 // ============================================================
 // Animated Loading / Splash Screen
@@ -250,7 +250,7 @@ function NavigationGuard({ children }: { children: React.ReactNode }) {
     if (authState === 'loading') return;
 
     // Sembunyikan native splash screen setelah sesi dicek
-    SplashScreen.hideAsync().catch(() => {});
+    SplashScreen.hideAsync().catch(() => { });
 
     const firstSegment = segments[0] as string | undefined;
     // Pada root route '/' (segments kosong), index.tsx menangani navigasi awal
@@ -260,6 +260,7 @@ function NavigationGuard({ children }: { children: React.ReactNode }) {
     const inRegisterPage = firstSegment === 'register';
     const isAuthRoute = inLoginPage || inRegisterPage;
 
+    const navDelay = (authState === 'authenticated' && isAuthRoute) ? 850 : 10;
     const navTimer = setTimeout(() => {
       if (authState === 'unauthenticated' && !isAuthRoute) {
         // User belum login dan mencoba akses tab/halaman protected → redirect ke login
@@ -268,7 +269,7 @@ function NavigationGuard({ children }: { children: React.ReactNode }) {
         // User sudah login tapi berada di halaman login/register → redirect ke home
         router.replace('/(tabs)' as any);
       }
-    }, 10);
+    }, navDelay);
 
     return () => clearTimeout(navTimer);
   }, [authState, segments, router]);
@@ -345,7 +346,7 @@ const styles = StyleSheet.create({
   // Splash screen
   splashContainer: {
     flex: 1,
-    backgroundColor: '#1a1336',
+    backgroundColor: '#1A1C2E',
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -355,7 +356,7 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     height: '50%',
-    backgroundColor: '#231B4A',
+    backgroundColor: '#232742',
     opacity: 0.7,
   },
   gradientBottom: {
@@ -364,7 +365,7 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     height: '50%',
-    backgroundColor: '#120E28',
+    backgroundColor: '#111322',
     opacity: 0.7,
   },
   glowRing: {
