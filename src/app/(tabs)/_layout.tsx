@@ -212,6 +212,56 @@ function AnimatedTabItem({
 }
 
 // ─────────────────────────────────────────────────────────────
+// Custom Mobile Bottom Tab Bar
+// Renders outside <Tabs> so Expo Router never allocates a hidden
+// scanner slot — all 5 items get exactly 1/5 of bar width.
+// ─────────────────────────────────────────────────────────────
+function CustomTabBar({
+  activeColor,
+  inactiveColor,
+  barBg,
+  border,
+}: {
+  activeColor: string;
+  inactiveColor: string;
+  barBg: string;
+  border: string;
+}) {
+  const router   = useRouter();
+  const pathname = usePathname();
+
+  const currentTab = (() => {
+    const seg = pathname.split('/').filter(Boolean).pop() || 'index';
+    return TABS.some(t => t.name === seg) ? seg : 'index';
+  })();
+
+  const handleTabPress = (tabName: string) => {
+    const target = tabName === 'index' ? '/(tabs)' : `/(tabs)/${tabName}`;
+    router.replace(target as any);
+  };
+
+  return (
+    <View
+      style={[
+        styles.tabBar,
+        { backgroundColor: barBg, borderTopColor: border },
+      ]}
+    >
+      {TABS.map((tab) => (
+        <AnimatedTabItem
+          key={tab.name}
+          tab={tab}
+          focused={currentTab === tab.name}
+          onPress={() => handleTabPress(tab.name)}
+          activeColor={activeColor}
+          inactiveColor={inactiveColor}
+        />
+      ))}
+    </View>
+  );
+}
+
+// ─────────────────────────────────────────────────────────────
 // Desktop Left Sidebar Navigation
 // ─────────────────────────────────────────────────────────────
 function DesktopSidebar({ currentTab }: { currentTab: string }) {
@@ -409,50 +459,35 @@ export default function TabLayout() {
         <Tabs
           screenOptions={{
             headerShown: false,
-            tabBarStyle: isDesktop
-              ? { display: 'none' }       // hide on desktop — sidebar handles nav
-              : [
-                  styles.tabBar,
-                  {
-                    backgroundColor: barBg,
-                    borderTopColor: border,
-                    // Full-width on mobile
-                    width: width,
-                    left: 0,
-                  },
-                ],
-            tabBarItemStyle: styles.tabSlot,
-            tabBarShowLabel: false,
-            tabBarLabelStyle: { display: 'none' },
+            tabBarStyle: { display: 'none' },   // hide the default bar — we render our own
           }}
         >
           {TABS.map((tab) => (
             <Tabs.Screen
               key={tab.name}
               name={tab.name}
-              options={{
-                title: tab.label,
-                tabBarButton: (props) => (
-                  <AnimatedTabItem
-                    tab={tab}
-                    focused={props.accessibilityState?.selected ?? false}
-                    onPress={props.onPress as () => void}
-                    activeColor={activeColor}
-                    inactiveColor={inactiveColor}
-                  />
-                ),
-              }}
+              options={{ title: tab.label }}
             />
           ))}
-          {/* Scanner screen — hidden from tab bar */}
+          {/* Scanner screen — not part of tab bar */}
           <Tabs.Screen
             name="scanner"
             options={{
               title: 'Scan QR',
-              tabBarButton: () => null,
+              href: null,   // completely exclude from tab navigation
             }}
           />
         </Tabs>
+
+        {/* ── Custom Bottom Navigation Bar (Mobile only) ── */}
+        {!isDesktop && (
+          <CustomTabBar
+            activeColor={activeColor}
+            inactiveColor={inactiveColor}
+            barBg={barBg}
+            border={border}
+          />
+        )}
       </View>
     </View>
   );
@@ -652,6 +687,7 @@ const styles = StyleSheet.create({
   tabBar: {
     position:             'absolute',
     bottom:               BAR_BOT,
+    left:                 0,
     right:                0,
     height:               BAR_H,
     flexDirection:        'row',
@@ -670,33 +706,43 @@ const styles = StyleSheet.create({
     shadowRadius:         20,
   },
   tabSlot: {
-    flex:           1,
-    height:         '100%',
-    alignItems:     'center',
-    justifyContent: 'center',
+    flex:            1,
+    flexGrow:        1,
+    flexShrink:      1,
+    flexBasis:       0,
+    height:          '100%',
+    alignItems:      'center',
+    justifyContent:  'center',
     paddingVertical: 0,
+    paddingHorizontal: 0,
   },
   itemOuter: {
-    flex:           1,
-    height:         '100%',
-    alignItems:     'center',
-    justifyContent: 'center',
+    flex:            1,
+    flexGrow:        1,
+    flexShrink:      1,
+    flexBasis:       0,
+    height:          '100%',
+    alignItems:      'center',
+    justifyContent:  'center',
+    paddingHorizontal: 0,
   },
   normalInner: {
-    alignItems:     'center',
-    justifyContent: 'center',
-    gap:             3,
-    paddingVertical: 6,
-    position:       'relative',
-    width:          '100%',
+    alignItems:      'center',
+    justifyContent:  'center',
+    gap:              3,
+    paddingVertical:  6,
+    position:        'relative',
+    width:           '100%',
+    paddingHorizontal: 0,
   },
   centerInner: {
-    alignItems:     'center',
-    justifyContent: 'center',
-    gap:             3,
-    paddingVertical: 4,
-    position:       'relative',
-    width:          '100%',
+    alignItems:      'center',
+    justifyContent:  'center',
+    gap:              3,
+    paddingVertical:  4,
+    position:        'relative',
+    width:           '100%',
+    paddingHorizontal: 0,
   },
   topBar: {
     position:               'absolute',
