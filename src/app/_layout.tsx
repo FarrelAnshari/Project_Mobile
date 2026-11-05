@@ -328,6 +328,15 @@ export default function RootLayout() {
                       presentation: 'card',
                     }}
                   />
+                  {/* Week 7 — Sensor Accelerometer */}
+                  <Stack.Screen
+                    name="sensor"
+                    options={{
+                      headerShown: false,
+                      presentation: 'card',
+                      animation: 'slide_from_right',
+                    }}
+                  />
                 </Stack>
               </NavigationGuard>
               <OfflineBanner />

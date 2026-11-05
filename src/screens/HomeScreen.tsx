@@ -169,6 +169,7 @@ export default function HomeScreen() {
   const navigateToProfile = () => router.push('/(tabs)/profile' as any);
   const navigateToScanner = () => router.push('/scanner' as any);
   const navigateToPrediction = () => router.push('/(tabs)/prediction' as any);
+  const navigateToSensor = () => router.push('/sensor' as any);
 
   const handleCardPress = (_area: ParkingArea) => navigateToParking();
   const handleRecommendationPress = () => navigateToParking();
@@ -440,6 +441,58 @@ export default function HomeScreen() {
                   }}
                 >
                   <Text style={{ color: '#fff', fontSize: 12, fontWeight: '700' }}>Pindai</Text>
+                </View>
+              </GlowCard>
+            </View>
+
+            {/* ── QUICK ACTION: SENSOR ACCELEROMETER (Week 7) ── */}
+            <View style={styles.section}>
+              <GlowCard
+                glowColor="#10B981"
+                glowIntensity={0.18}
+                glowRadius={20}
+                onPress={navigateToSensor}
+                style={{ width: '100%' }}
+                innerStyle={{
+                  backgroundColor: colors.surface,
+                  flexDirection: 'row',
+                  alignItems: 'center',
+                  padding: 14,
+                  borderRadius: 20,
+                  gap: 12,
+                }}
+              >
+                <View
+                  style={{
+                    width: 44,
+                    height: 44,
+                    borderRadius: 14,
+                    backgroundColor: '#10B9811A',
+                    borderWidth: 1,
+                    borderColor: '#10B98140',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                  }}
+                >
+                  <Ionicons name="hardware-chip-outline" size={24} color="#10B981" />
+                </View>
+                <View style={{ flex: 1 }}>
+                  <Text style={{ color: colors.textPrimary, fontSize: 14, fontWeight: '700' }}>
+                    Sensor Accelerometer
+                  </Text>
+                  <Text style={{ color: colors.textSecondary, fontSize: 11, marginTop: 2 }}>
+                    Monitor gerakan perangkat secara real-time
+                  </Text>
+                </View>
+                <View
+                  style={{
+                    backgroundColor: '#10B981',
+                    paddingHorizontal: 12,
+                    paddingVertical: 7,
+                    borderRadius: 10,
+                  }}
+                >
+                  <Text style={{ color: '#fff', fontSize: 12, fontWeight: '700' }}>Buka</Text>
                 </View>
               </GlowCard>
             </View>

@@ -304,8 +304,15 @@ export default function ProfileScreen() {
               label="Pindai QR Tiket Parkir"
               subtitle="Sensor kamera untuk check-in / check-out otomatis"
               onPress={() => router.push('/scanner' as any)}
-              isLast
               accessibilityLabel="Buka pemindai QR tiket parkir"
+            />
+            <MenuRow
+              icon="hardware-chip-outline"
+              label="Sensor Accelerometer"
+              subtitle="Week 7 — Monitor gerakan perangkat secara real-time"
+              onPress={() => router.push('/sensor' as any)}
+              isLast
+              accessibilityLabel="Buka sensor accelerometer Week 7"
             />
           </View>
         </View>
