@@ -474,7 +474,7 @@ export default function TabLayout() {
             name="scanner"
             options={{
               title: 'Scan QR',
-              href: null,   // completely exclude from tab navigation
+              tabBarButton: () => null,
             }}
           />
         </Tabs>
