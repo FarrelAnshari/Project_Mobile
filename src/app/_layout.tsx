@@ -12,6 +12,7 @@ import * as SplashScreen from 'expo-splash-screen';
 import { StatusBar } from 'expo-status-bar';
 import { useEffect, useRef, useState } from 'react';
 import { Animated, Easing, Platform, StyleSheet, Text, View } from 'react-native';
+import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { ErrorBoundary } from '../components/ErrorBoundary';
 import OfflineBanner from '../components/OfflineBanner';
 import { Colors } from '../constants/theme';
@@ -296,7 +297,8 @@ function NavigationGuard({ children }: { children: React.ReactNode }) {
 // ============================================================
 export default function RootLayout() {
   return (
-    <ErrorBoundary>
+    <GestureHandlerRootView style={{ flex: 1 }}>
+      <ErrorBoundary>
       <ThemeProvider>
         <OnlineStatusProvider>
           <ToastProvider>
@@ -345,6 +347,7 @@ export default function RootLayout() {
         </OnlineStatusProvider>
       </ThemeProvider>
     </ErrorBoundary>
+    </GestureHandlerRootView>
   );
 }
 
