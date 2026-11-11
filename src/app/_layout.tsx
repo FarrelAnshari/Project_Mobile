@@ -330,15 +330,16 @@ export default function RootLayout() {
                       presentation: 'card',
                     }}
                   />
-                  {/* Week 7 — Sensor Accelerometer */}
+                  {/* Week 8 — Async API Parkir */}
                   <Stack.Screen
-                    name="sensor"
+                    name="parking-api"
                     options={{
                       headerShown: false,
                       presentation: 'card',
                       animation: 'slide_from_right',
                     }}
                   />
+
                 </Stack>
               </NavigationGuard>
               <OfflineBanner />

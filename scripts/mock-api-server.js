@@ -156,6 +156,16 @@ const PARKING_AREAS = [
 // In-memory valid issued tokens set
 const VALID_TOKENS = new Map();
 
+// Week 8 – Mock Data Todo List Tugas Operasional Petugas Parkir (Sesuai PPT Week 8)
+let PARKING_TODOS = [
+  { id: 1, title: 'Pemeriksaan Slot Parkir Gedung Utama', completed: false, category: 'Inspeksi', time: '08:00' },
+  { id: 2, title: 'Kalibrasi Kamera Sensor Gate Masuk', completed: true, category: 'Teknis', time: '08:30' },
+  { id: 3, title: 'Patroli Keamanan Area Parkir FT', completed: false, category: 'Keamanan', time: '10:00' },
+  { id: 4, title: 'Pembersihan Area Parkir Motor Timur', completed: false, category: 'Kebersihan', time: '13:00' },
+  { id: 5, title: 'Cek Kertas Tiket & Barrier Gate Otomatis', completed: true, category: 'Operasional', time: '15:30' },
+];
+let nextTodoId = 6;
+
 // Helper: Generate Mock JWT Token
 function createMockJwt(user) {
   const header = Buffer.from(JSON.stringify({ alg: 'HS256', typ: 'JWT' })).toString('base64url');
@@ -188,7 +198,7 @@ function sendJson(res, statusCode, data) {
     'Content-Type': 'application/json; charset=utf-8',
     'Content-Length': Buffer.byteLength(body),
     'Access-Control-Allow-Origin': '*',
-    'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
+    'Access-Control-Allow-Methods': 'GET, POST, PUT, PATCH, DELETE, OPTIONS',
     'Access-Control-Allow-Headers': 'Authorization, Content-Type, Accept, X-Requested-With',
   });
   res.end(body);
@@ -262,7 +272,7 @@ const handleRequest = async (req, res) => {
   if (method === 'OPTIONS') {
     res.writeHead(204, {
       'Access-Control-Allow-Origin': '*',
-      'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
+      'Access-Control-Allow-Methods': 'GET, POST, PUT, PATCH, DELETE, OPTIONS',
       'Access-Control-Allow-Headers': 'Authorization, Content-Type, Accept, X-Requested-With',
       'Access-Control-Max-Age': '86400',
     });
@@ -419,6 +429,190 @@ const handleRequest = async (req, res) => {
     return sendJson(res, 200, {
       success: true,
       message: 'Sesi berhasil diakhiri (Logout sukses).',
+    });
+  }
+
+  // ------------------------------------------------------------
+  // Week 8 – GET /todos (Mengambil Daftar Tugas Operasional Sesuai Slide PPT)
+  // ------------------------------------------------------------
+  if (pathname === '/todos' && method === 'GET') {
+    console.log(`[${timestamp}] 📋 GET /todos -> 200 OK (${PARKING_TODOS.length} tugas)`);
+    return sendJson(res, 200, PARKING_TODOS);
+  }
+
+  // ------------------------------------------------------------
+  // Week 8 – POST /todos (Menambahkan Tugas Baru Sesuai Slide PPT)
+  // ------------------------------------------------------------
+  if (pathname === '/todos' && method === 'POST') {
+    const body = await parseBody(req);
+    const title = (body.title || '').trim();
+    if (!title) {
+      return sendJson(res, 400, { success: false, message: 'Judul tugas wajib diisi.' });
+    }
+    const newTodo = {
+      id: nextTodoId++,
+      title,
+      completed: false,
+      category: body.category || 'Operasional',
+      time: new Date().toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' }),
+    };
+    PARKING_TODOS.unshift(newTodo);
+    console.log(`[${timestamp}] ➕ POST /todos -> 201 Created (ID: ${newTodo.id}, "${title}")`);
+    return sendJson(res, 201, { success: true, message: 'Tugas berhasil ditambahkan.', data: newTodo });
+  }
+
+  // ------------------------------------------------------------
+  // Week 8 – PATCH /todos/:id (Ubah Status Centang/Selesai Sesuai Slide PPT)
+  // ------------------------------------------------------------
+  const todoPatchMatch = pathname.match(/^\/todos\/(\d+)$/);
+  if (todoPatchMatch && method === 'PATCH') {
+    const todoId = parseInt(todoPatchMatch[1], 10);
+    const body = await parseBody(req);
+    const todo = PARKING_TODOS.find(t => t.id === todoId);
+    if (!todo) {
+      return sendJson(res, 404, { success: false, message: 'Tugas tidak ditemukan.' });
+    }
+    if (body.completed !== undefined) {
+      todo.completed = Boolean(body.completed);
+    }
+    if (body.title !== undefined) {
+      todo.title = String(body.title).trim();
+    }
+    console.log(`[${timestamp}] 🔄 PATCH /todos/${todoId} -> 200 OK (Completed: ${todo.completed})`);
+    return sendJson(res, 200, { success: true, message: `Status tugas ${todo.completed ? 'selesai' : 'belum selesai'}.`, data: todo });
+  }
+
+  // ------------------------------------------------------------
+  // Week 8 – DELETE /todos/:id (Hapus Tugas Sesuai Slide PPT)
+  // ------------------------------------------------------------
+  const todoDeleteMatch = pathname.match(/^\/todos\/(\d+)$/);
+  if (todoDeleteMatch && method === 'DELETE') {
+    const todoId = parseInt(todoDeleteMatch[1], 10);
+    const idx = PARKING_TODOS.findIndex(t => t.id === todoId);
+    if (idx === -1) {
+      return sendJson(res, 404, { success: false, message: 'Tugas tidak ditemukan.' });
+    }
+    const deleted = PARKING_TODOS.splice(idx, 1)[0];
+    console.log(`[${timestamp}] 🗑️ DELETE /todos/${todoId} -> 200 OK`);
+    return sendJson(res, 200, { success: true, message: 'Tugas berhasil dihapus.', data: deleted });
+  }
+
+  // ------------------------------------------------------------
+  // Week 8 – POST /parking-checkin (Check-in ke area parkir)
+  // ------------------------------------------------------------
+  if (pathname === '/parking-checkin' && method === 'POST') {
+    const authHeader = req.headers['authorization'];
+    let user = USERS[1];
+    if (authHeader) {
+      const auth = verifyAuthHeader(req);
+      if (auth.valid) user = auth.user;
+    }
+    const body = await parseBody(req);
+    const { areaId, vehicleType, plateNumber } = body;
+
+    const area = PARKING_AREAS.find(a => a.id === String(areaId));
+    if (!area) {
+      return sendJson(res, 404, { success: false, message: 'Area parkir tidak ditemukan.' });
+    }
+    if (area.available <= 0) {
+      return sendJson(res, 400, {
+        success: false,
+        message: `Area ${area.name} sudah penuh. Tidak ada slot tersedia.`,
+      });
+    }
+
+    // Kurangi slot yang tersedia (sementara, tidak persisten antar restart)
+    area.occupied = Math.min(area.occupied + 1, area.capacity);
+    area.available = area.capacity - area.occupied;
+    area.occupancy = Math.round((area.occupied / area.capacity) * 100);
+    if (area.occupancy >= 90) area.status = 'FULL';
+    else if (area.occupancy >= 70) area.status = 'BUSY';
+    else area.status = 'AVAILABLE';
+
+    const checkin = {
+      id: `CHK-${Date.now()}`,
+      areaId: String(areaId),
+      areaName: area.name,
+      vehicleType: vehicleType || 'MOTOR',
+      plateNumber: plateNumber || '-',
+      checkinTime: new Date().toISOString(),
+      status: 'ACTIVE',
+      user: user.name,
+    };
+
+    // Sinkronkan ke Todo List: Buat tugas verifikasi parkir otomatis
+    const autoTodo = {
+      id: nextTodoId++,
+      title: `Verifikasi Kendaraan: ${plateNumber || '-'} (${vehicleType || 'MOTOR'}) di ${area.name}`,
+      completed: false,
+      category: 'Check-in',
+      time: new Date().toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' }),
+    };
+    PARKING_TODOS.unshift(autoTodo);
+
+    console.log(`[${timestamp}] 🚗 POST /parking-checkin -> 201 Created (ID: ${checkin.id}, Auto-Todo ID: ${autoTodo.id})`);
+    return sendJson(res, 201, { success: true, message: 'Check-in berhasil dicatat & masuk ke Todo List.', data: checkin });
+  }
+
+  // ------------------------------------------------------------
+  // Week 8 – PATCH /parking-areas/:id/status (Perbarui status area)
+  // ------------------------------------------------------------
+  const patchMatch = pathname.match(/^\/parking-areas\/([^/]+)\/status$/);
+  if (patchMatch && method === 'PATCH') {
+    const areaId = patchMatch[1];
+    const body = await parseBody(req);
+    const area = PARKING_AREAS.find(a => a.id === areaId);
+    if (!area) {
+      return sendJson(res, 404, { success: false, message: 'Area parkir tidak ditemukan.' });
+    }
+    // Jika ada request ganti status, sinkronkan kapasitas dan keterisiannya secara logis
+    if (body.status) {
+      area.status = body.status;
+      if (body.status === 'FULL') {
+        area.occupied = area.capacity;
+        area.available = 0;
+        area.occupancy = 100;
+      } else if (body.status === 'BUSY') {
+        area.occupied = Math.round(area.capacity * 0.75);
+        area.available = area.capacity - area.occupied;
+        area.occupancy = 75;
+      } else if (body.status === 'AVAILABLE') {
+        area.occupied = Math.round(area.capacity * 0.35);
+        area.available = area.capacity - area.occupied;
+        area.occupancy = 35;
+      }
+    }
+    if (body.occupied !== undefined) {
+      area.occupied = Number(body.occupied);
+      area.available = area.capacity - area.occupied;
+      area.occupancy = Math.round((area.occupied / area.capacity) * 100);
+      if (area.occupancy >= 95) area.status = 'FULL';
+      else if (area.occupancy >= 70) area.status = 'BUSY';
+      else area.status = 'AVAILABLE';
+    }
+    console.log(`[${timestamp}] 🔄 PATCH /parking-areas/${areaId}/status -> 200 OK (${area.status}, ${area.occupied}/${area.capacity})`);
+    return sendJson(res, 200, { success: true, message: `Status area ${area.name} diubah menjadi ${area.status}.`, data: area });
+  }
+
+  // ------------------------------------------------------------
+  // Week 8 – DELETE /parking-checkin/:id (Batalkan / checkout)
+  // ------------------------------------------------------------
+  const deleteMatch = pathname.match(/^\/parking-checkin\/([^/]+)$/);
+  if (deleteMatch && method === 'DELETE') {
+    const checkinId = deleteMatch[1];
+    // Simulasikan checkout: kembalikan 1 slot di area pertama yang BUSY
+    const busyArea = PARKING_AREAS.find(a => a.occupied > 0);
+    if (busyArea) {
+      busyArea.occupied = Math.max(busyArea.occupied - 1, 0);
+      busyArea.available = busyArea.capacity - busyArea.occupied;
+      busyArea.occupancy = Math.round((busyArea.occupied / busyArea.capacity) * 100);
+      if (busyArea.occupancy < 70) busyArea.status = 'AVAILABLE';
+    }
+    console.log(`[${timestamp}] 🗑️  DELETE /parking-checkin/${checkinId} -> 200 OK`);
+    return sendJson(res, 200, {
+      success: true,
+      message: `Check-in ${checkinId} berhasil dibatalkan (checkout).`,
+      data: { id: checkinId, status: 'CANCELLED', checkoutTime: new Date().toISOString() },
     });
   }
 

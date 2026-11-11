@@ -270,6 +270,13 @@ export const apiClient = {
       body: body ? JSON.stringify(body) : undefined,
     }),
 
+  patch: <T = any>(endpoint: string, body?: any, options?: RequestOptions) =>
+    apiRequest<T>(endpoint, {
+      ...options,
+      method: 'PATCH',
+      body: body ? JSON.stringify(body) : undefined,
+    }),
+
   put: <T = any>(endpoint: string, body?: any, options?: RequestOptions) =>
     apiRequest<T>(endpoint, {
       ...options,

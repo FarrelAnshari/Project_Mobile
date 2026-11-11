@@ -169,7 +169,6 @@ export default function HomeScreen() {
   const navigateToProfile = () => router.push('/(tabs)/profile' as any);
   const navigateToScanner = () => router.push('/scanner' as any);
   const navigateToPrediction = () => router.push('/(tabs)/prediction' as any);
-  const navigateToSensor = () => router.push('/sensor' as any);
 
   const handleCardPress = (_area: ParkingArea) => navigateToParking();
   const handleRecommendationPress = () => navigateToParking();
@@ -445,13 +444,13 @@ export default function HomeScreen() {
               </GlowCard>
             </View>
 
-            {/* ── QUICK ACTION: SENSOR ACCELEROMETER (Week 7) ── */}
+            {/* ── QUICK ACTION: ASYNC API (Week 8) ── */}
             <View style={styles.section}>
               <GlowCard
-                glowColor="#10B981"
+                glowColor="#6366F1"
                 glowIntensity={0.18}
                 glowRadius={20}
-                onPress={navigateToSensor}
+                onPress={() => router.push('/parking-api' as any)}
                 style={{ width: '100%' }}
                 innerStyle={{
                   backgroundColor: colors.surface,
@@ -467,26 +466,26 @@ export default function HomeScreen() {
                     width: 44,
                     height: 44,
                     borderRadius: 14,
-                    backgroundColor: '#10B9811A',
+                    backgroundColor: '#6366F11A',
                     borderWidth: 1,
-                    borderColor: '#10B98140',
+                    borderColor: '#6366F140',
                     alignItems: 'center',
                     justifyContent: 'center',
                   }}
                 >
-                  <Ionicons name="hardware-chip-outline" size={24} color="#10B981" />
+                  <Ionicons name="cloud-download-outline" size={24} color="#6366F1" />
                 </View>
                 <View style={{ flex: 1 }}>
                   <Text style={{ color: colors.textPrimary, fontSize: 14, fontWeight: '700' }}>
-                    Sensor Accelerometer
+                    Async API Parkir
                   </Text>
                   <Text style={{ color: colors.textSecondary, fontSize: 11, marginTop: 2 }}>
-                    Monitor gerakan perangkat secara real-time
+                    GET · POST · PATCH · DELETE — Week 8
                   </Text>
                 </View>
                 <View
                   style={{
-                    backgroundColor: '#10B981',
+                    backgroundColor: '#6366F1',
                     paddingHorizontal: 12,
                     paddingVertical: 7,
                     borderRadius: 10,

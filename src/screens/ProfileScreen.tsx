@@ -307,12 +307,12 @@ export default function ProfileScreen() {
               accessibilityLabel="Buka pemindai QR tiket parkir"
             />
             <MenuRow
-              icon="hardware-chip-outline"
-              label="Sensor Accelerometer"
-              subtitle="Week 7 — Monitor gerakan perangkat secara real-time"
-              onPress={() => router.push('/sensor' as any)}
+              icon="cloud-download-outline"
+              label="Async API Parkir"
+              subtitle="GET · POST · PATCH · DELETE — Week 8"
+              onPress={() => router.push('/parking-api' as any)}
               isLast
-              accessibilityLabel="Buka sensor accelerometer Week 7"
+              accessibilityLabel="Buka fitur Async API Week 8"
             />
           </View>
         </View>
