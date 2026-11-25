@@ -79,19 +79,19 @@ export class ParkingApiError extends Error {
 // ============================================================
 
 const DEFAULT_COORDINATES: Record<string, { x: number; y: number }> = {
-  '1': { x: 0.22, y: 0.28 },
-  '2': { x: 0.62, y: 0.22 },
-  '3': { x: 0.78, y: 0.58 },
-  '4': { x: 0.42, y: 0.72 },
-  '5': { x: 0.18, y: 0.65 },
+  '1': { x: 0.23, y: 0.24 },
+  '2': { x: 0.18, y: 0.43 },
+  '3': { x: 0.46, y: 0.76 },
+  '4': { x: 0.73, y: 0.25 },
+  '5': { x: 0.82, y: 0.40 },
 };
 
 const DEFAULT_DESCRIPTIONS: Record<string, string> = {
-  '1': 'Area parkir utama, dekat pintu masuk kampus.',
-  '2': 'Area parkir dekat Fakultas Teknik.',
-  '3': 'Area parkir dekat Kantin Pusat.',
-  '4': 'Area parkir terbuka, kapasitas terbesar.',
-  '5': 'Area parkir dekat Gedung Rektorat.',
+  '1': 'Parkiran Masjid AR Fachruddin, area utama utara UMM Kampus III.',
+  '2': 'Parkiran Utama UMM Kampus III, dekat gerbang utama & Helipad.',
+  '3': 'Parkiran Baru UMM Kampus III, sisi tenggara dekat Jl. Raya Tlogomas.',
+  '4': 'Parkiran Belakang UMM, sisi barat Jl. Karyawiguna dekat Gerbang Belakang.',
+  '5': 'Parkiran Jl. Karyawiguna Timur, dekat Stadion Sepak Bola UMM.',
 };
 
 /**

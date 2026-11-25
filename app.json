@@ -10,7 +10,8 @@
     "ios": {
       "supportsTablet": true,
       "infoPlist": {
-        "NSCameraUsageDescription": "Izinkan PARKIN mengakses kamera untuk memindai tiket QR Code parkir."
+        "NSCameraUsageDescription": "Izinkan PARKIN mengakses kamera untuk memindai tiket QR Code parkir.",
+        "NSLocationWhenInUseUsageDescription": "Izinkan PARKIN mengakses lokasi Anda untuk menampilkan peta parkir kampus dan mendeteksi area parkir terdekat."
       }
     },
     "android": {
@@ -22,7 +23,9 @@
       },
       "permissions": [
         "android.permission.CAMERA",
-        "android.permission.RECORD_AUDIO"
+        "android.permission.RECORD_AUDIO",
+        "android.permission.ACCESS_COARSE_LOCATION",
+        "android.permission.ACCESS_FINE_LOCATION"
       ],
       "predictiveBackGestureEnabled": false,
       "package": "com.anonymous.parkinsmartparking"
@@ -46,6 +49,12 @@
         "expo-camera",
         {
           "cameraPermission": "Izinkan PARKIN mengakses kamera untuk memindai tiket QR Code parkir."
+        }
+      ],
+      [
+        "expo-location",
+        {
+          "locationWhenInUsePermission": "Izinkan PARKIN mengakses lokasi Anda untuk menampilkan peta parkir kampus dan mendeteksi area parkir terdekat."
         }
       ]
     ],

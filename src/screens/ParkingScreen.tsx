@@ -19,6 +19,7 @@ import {
 } from 'react-native';
 import Animated, { FadeInDown } from 'react-native-reanimated';
 import { Ionicons } from '@expo/vector-icons';
+import { useRouter } from 'expo-router';
 import { ParkingArea } from '../models/parking';
 import { getParkingAreas, getDemoParkingAreas } from '../services/parkingApi';
 import { predictionDataToday } from '../data/predictionData';
@@ -57,6 +58,7 @@ const ALL_STATUSES = [
 ] as const;
 
 export default function ParkingScreen() {
+  const router = useRouter();
   const { horizontalPadding, isWide, cardWidth } = useResponsive();
   const colors = useThemeColors();
   const { isDark } = useTheme();
@@ -114,6 +116,15 @@ export default function ParkingScreen() {
             <View style={[styles.headerInner, { paddingHorizontal: horizontalPadding }]}>
               <View style={styles.headerTop}>
                 <Text style={styles.headerTitle}>Monitoring Parkir</Text>
+                <AnimatedPressable
+                  pressScale={0.94}
+                  style={styles.gpsShortcutBtn}
+                  onPress={() => router.push('/location' as any)}
+                  accessibilityLabel="Buka Peta GPS Interaktif"
+                >
+                  <Ionicons name="navigate" size={14} color={Colors.white} />
+                  <Text style={styles.gpsShortcutText}>Peta GPS Interaktif</Text>
+                </AnimatedPressable>
               </View>
             </View>
           </SafeAreaView>
@@ -559,16 +570,33 @@ const styles = StyleSheet.create({
   },
   headerTop: {
     flexDirection: 'row',
-    justifyContent: 'center',
+    justifyContent: 'space-between',
     alignItems: 'center',
     paddingTop: 8,
     paddingBottom: 4,
+    gap: 12,
   },
   headerTitle: {
     fontSize: FontSize.lg,
     fontWeight: FontWeight.bold,
     color: Colors.white,
     letterSpacing: 0.3,
+  },
+  gpsShortcutBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    backgroundColor: 'rgba(255, 255, 255, 0.18)',
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.28)',
+    paddingHorizontal: 11,
+    paddingVertical: 6,
+    borderRadius: BorderRadius.full,
+  },
+  gpsShortcutText: {
+    fontSize: FontSize.xs,
+    fontWeight: FontWeight.bold,
+    color: Colors.white,
   },
   scroll: {
     flex: 1,

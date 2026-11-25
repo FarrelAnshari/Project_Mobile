@@ -309,10 +309,17 @@ export default function ProfileScreen() {
             <MenuRow
               icon="cloud-download-outline"
               label="Async API Parkir"
-              subtitle="GET · POST · PATCH · DELETE — Week 8"
+              subtitle="Kelola tugas operasional & data parkir real-time"
               onPress={() => router.push('/parking-api' as any)}
+              accessibilityLabel="Buka fitur operasional parkir"
+            />
+            <MenuRow
+              icon="map-outline"
+              label="Lokasi & Peta GPS"
+              subtitle="GPS, Peta Kampus, Alamat & Geofencing"
+              onPress={() => router.push('/location' as any)}
               isLast
-              accessibilityLabel="Buka fitur Async API Week 8"
+              accessibilityLabel="Buka fitur Lokasi dan Peta GPS"
             />
           </View>
         </View>
@@ -727,7 +734,7 @@ export default function ProfileScreen() {
                 <Ionicons name="shield-checkmark" size={32} color={colors.success} />
               </View>
               <Text style={{ fontSize: FontSize.lg, fontWeight: FontWeight.bold, color: colors.textPrimary }}>Status Sesi Aktif</Text>
-              <Text style={{ fontSize: FontSize.xs, color: colors.textSecondary, marginTop: 4 }}>Task 03: Protect the Session (Login, Token, Logout)</Text>
+              <Text style={{ fontSize: FontSize.xs, color: colors.textSecondary, marginTop: 4 }}>Sesi Login & Token Terproteksi</Text>
             </View>
 
             <View style={{ backgroundColor: colors.background, borderRadius: BorderRadius.md, padding: Spacing.md, gap: Spacing.sm, marginBottom: Spacing.md }}>
@@ -804,10 +811,10 @@ export default function ProfileScreen() {
                   setTimeout(() => handleLogout(), 300);
                 }}
                 accessibilityRole="button"
-                accessibilityLabel="Hapus token dan logout (Task 03)"
+                accessibilityLabel="Hapus token dan logout"
               >
                 <Ionicons name="log-out-outline" size={16} color={colors.danger} />
-                <Text style={{ color: colors.danger, fontWeight: FontWeight.bold, fontSize: FontSize.sm }}>Hapus Token & Logout (Task 03)</Text>
+                <Text style={{ color: colors.danger, fontWeight: FontWeight.bold, fontSize: FontSize.sm }}>Hapus Token & Logout</Text>
               </TouchableOpacity>
             </View>
           </View>

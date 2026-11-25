@@ -75,7 +75,7 @@ export default function ParkingMap({ areas, onMarkerPress }: Props) {
 
         {/* Campus label */}
         <View style={styles.campusLabel}>
-          <Text style={[styles.campusLabelText, { color: colors.textSecondary }]}>🏫 Kampus</Text>
+          <Text style={[styles.campusLabelText, { color: colors.textSecondary }]}>🏫 UMM Kampus III</Text>
         </View>
 
         {/* Parking markers */}
@@ -86,17 +86,16 @@ export default function ParkingMap({ areas, onMarkerPress }: Props) {
           const percent = typeof area.occupancy === 'number' ? area.occupancy : getOccupancyPercent(area.occupied, area.capacity);
           const statusColor = getStatusColor(area.status);
           const isSelected = area.id === selectedId;
+          const shortCode = `P${area.id.replace(/\D/g, '') || area.id}`;
 
           return (
             <TouchableOpacity
               key={area.id}
               style={[
-                styles.marker,
+                styles.markerWrapper,
                 {
-                  left: x - 16,
-                  top: y - 16,
-                  borderColor: statusColor,
-                  backgroundColor: isSelected ? statusColor : colors.surface,
+                  left: x - 20,
+                  top: y - 18,
                 },
                 isSelected && styles.markerSelected,
               ]}
@@ -106,14 +105,27 @@ export default function ParkingMap({ areas, onMarkerPress }: Props) {
               accessibilityLabel={`${area.name}. Status: ${area.status}. ${area.available} slot tersedia.`}
               accessibilityHint="Ketuk untuk melihat info parkir ini"
             >
-              <Text
+              <View
                 style={[
-                  styles.markerText,
-                  { color: isSelected ? Colors.white : statusColor },
+                  styles.marker,
+                  {
+                    borderColor: statusColor,
+                    backgroundColor: isSelected ? statusColor : colors.surface,
+                  },
                 ]}
               >
-                {percent}%
-              </Text>
+                <Text
+                  style={[
+                    styles.markerText,
+                    { color: isSelected ? Colors.white : statusColor },
+                  ]}
+                >
+                  {percent}%
+                </Text>
+              </View>
+              <View style={[styles.markerCodePill, { backgroundColor: isDark ? 'rgba(15, 23, 42, 0.85)' : 'rgba(15, 23, 42, 0.78)' }]}>
+                <Text style={styles.markerCodeText}>{shortCode}</Text>
+              </View>
             </TouchableOpacity>
           );
         })}
@@ -139,6 +151,11 @@ export default function ParkingMap({ areas, onMarkerPress }: Props) {
             accessibilityLabel={`Info: ${selectedArea.name}. ${percent} persen terisi. ${selectedArea.available} slot tersedia.`}
           >
             <Text style={[styles.popupName, { color }]}>{selectedArea.name}</Text>
+            {selectedArea.description ? (
+              <Text style={[styles.popupDetails, { color: colors.textSecondary, marginBottom: 2 }]}>
+                {selectedArea.description}
+              </Text>
+            ) : null}
             <Text style={[styles.popupDetails, { color: colors.textSecondary }]}>
               {selectedArea.occupied} / {selectedArea.capacity} kendaraan · {percent}%
             </Text>
@@ -225,23 +242,37 @@ const styles = StyleSheet.create({
     color: Colors.textSecondary,
     fontWeight: FontWeight.medium,
   },
-  marker: {
+  markerWrapper: {
     position: 'absolute',
+    width: 40,
+    alignItems: 'center',
+  },
+  marker: {
     width: 36,
     height: 36,
     borderRadius: BorderRadius.full,
     borderWidth: 2,
     alignItems: 'center',
     justifyContent: 'center',
-    // minimum touch target via hitSlop
   },
   markerSelected: {
-    transform: [{ scale: 1.25 }],
+    transform: [{ scale: 1.15 }],
     zIndex: 10,
   },
   markerText: {
+    fontSize: 11,
+    fontWeight: FontWeight.bold,
+  },
+  markerCodePill: {
+    marginTop: 2,
+    paddingHorizontal: 5,
+    paddingVertical: 1,
+    borderRadius: 6,
+  },
+  markerCodeText: {
     fontSize: 10,
     fontWeight: FontWeight.bold,
+    color: '#FFFFFF',
   },
   popup: {
     margin: Spacing.sm,

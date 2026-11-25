@@ -110,7 +110,7 @@ function generateMockToken(userId: string): string {
 // Akun demo bawaan aplikasi (termasuk kredensial dari Task 01 Slide)
 const DEFAULT_DEMO_USERS: StoredUser[] = [
   {
-    id: 'user_demo_presidentku_00',
+    id: 'user_demo_parkin_00',
     name: 'Farrel Anshari (User)',
     email: 'user@mail.com',
     passwordHash: hashPassword('password123'),

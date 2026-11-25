@@ -1,14 +1,6 @@
 /**
- * PARKIN – Smart Campus Parking
- * Screen: Async API Parkir (Week 8)
- *
- * Implementasi 6 Fitur Wajib Asynchronous API (Sesuai Slide 15 PPT Week 8):
- *  01. GET  – Mengambil data tugas operasional parkir & area parkir via fetch() + useEffect()
- *  02. Loading Indicator – Menampilkan <ActivityIndicator /> saat aplikasi menunggu respons
- *  03. POST – Form input teks untuk menambahkan tugas baru / check-in kendaraan
- *  04. PATCH – Centang / toggle untuk menandai tugas selesai atau belum selesai secara dinamis
- *  05. Error Handling – Blok try...catch dengan feedback ramah pengguna & tombol coba lagi
- *  06. Refresh – Tombol reload & pull-to-refresh untuk mengambil ulang data terbaru
+ * PARKIN — Smart Campus Parking
+ * Screen: Operasional Parkir (Todo List Async & Monitoring Area Parkir)
  */
 
 import { Ionicons } from '@expo/vector-icons';
@@ -18,7 +10,6 @@ import {
   ActivityIndicator,
   Animated,
   Modal,
-  Platform,
   RefreshControl,
   ScrollView,
   StyleSheet,
@@ -28,8 +19,11 @@ import {
   View,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { toast } from '../context/ToastContext';
-import { apiClient, ApiError } from '../services/apiClient';
+import { API_CONFIG } from '../config/api';
+import { useTheme } from '../context/ThemeContext';
+import { useToast } from '../context/ToastContext';
+import { parkingAreas as localParkingAreas } from '../data/parkingData';
+import { ParkingArea as DomainParkingArea } from '../models/parking';
 
 // ============================================================
 // Types
@@ -39,11 +33,12 @@ export interface ParkingTodo {
   id: number;
   title: string;
   completed: boolean;
+  userId?: number;
   category?: string;
   time?: string;
 }
 
-export interface ParkingArea {
+export interface ApiParkingArea {
   id: string;
   name: string;
   capacity: number;
@@ -54,39 +49,78 @@ export interface ParkingArea {
   type: 'MOTOR' | 'MOBIL';
 }
 
-export interface CheckinResult {
-  id: string;
-  areaId: string;
-  areaName: string;
-  vehicleType: string;
-  plateNumber: string;
-  checkinTime: string;
-  status: string;
-}
-
 type TabType = 'todos' | 'areas';
 
-// ============================================================
-// Theme Colors
-// ============================================================
+const JSONPLACEHOLDER_TODOS_URL = 'https://jsonplaceholder.typicode.com/todos';
 
-const C = {
-  bg:        '#0B0D17',
-  surface:   '#14172B',
-  card:      '#1E223D',
-  cardBorder:'#2E3460',
-  textPrim:  '#F8FAFC',
-  textSec:   '#94A3B8',
-  textMuted: '#64748B',
-  primary:   '#6366F1',
-  primaryLight: '#818CF8',
-  success:   '#10B981',
-  warning:   '#F59E0B',
-  danger:    '#EF4444',
-};
+// Tugas operasional realistis yang terhubung ke area parkir PARKIN (PARKIRAN 1–5)
+const PARKIN_DEFAULT_TASKS: { title: string; category: string }[] = [
+  { title: 'Cek slot tersedia & palang pintu masuk utama', category: 'PARKIRAN 1' },
+  { title: 'Patroli area parkir motor Fakultas Teknik', category: 'PARKIRAN 2' },
+  { title: 'Pantau kepadatan & arahkan kendaraan dekat Kantin Pusat', category: 'PARKIRAN 3' },
+  { title: 'Periksa penerangan & marka area parkir terbuka', category: 'PARKIRAN 4' },
+  { title: 'Verifikasi parkir tamu & staf dekat Gedung Rektorat', category: 'PARKIRAN 5' },
+  { title: 'Kalibrasi kamera pemindai QR tiket pintu masuk', category: 'PARKIRAN 1' },
+  { title: 'Atur antrean keluar mahasiswa jam pulang kuliah', category: 'PARKIRAN 2' },
+  { title: 'Siapkan jalur alternatif saat kapasitas hampir penuh', category: 'PARKIRAN 3' },
+  { title: 'Bersihkan rambu & pembatas slot parkir kapasitas besar', category: 'PARKIRAN 4' },
+  { title: 'Rekap laporan okupansi harian area Rektorat', category: 'PARKIRAN 5' },
+];
 
 // ============================================================
-// Sub-komponen: TodoItemCard (Fitur 04: Centang / Toggle PATCH)
+// Helpers
+// ============================================================
+
+function normalizeAreaStatus(status: string, occupancy: number): 'AVAILABLE' | 'BUSY' | 'FULL' {
+  const upper = status.toUpperCase();
+  if (upper === 'FULL' || occupancy >= 95) return 'FULL';
+  if (upper === 'BUSY' || upper === 'NEAR FULL' || occupancy >= 70) return 'BUSY';
+  return 'AVAILABLE';
+}
+
+function mapLocalParkingAreas(areas: DomainParkingArea[]): ApiParkingArea[] {
+  return areas.map((area, idx) => ({
+    id: area.id,
+    name: area.name,
+    capacity: area.capacity,
+    occupied: area.occupied,
+    available: area.available,
+    occupancy: area.occupancy,
+    status: normalizeAreaStatus(area.status, area.occupancy),
+    type: idx % 2 === 0 ? 'MOTOR' : 'MOBIL',
+  }));
+}
+
+function normalizeRemoteArea(raw: Partial<ApiParkingArea>, idx: number): ApiParkingArea {
+  const capacity = Math.max(1, Number(raw.capacity) || 100);
+  const occupied = Math.min(capacity, Math.max(0, Number(raw.occupied) || 0));
+  const available =
+    typeof raw.available === 'number' ? Math.max(0, raw.available) : Math.max(0, capacity - occupied);
+  const occupancy =
+    typeof raw.occupancy === 'number' ? raw.occupancy : Math.round((occupied / capacity) * 100);
+
+  return {
+    id: String(raw.id ?? idx + 1),
+    name: raw.name || `PARKIRAN ${idx + 1}`,
+    capacity,
+    occupied,
+    available,
+    occupancy,
+    status: normalizeAreaStatus(String(raw.status || ''), occupancy),
+    type: raw.type === 'MOBIL' ? 'MOBIL' : raw.type === 'MOTOR' ? 'MOTOR' : idx % 2 === 0 ? 'MOTOR' : 'MOBIL',
+  };
+}
+
+function formatCurrentClock(): string {
+  return new Date().toLocaleTimeString('id-ID', {
+    hour: '2-digit',
+    minute: '2-digit',
+    second: '2-digit',
+  });
+}
+
+// ============================================================
+// Sub-komponen: TodoItemCard
 // ============================================================
 
 interface TodoItemCardProps {
@@ -97,19 +131,46 @@ interface TodoItemCardProps {
   onDelete: (id: number) => void;
 }
 
-function TodoItemCard({ todo, isPatching, isDeleting, onToggle, onDelete }: TodoItemCardProps) {
+function TodoItemCard({
+  todo,
+  isPatching,
+  isDeleting,
+  onToggle,
+  onDelete,
+}: TodoItemCardProps) {
+  const { colors, isDark } = useTheme();
+
   return (
-    <View style={[styles.todoCard, todo.completed && styles.todoCardCompleted]}>
-      {/* 04: Tombol Centang / Toggle PATCH */}
+    <View
+      style={[
+        styles.todoCard,
+        {
+          backgroundColor: todo.completed
+            ? isDark
+              ? 'rgba(34, 197, 94, 0.08)'
+              : '#F0FDF4'
+            : colors.surface,
+          borderColor: todo.completed ? colors.success + '44' : colors.border,
+          opacity: todo.completed ? 0.9 : 1,
+        },
+      ]}
+    >
+      {/* Tombol Centang / Toggle */}
       <TouchableOpacity
-        style={[styles.checkboxBtn, todo.completed && styles.checkboxBtnChecked]}
+        style={[
+          styles.checkboxBtn,
+          {
+            borderColor: todo.completed ? colors.success : colors.primary,
+            backgroundColor: todo.completed ? colors.success : 'transparent',
+          },
+        ]}
         onPress={() => onToggle(todo)}
         disabled={isPatching}
         activeOpacity={0.7}
         accessibilityLabel={`Tandai tugas ${todo.title} ${todo.completed ? 'belum selesai' : 'selesai'}`}
       >
         {isPatching ? (
-          <ActivityIndicator size="small" color={todo.completed ? '#fff' : C.primary} />
+          <ActivityIndicator size="small" color={todo.completed ? '#fff' : colors.primary} />
         ) : todo.completed ? (
           <Ionicons name="checkmark" size={16} color="#fff" />
         ) : (
@@ -125,58 +186,70 @@ function TodoItemCard({ todo, isPatching, isDeleting, onToggle, onDelete }: Todo
         activeOpacity={0.7}
       >
         <Text
-          style={[styles.todoTitle, todo.completed && styles.todoTitleCompleted]}
+          style={[
+            styles.todoTitle,
+            {
+              color: todo.completed ? colors.textTertiary : colors.textPrimary,
+              textDecorationLine: todo.completed ? 'line-through' : 'none',
+            },
+          ]}
           numberOfLines={2}
         >
           {todo.title}
         </Text>
         <View style={styles.todoMetaRow}>
           {todo.category && (
-            <View style={styles.categoryBadge}>
-              <Text style={styles.categoryBadgeTxt}>{todo.category}</Text>
+            <View style={[styles.categoryBadge, { backgroundColor: colors.primary + '1A' }]}>
+              <Text style={[styles.categoryBadgeTxt, { color: colors.primary }]}>
+                {todo.category}
+              </Text>
             </View>
           )}
           {todo.time && (
-            <Text style={styles.todoTimeTxt}>
-              <Ionicons name="time-outline" size={11} color={C.textMuted} /> {todo.time}
+            <Text style={[styles.todoTimeTxt, { color: colors.textTertiary }]}>
+              <Ionicons name="time-outline" size={11} color={colors.textTertiary} /> {todo.time}
             </Text>
           )}
           <View
             style={[
               styles.statusTag,
-              { backgroundColor: todo.completed ? C.success + '22' : C.warning + '22' },
+              {
+                backgroundColor: todo.completed
+                  ? colors.successBg
+                  : colors.warningBg,
+              },
             ]}
           >
             <View
               style={[
                 styles.statusDot,
-                { backgroundColor: todo.completed ? C.success : C.warning },
+                { backgroundColor: todo.completed ? colors.success : colors.warning },
               ]}
             />
             <Text
               style={[
                 styles.statusTagTxt,
-                { color: todo.completed ? C.success : C.warning },
+                { color: todo.completed ? colors.success : colors.warning },
               ]}
             >
-              {todo.completed ? 'Selesai (PATCH)' : 'Belum Selesai'}
+              {todo.completed ? 'Selesai' : 'Belum Selesai'}
             </Text>
           </View>
         </View>
       </TouchableOpacity>
 
-      {/* Tombol Hapus (DELETE) */}
+      {/* Tombol Hapus */}
       <TouchableOpacity
-        style={styles.deleteTodoBtn}
+        style={[styles.deleteTodoBtn, { backgroundColor: colors.dangerBg }]}
         onPress={() => onDelete(todo.id)}
         disabled={isDeleting}
         activeOpacity={0.7}
         accessibilityLabel={`Hapus tugas ${todo.title}`}
       >
         {isDeleting ? (
-          <ActivityIndicator size="small" color={C.danger} />
+          <ActivityIndicator size="small" color={colors.danger} />
         ) : (
-          <Ionicons name="trash-outline" size={16} color={C.danger} />
+          <Ionicons name="trash-outline" size={16} color={colors.danger} />
         )}
       </TouchableOpacity>
     </View>
@@ -184,64 +257,79 @@ function TodoItemCard({ todo, isPatching, isDeleting, onToggle, onDelete }: Todo
 }
 
 // ============================================================
-// Sub-komponen: AreaCard (Monitoring Area Parkir)
+// Sub-komponen: AreaCard
 // ============================================================
 
 interface AreaCardProps {
-  area: ParkingArea;
+  area: ApiParkingArea;
   isPatching: boolean;
-  onPatch: (area: ParkingArea) => void;
-  onCheckin: (area: ParkingArea) => void;
+  onPatch: (area: ApiParkingArea) => void;
+  onCheckin: (area: ApiParkingArea) => void;
 }
 
 function AreaCard({ area, isPatching, onPatch, onCheckin }: AreaCardProps) {
-  const sColor = area.status === 'AVAILABLE' ? C.success : area.status === 'BUSY' ? C.warning : C.danger;
-  const sLabel = area.status === 'AVAILABLE' ? 'Tersedia' : area.status === 'BUSY' ? 'Ramai' : 'Penuh';
+  const { colors } = useTheme();
+  const sColor =
+    area.status === 'AVAILABLE'
+      ? colors.success
+      : area.status === 'BUSY'
+      ? colors.warning
+      : colors.danger;
+  const sLabel =
+    area.status === 'AVAILABLE' ? 'Tersedia' : area.status === 'BUSY' ? 'Ramai' : 'Penuh';
 
   return (
-    <View style={styles.areaCard}>
+    <View
+      style={[
+        styles.areaCard,
+        { backgroundColor: colors.surface, borderColor: colors.border },
+      ]}
+    >
       <View style={styles.areaCardHeader}>
-        <View style={[styles.areaTypeBadge, { backgroundColor: area.type === 'MOTOR' ? C.primary + '22' : '#8B5CF622' }]}>
+        <View style={[styles.areaTypeBadge, { backgroundColor: colors.primary + '1A' }]}>
           <Ionicons
             name={area.type === 'MOTOR' ? 'bicycle-outline' : 'car-outline'}
             size={13}
-            color={area.type === 'MOTOR' ? C.primaryLight : '#A78BFA'}
+            color={colors.primary}
           />
-          <Text style={[styles.areaTypeTxt, { color: area.type === 'MOTOR' ? C.primaryLight : '#A78BFA' }]}>
-            {area.type}
-          </Text>
+          <Text style={[styles.areaTypeTxt, { color: colors.primary }]}>{area.type}</Text>
         </View>
 
-        <View style={[styles.statusTag, { backgroundColor: sColor + '22', borderColor: sColor + '55', borderWidth: 1 }]}>
+        <View
+          style={[
+            styles.statusTag,
+            { backgroundColor: sColor + '20', borderColor: sColor + '50', borderWidth: 1 },
+          ]}
+        >
           <View style={[styles.statusDot, { backgroundColor: sColor }]} />
           <Text style={[styles.statusTagTxt, { color: sColor }]}>{sLabel}</Text>
         </View>
       </View>
 
-      <Text style={styles.areaName}>{area.name}</Text>
+      <Text style={[styles.areaName, { color: colors.textPrimary }]}>{area.name}</Text>
 
       {/* Stat Bar */}
       <View style={styles.statGrid}>
         <View style={styles.statBox}>
-          <Text style={styles.statNum}>{area.capacity}</Text>
-          <Text style={styles.statSub}>Kapasitas</Text>
+          <Text style={[styles.statNum, { color: colors.textPrimary }]}>{area.capacity}</Text>
+          <Text style={[styles.statSub, { color: colors.textTertiary }]}>Kapasitas</Text>
         </View>
         <View style={styles.statBox}>
-          <Text style={[styles.statNum, { color: C.warning }]}>{area.occupied}</Text>
-          <Text style={styles.statSub}>Terisi</Text>
+          <Text style={[styles.statNum, { color: colors.warning }]}>{area.occupied}</Text>
+          <Text style={[styles.statSub, { color: colors.textTertiary }]}>Terisi</Text>
         </View>
         <View style={styles.statBox}>
-          <Text style={[styles.statNum, { color: C.success }]}>{area.available}</Text>
-          <Text style={styles.statSub}>Tersedia</Text>
+          <Text style={[styles.statNum, { color: colors.success }]}>{area.available}</Text>
+          <Text style={[styles.statSub, { color: colors.textTertiary }]}>Tersedia</Text>
         </View>
         <View style={styles.statBox}>
           <Text style={[styles.statNum, { color: sColor }]}>{area.occupancy}%</Text>
-          <Text style={styles.statSub}>Occupancy</Text>
+          <Text style={[styles.statSub, { color: colors.textTertiary }]}>Occupancy</Text>
         </View>
       </View>
 
       {/* Occupancy Progress */}
-      <View style={styles.progressTrack}>
+      <View style={[styles.progressTrack, { backgroundColor: colors.background }]}>
         <View
           style={[
             styles.progressFill,
@@ -256,25 +344,33 @@ function AreaCard({ area, isPatching, onPatch, onCheckin }: AreaCardProps) {
       {/* Aksi */}
       <View style={styles.areaActionsRow}>
         <TouchableOpacity
-          style={[styles.areaBtnPrimary, { opacity: area.available <= 0 ? 0.5 : 1 }]}
+          style={[
+            styles.areaBtnPrimary,
+            { backgroundColor: colors.primary, opacity: area.available <= 0 ? 0.5 : 1 },
+          ]}
           onPress={() => onCheckin(area)}
           disabled={area.available <= 0}
         >
           <Ionicons name="log-in-outline" size={14} color="#fff" />
-          <Text style={styles.areaBtnPrimaryTxt}>Check-in (POST)</Text>
+          <Text style={styles.areaBtnPrimaryTxt}>Check-in</Text>
         </TouchableOpacity>
 
         <TouchableOpacity
-          style={styles.areaBtnSecondary}
+          style={[
+            styles.areaBtnSecondary,
+            { backgroundColor: colors.background, borderColor: colors.border },
+          ]}
           onPress={() => onPatch(area)}
           disabled={isPatching}
         >
           {isPatching ? (
-            <ActivityIndicator size="small" color={C.primaryLight} />
+            <ActivityIndicator size="small" color={colors.primary} />
           ) : (
             <>
-              <Ionicons name="swap-horizontal-outline" size={14} color={C.textSec} />
-              <Text style={styles.areaBtnSecondaryTxt}>Ganti Status (PATCH)</Text>
+              <Ionicons name="swap-horizontal-outline" size={14} color={colors.textSecondary} />
+              <Text style={[styles.areaBtnSecondaryTxt, { color: colors.textSecondary }]}>
+                Ganti Status
+              </Text>
             </>
           )}
         </TouchableOpacity>
@@ -290,11 +386,15 @@ function AreaCard({ area, isPatching, onPatch, onCheckin }: AreaCardProps) {
 export default function ParkingApiScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
+  const { colors } = useTheme();
+  const toast = useToast();
 
-  // ── State ────────────────────────────────────────────────
+  // State
   const [activeTab, setActiveTab] = useState<TabType>('todos');
   const [todos, setTodos] = useState<ParkingTodo[]>([]);
-  const [areas, setAreas] = useState<ParkingArea[]>([]);
+  const [areas, setAreas] = useState<ApiParkingArea[]>(() =>
+    mapLocalParkingAreas(localParkingAreas)
+  );
   const [isInitialLoading, setIsInitialLoading] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [patchingIds, setPatchingIds] = useState<Set<number | string>>(new Set());
@@ -303,84 +403,147 @@ export default function ParkingApiScreen() {
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [lastUpdated, setLastUpdated] = useState<string>('');
 
-  // Form input todo baru (Fitur 03)
+  // Form input tugas baru
   const [newTodoTitle, setNewTodoTitle] = useState('');
 
-  // Form check-in parkir
-  const [selectedArea, setSelectedArea] = useState<ParkingArea | null>(null);
+  // Modal check-in parkir
+  const [selectedArea, setSelectedArea] = useState<ApiParkingArea | null>(null);
   const [vehicleType, setVehicleType] = useState<'MOTOR' | 'MOBIL'>('MOTOR');
   const [plateNumber, setPlateNumber] = useState('');
   const [showCheckinModal, setShowCheckinModal] = useState(false);
 
-  // Animasi rotasi tombol refresh
   const spinAnim = useRef(new Animated.Value(0)).current;
+  const abortControllerRef = useRef<AbortController | null>(null);
 
-  const triggerSpin = () => {
+  const triggerSpin = useCallback(() => {
     spinAnim.setValue(0);
     Animated.timing(spinAnim, {
       toValue: 1,
       duration: 600,
       useNativeDriver: true,
     }).start();
-  };
+  }, [spinAnim]);
 
   const spin = spinAnim.interpolate({
     inputRange: [0, 1],
     outputRange: ['0deg', '360deg'],
   });
 
-  // ── 01. GET – Mengambil Data dari API ─────────────────────
-  const loadAllData = useCallback(async (isRefreshAction = false) => {
-    // Tampilkan loading screen penuh baik saat masuk awal maupun saat tombol refresh diklik
-    setIsInitialLoading(true);
-    if (isRefreshAction) {
-      triggerSpin();
-    }
-    setErrorMsg(null);
+  // Fetch Area Parkir dengan fallback otomatis tanpa memicu toast error saat localhost:5000 mati
+  const fetchAreasWithFallback = useCallback(async (parentSignal?: AbortSignal) => {
+    const localController = new AbortController();
+    const timeoutId = setTimeout(() => localController.abort(), 2500);
+    const onParentAbort = () => localController.abort();
 
-    // Minimum delay agar Loading Screen terlihat jelas oleh pengguna & dosen (Fitur 02)
-    const minDelay = new Promise(resolve => setTimeout(resolve, isRefreshAction ? 600 : 500));
+    if (parentSignal) {
+      if (parentSignal.aborted) {
+        clearTimeout(timeoutId);
+        return mapLocalParkingAreas(localParkingAreas);
+      }
+      parentSignal.addEventListener('abort', onParentAbort);
+    }
 
     try {
-      // Panggilan asinkron paralel untuk data Todos dan Data Area Parkir
-      const [todosData, areasData] = await Promise.all([
-        apiClient.get<ParkingTodo[]>('/todos', { requiresAuth: false }).catch(() => null),
-        apiClient.get<ParkingArea[]>('/parking-areas', { requiresAuth: false }).catch(() => null),
-        minDelay,
-      ]);
-
-      if (todosData && Array.isArray(todosData)) {
-        setTodos(todosData);
-      }
-      if (areasData && Array.isArray(areasData)) {
-        setAreas(areasData);
-      }
-
-      const now = new Date().toLocaleTimeString('id-ID', {
-        hour: '2-digit',
-        minute: '2-digit',
-        second: '2-digit',
+      const response = await fetch(`${API_CONFIG.BASE_URL}/parking-areas`, {
+        method: 'GET',
+        headers: { Accept: 'application/json' },
+        signal: localController.signal,
       });
-      setLastUpdated(now);
-      // Tanpa toast popup saat refresh sesuai permintaan pengguna (hanya loading screen)
-    } catch (err: any) {
-      // 05. Error Handling – try...catch menangani kegagalan koneksi
-      const msg = err instanceof ApiError ? err.message : 'Gagal terhubung ke REST API Server.';
-      setErrorMsg(msg);
-      toast.error('Gagal mengambil data dari server. Pastikan mock API aktif.', {
-        title: 'Error Koneksi',
-      });
+      if (!response.ok) {
+        return mapLocalParkingAreas(localParkingAreas);
+      }
+      const raw = await response.json();
+      const list = Array.isArray(raw) ? raw : Array.isArray(raw?.data) ? raw.data : null;
+      if (list && list.length > 0) {
+        return list.map((item: Partial<ApiParkingArea>, idx: number) =>
+          normalizeRemoteArea(item, idx)
+        );
+      }
+      return mapLocalParkingAreas(localParkingAreas);
+    } catch {
+      // Server lokal tidak aktif -> gunakan data lokal dengan mulus tanpa toast spam
+      return mapLocalParkingAreas(localParkingAreas);
     } finally {
-      setIsInitialLoading(false);
-      setIsRefreshing(false);
+      clearTimeout(timeoutId);
+      parentSignal?.removeEventListener('abort', onParentAbort);
     }
-  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+  }, []);
+
+  // GET daftar Todo dari JSONPlaceholder + Area Parkir (dengan fallback)
+  const loadAllData = useCallback(
+    async (isRefreshAction = false) => {
+      if (abortControllerRef.current) {
+        abortControllerRef.current.abort();
+      }
+      const controller = new AbortController();
+      abortControllerRef.current = controller;
+
+      if (isRefreshAction) {
+        setIsRefreshing(true);
+        triggerSpin();
+      } else {
+        setIsInitialLoading(true);
+      }
+      setErrorMsg(null);
+
+      try {
+        const [todosResponse, resolvedAreas] = await Promise.all([
+          fetch(`${JSONPLACEHOLDER_TODOS_URL}?_limit=10`, {
+            method: 'GET',
+            headers: { Accept: 'application/json' },
+            signal: controller.signal,
+          }),
+          fetchAreasWithFallback(controller.signal),
+        ]);
+
+        if (!todosResponse.ok) {
+          throw new Error(`Server mengembalikan status ${todosResponse.status}`);
+        }
+
+        const todosJson: ParkingTodo[] = await todosResponse.json();
+        if (controller.signal.aborted) return;
+
+        setTodos(
+          Array.isArray(todosJson)
+            ? todosJson.map((item, idx) => {
+                const parkinTask = PARKIN_DEFAULT_TASKS[idx % PARKIN_DEFAULT_TASKS.length];
+                return {
+                  id: Number(item.id),
+                  title: parkinTask.title,
+                  completed: Boolean(item.completed),
+                  userId: item.userId,
+                  category: parkinTask.category,
+                };
+              })
+            : []
+        );
+        setAreas(resolvedAreas);
+        setLastUpdated(formatCurrentClock());
+      } catch (err: unknown) {
+        if (controller.signal.aborted) return;
+        const msg =
+          err instanceof Error && err.message
+            ? `Gagal memuat daftar tugas: ${err.message}`
+            : 'Gagal memuat daftar tugas. Periksa koneksi internet Anda.';
+        setErrorMsg(msg);
+      } finally {
+        if (!controller.signal.aborted) {
+          setIsInitialLoading(false);
+          setIsRefreshing(false);
+        }
+      }
+    },
+    [fetchAreasWithFallback, triggerSpin]
+  );
 
   useEffect(() => {
     loadAllData(false);
+    return () => {
+      abortControllerRef.current?.abort();
+    };
   }, [loadAllData]);
 
-  // ── 03. POST – Menambahkan Todo Baru ──────────────────────
+  // POST: Tambah tugas baru ke JSONPlaceholder
   const handleAddTodo = async () => {
     const trimmed = newTodoTitle.trim();
     if (!trimmed) {
@@ -390,49 +553,78 @@ export default function ParkingApiScreen() {
 
     setIsPosting(true);
     try {
-      const res = await apiClient.post<{ success: boolean; data: ParkingTodo }>(
-        '/todos',
-        { title: trimmed, category: 'Operasional' },
-        { requiresAuth: false }
-      );
+      const response = await fetch(JSONPLACEHOLDER_TODOS_URL, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json; charset=UTF-8',
+          Accept: 'application/json',
+        },
+        body: JSON.stringify({
+          title: trimmed,
+          completed: false,
+          userId: 1,
+        }),
+      });
 
-      if (res?.data) {
-        setTodos(prev => [res.data, ...prev]);
-        setNewTodoTitle('');
-        toast.success(`Tugas "${trimmed}" berhasil ditambahkan!`, { title: 'POST Sukses' });
+      if (!response.ok) {
+        throw new Error(`Permintaan gagal (${response.status})`);
       }
-    } catch (err: any) {
-      const msg = err instanceof ApiError ? err.message : 'Gagal menambahkan tugas baru.';
-      toast.error(msg, { title: 'POST Gagal' });
+
+      await response.json();
+      const createdTodo: ParkingTodo = {
+        id: Date.now(),
+        title: trimmed,
+        completed: false,
+        userId: 1,
+        category: 'Operasional',
+        time: formatCurrentClock().slice(0, 5),
+      };
+
+      setTodos((prev) => [createdTodo, ...prev]);
+      setNewTodoTitle('');
+      toast.success(`Tugas "${trimmed}" berhasil ditambahkan!`);
+    } catch (err: unknown) {
+      const msg =
+        err instanceof Error ? err.message : 'Gagal menambahkan tugas baru.';
+      toast.error(msg, { title: 'Gagal Menambah Tugas' });
     } finally {
       setIsPosting(false);
     }
   };
 
-  // ── 04. PATCH – Centang / Toggle Status Selesai ───────────
+  // PATCH: Toggle status selesai tugas ke JSONPlaceholder
   const handleToggleTodo = async (todo: ParkingTodo) => {
-    const newStatus = !todo.completed;
-    setPatchingIds(prev => new Set(prev).add(todo.id));
+    const nextCompleted = !todo.completed;
+    setPatchingIds((prev) => new Set(prev).add(todo.id));
 
     try {
-      const res = await apiClient.patch<{ success: boolean; data: ParkingTodo }>(
-        `/todos/${todo.id}`,
-        { completed: newStatus },
-        { requiresAuth: false }
-      );
+      const targetId = todo.id > 200 ? 1 : todo.id;
+      const response = await fetch(`${JSONPLACEHOLDER_TODOS_URL}/${targetId}`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json; charset=UTF-8',
+          Accept: 'application/json',
+        },
+        body: JSON.stringify({ completed: nextCompleted }),
+      });
 
-      if (res?.data) {
-        setTodos(prev => prev.map(t => (t.id === todo.id ? res.data : t)));
-        toast.info(
-          `Tugas ditandai: ${newStatus ? 'Selesai ✓' : 'Belum Selesai'}`,
-          { title: 'PATCH Sukses' }
-        );
+      if (!response.ok) {
+        throw new Error(`Gagal memperbarui status (${response.status})`);
       }
-    } catch (err: any) {
-      const msg = err instanceof ApiError ? err.message : 'Gagal mengubah status tugas.';
-      toast.error(msg, { title: 'PATCH Gagal' });
+
+      await response.json();
+      setTodos((prev) =>
+        prev.map((t) => (t.id === todo.id ? { ...t, completed: nextCompleted } : t))
+      );
+      toast.info(
+        `Tugas ditandai ${nextCompleted ? 'Selesai' : 'Belum Selesai'}`
+      );
+    } catch (err: unknown) {
+      const msg =
+        err instanceof Error ? err.message : 'Gagal mengubah status tugas.';
+      toast.error(msg, { title: 'Gagal Memperbarui' });
     } finally {
-      setPatchingIds(prev => {
+      setPatchingIds((prev) => {
         const next = new Set(prev);
         next.delete(todo.id);
         return next;
@@ -440,18 +632,24 @@ export default function ParkingApiScreen() {
     }
   };
 
-  // ── DELETE – Menghapus Todo ───────────────────────────────
+  // DELETE: Hapus tugas dari JSONPlaceholder & state lokal
   const handleDeleteTodo = async (id: number) => {
-    setDeletingIds(prev => new Set(prev).add(id));
+    setDeletingIds((prev) => new Set(prev).add(id));
     try {
-      await apiClient.delete(`/todos/${id}`, { requiresAuth: false });
-      setTodos(prev => prev.filter(t => t.id !== id));
-      toast.success('Tugas berhasil dihapus dari server.', { title: 'DELETE Sukses' });
-    } catch (err: any) {
-      const msg = err instanceof ApiError ? err.message : 'Gagal menghapus tugas.';
-      toast.error(msg, { title: 'DELETE Gagal' });
+      const targetId = id > 200 ? 1 : id;
+      const response = await fetch(`${JSONPLACEHOLDER_TODOS_URL}/${targetId}`, {
+        method: 'DELETE',
+      });
+      if (!response.ok) {
+        throw new Error(`Gagal menghapus tugas (${response.status})`);
+      }
+      setTodos((prev) => prev.filter((t) => t.id !== id));
+      toast.success('Tugas berhasil dihapus.');
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : 'Gagal menghapus tugas.';
+      toast.error(msg, { title: 'Gagal Menghapus' });
     } finally {
-      setDeletingIds(prev => {
+      setDeletingIds((prev) => {
         const next = new Set(prev);
         next.delete(id);
         return next;
@@ -459,29 +657,55 @@ export default function ParkingApiScreen() {
     }
   };
 
-  // ── PATCH Area Parkir: Siklus Status Logis ────────────────
-  const handlePatchAreaStatus = async (area: ParkingArea) => {
-    setPatchingIds(prev => new Set(prev).add(area.id));
-    // Transisi status: AVAILABLE -> BUSY -> FULL -> AVAILABLE
-    const nextStatus =
+  // Update status area parkir (coba API lokal dulu, lalu fallback update state)
+  const handlePatchAreaStatus = async (area: ApiParkingArea) => {
+    setPatchingIds((prev) => new Set(prev).add(area.id));
+    const nextStatus: ApiParkingArea['status'] =
       area.status === 'AVAILABLE' ? 'BUSY' : area.status === 'BUSY' ? 'FULL' : 'AVAILABLE';
 
-    try {
-      const res = await apiClient.patch<{ success: boolean; data: ParkingArea }>(
-        `/parking-areas/${area.id}/status`,
-        { status: nextStatus },
-        { requiresAuth: false }
-      );
+    const applyLocalStatus = (): ApiParkingArea => {
+      const nextOccupied =
+        nextStatus === 'FULL'
+          ? area.capacity
+          : nextStatus === 'BUSY'
+          ? Math.round(area.capacity * 0.75)
+          : Math.round(area.capacity * 0.35);
+      return {
+        ...area,
+        status: nextStatus,
+        occupied: nextOccupied,
+        available: area.capacity - nextOccupied,
+        occupancy: Math.round((nextOccupied / area.capacity) * 100),
+      };
+    };
 
-      if (res?.data) {
-        setAreas(prev => prev.map(a => (a.id === area.id ? res.data : a)));
-        toast.info(`Status ${area.name} diubah ke ${nextStatus}`, { title: 'PATCH Sukses' });
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 2000);
+
+    try {
+      const response = await fetch(
+        `${API_CONFIG.BASE_URL}/parking-areas/${area.id}/status`,
+        {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
+          body: JSON.stringify({ status: nextStatus }),
+          signal: controller.signal,
+        }
+      );
+      if (response.ok) {
+        const resJson = await response.json();
+        const updated = resJson?.data ? normalizeRemoteArea(resJson.data, 0) : applyLocalStatus();
+        setAreas((prev) => prev.map((a) => (a.id === area.id ? updated : a)));
+      } else {
+        setAreas((prev) => prev.map((a) => (a.id === area.id ? applyLocalStatus() : a)));
       }
-    } catch (err: any) {
-      const msg = err instanceof ApiError ? err.message : 'Gagal memperbarui status area.';
-      toast.error(msg, { title: 'PATCH Gagal' });
+      toast.info(`Status ${area.name} diperbarui ke ${nextStatus}`);
+    } catch {
+      setAreas((prev) => prev.map((a) => (a.id === area.id ? applyLocalStatus() : a)));
+      toast.info(`Status ${area.name} diperbarui ke ${nextStatus}`);
     } finally {
-      setPatchingIds(prev => {
+      clearTimeout(timeoutId);
+      setPatchingIds((prev) => {
         const next = new Set(prev);
         next.delete(area.id);
         return next;
@@ -489,7 +713,7 @@ export default function ParkingApiScreen() {
     }
   };
 
-  // ── POST Check-in Parkir ─────────────────────────────────
+  // Check-in Parkir (coba API lokal dulu, lalu fallback update state + masukkan ke daftar tugas)
   const handleConfirmCheckin = async () => {
     if (!selectedArea) return;
     const plate = plateNumber.trim().toUpperCase();
@@ -499,34 +723,57 @@ export default function ParkingApiScreen() {
     }
 
     setIsPosting(true);
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 2000);
+
     try {
-      const res = await apiClient.post<{ success: boolean; message: string; data: CheckinResult }>(
-        '/parking-checkin',
-        { areaId: selectedArea.id, vehicleType, plateNumber: plate },
-        { requiresAuth: false }
+      await fetch(`${API_CONFIG.BASE_URL}/parking-checkin`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
+        body: JSON.stringify({
+          areaId: selectedArea.id,
+          vehicleType,
+          plateNumber: plate,
+        }),
+        signal: controller.signal,
+      }).catch(() => null);
+
+      setAreas((prev) =>
+        prev.map((a) => {
+          if (a.id !== selectedArea.id) return a;
+          const occupied = Math.min(a.occupied + 1, a.capacity);
+          const available = Math.max(0, a.capacity - occupied);
+          const occupancy = Math.round((occupied / a.capacity) * 100);
+          return {
+            ...a,
+            occupied,
+            available,
+            occupancy,
+            status: normalizeAreaStatus(a.status, occupancy),
+          };
+        })
       );
 
-      if (res?.data) {
-        setShowCheckinModal(false);
-        setPlateNumber('');
-        setSelectedArea(null);
-        // Refresh seluruh data
-        await loadAllData(false);
-        // Langsung arahkan ke halaman yang dituju (Tab Todo List Tugas hasil check-in)!
-        setActiveTab('todos');
-        toast.success(`Check-in ${plate} berhasil & langsung masuk ke Todo List!`, {
-          title: 'Check-in Berhasil',
-        });
-      }
-    } catch (err: any) {
-      const msg = err instanceof ApiError ? err.message : 'Gagal melakukan check-in.';
-      toast.error(msg, { title: 'Check-in Gagal' });
+      const verificationTodo: ParkingTodo = {
+        id: Date.now(),
+        title: `Verifikasi Kendaraan: ${plate} (${vehicleType}) di ${selectedArea.name}`,
+        completed: false,
+        category: 'Check-in',
+        time: formatCurrentClock().slice(0, 5),
+      };
+      setTodos((prev) => [verificationTodo, ...prev]);
+
+      setShowCheckinModal(false);
+      setPlateNumber('');
+      setSelectedArea(null);
+      setActiveTab('todos');
+      toast.success(`Check-in ${plate} berhasil dicatat!`);
     } finally {
+      clearTimeout(timeoutId);
       setIsPosting(false);
     }
   };
 
-  // ── Handle Navigasi Kembali Aman ─────────────────────────
   const handleGoBack = () => {
     if (router.canGoBack()) {
       router.back();
@@ -535,111 +782,128 @@ export default function ParkingApiScreen() {
     }
   };
 
-  // ── RENDER ───────────────────────────────────────────────
   return (
-    <View style={[styles.root, { paddingTop: insets.top }]}>
-      {/* ── HEADER ── */}
-      <View style={styles.header}>
+    <View style={[styles.root, { backgroundColor: colors.background, paddingTop: insets.top }]}>
+      {/* HEADER */}
+      <View
+        style={[
+          styles.header,
+          { backgroundColor: colors.surface, borderBottomColor: colors.border },
+        ]}
+      >
         <TouchableOpacity
-          style={styles.headerBtn}
+          style={[
+            styles.headerBtn,
+            { backgroundColor: colors.background, borderColor: colors.border },
+          ]}
           onPress={handleGoBack}
           activeOpacity={0.7}
           accessibilityLabel="Kembali ke Beranda"
         >
-          <Ionicons name="arrow-back" size={20} color="#fff" />
+          <Ionicons name="arrow-back" size={20} color={colors.textPrimary} />
         </TouchableOpacity>
 
         <View style={styles.headerTitleWrap}>
-          <Text style={styles.headerTitle}>Async API Week 8</Text>
-          <Text style={styles.headerSub}>Komputasi Asinkron & REST API</Text>
+          <Text style={[styles.headerTitle, { color: colors.textPrimary }]}>
+            Operasional Parkir
+          </Text>
+          <Text style={[styles.headerSub, { color: colors.textSecondary }]}>
+            Tugas Operasional & Data Parkir Real-Time
+          </Text>
         </View>
 
-        {/* 06. Tombol Refresh / Reload */}
         <TouchableOpacity
-          style={styles.headerBtn}
+          style={[
+            styles.headerBtn,
+            { backgroundColor: colors.background, borderColor: colors.border },
+          ]}
           onPress={() => loadAllData(true)}
           disabled={isRefreshing || isInitialLoading}
           activeOpacity={0.7}
-          accessibilityLabel="Muat ulang data dari server"
+          accessibilityLabel="Muat ulang data"
         >
           {isRefreshing ? (
-            <ActivityIndicator size="small" color={C.primaryLight} />
+            <ActivityIndicator size="small" color={colors.primary} />
           ) : (
             <Animated.View style={{ transform: [{ rotate: spin }] }}>
-              <Ionicons name="reload" size={18} color={C.primaryLight} />
+              <Ionicons name="reload" size={18} color={colors.primary} />
             </Animated.View>
           )}
         </TouchableOpacity>
       </View>
 
-      {/* ── BANNER 6 FITUR ASYNC ── */}
-      <View style={styles.bannerRow}>
-        <Ionicons name="code-working-outline" size={16} color={C.primaryLight} />
-        <Text style={styles.bannerTxt}>
-          6 Fitur: GET (useEffect) · Loading · POST · PATCH (Centang) · Error · Refresh
-        </Text>
-      </View>
-
-      {/* ── TAB NAVIGATOR (Todo List vs Area Parkir) ── */}
-      <View style={styles.tabContainer}>
+      {/* TAB NAVIGATOR (Todo List Tugas vs Area Parkir) */}
+      <View
+        style={[
+          styles.tabContainer,
+          { backgroundColor: colors.surface, borderBottomColor: colors.border },
+        ]}
+      >
         <TouchableOpacity
-          style={[styles.tabBtn, activeTab === 'todos' && styles.tabBtnActive]}
+          style={[
+            styles.tabBtn,
+            {
+              backgroundColor: activeTab === 'todos' ? colors.primary : colors.background,
+              borderColor: activeTab === 'todos' ? colors.primary : colors.border,
+            },
+          ]}
           onPress={() => setActiveTab('todos')}
           activeOpacity={0.8}
         >
           <Ionicons
             name="checkbox-outline"
             size={16}
-            color={activeTab === 'todos' ? '#fff' : C.textMuted}
+            color={activeTab === 'todos' ? '#fff' : colors.textSecondary}
           />
-          <Text style={[styles.tabBtnTxt, activeTab === 'todos' && styles.tabBtnTxtActive]}>
+          <Text
+            style={[
+              styles.tabBtnTxt,
+              { color: activeTab === 'todos' ? '#fff' : colors.textSecondary },
+            ]}
+          >
             Todo List Tugas ({todos.length})
           </Text>
         </TouchableOpacity>
 
         <TouchableOpacity
-          style={[styles.tabBtn, activeTab === 'areas' && styles.tabBtnActive]}
+          style={[
+            styles.tabBtn,
+            {
+              backgroundColor: activeTab === 'areas' ? colors.primary : colors.background,
+              borderColor: activeTab === 'areas' ? colors.primary : colors.border,
+            },
+          ]}
           onPress={() => setActiveTab('areas')}
           activeOpacity={0.8}
         >
           <Ionicons
             name="car-sport-outline"
             size={16}
-            color={activeTab === 'areas' ? '#fff' : C.textMuted}
+            color={activeTab === 'areas' ? '#fff' : colors.textSecondary}
           />
-          <Text style={[styles.tabBtnTxt, activeTab === 'areas' && styles.tabBtnTxtActive]}>
+          <Text
+            style={[
+              styles.tabBtnTxt,
+              { color: activeTab === 'areas' ? '#fff' : colors.textSecondary },
+            ]}
+          >
             Area Parkir ({areas.length})
           </Text>
         </TouchableOpacity>
       </View>
 
-      {/* ── 02. LOADING INDICATOR SAAT PERTAMA KALI MASUK ── */}
+      {/* LOADING STATE */}
       {isInitialLoading ? (
         <View style={styles.centerLoadingContainer}>
-          <ActivityIndicator size="large" color={C.primary} />
-          <Text style={styles.centerLoadingTitle}>Mengambil Data dari Server...</Text>
-          <Text style={styles.centerLoadingSub}>GET /todos & GET /parking-areas (async/await)</Text>
-        </View>
-      ) : errorMsg ? (
-        /* ── 05. ERROR STATE (try/catch) ── */
-        <View style={styles.errorContainer}>
-          <Ionicons name="cloud-offline-outline" size={56} color={C.danger} />
-          <Text style={styles.errorTitle}>Koneksi Gagal</Text>
-          <Text style={styles.errorSubtitle}>{errorMsg}</Text>
-          <Text style={styles.errorHint}>
-            Pastikan Mock REST API server aktif di port 5000 (npm run mock-api).
+          <ActivityIndicator size="large" color={colors.primary} />
+          <Text style={[styles.centerLoadingTitle, { color: colors.textPrimary }]}>
+            Memuat Data Operasional...
           </Text>
-          <TouchableOpacity
-            style={styles.retryBtn}
-            onPress={() => loadAllData(false)}
-            activeOpacity={0.8}
-          >
-            <Ionicons name="refresh" size={16} color="#fff" />
-            <Text style={styles.retryBtnTxt}>Coba Lagi (Re-fetch)</Text>
-          </TouchableOpacity>
+          <Text style={[styles.centerLoadingSub, { color: colors.textSecondary }]}>
+            Mengambil daftar tugas & status area parkir
+          </Text>
         </View>
       ) : (
-        /* ── KONTEN UTAMA DENGAN PULL-TO-REFRESH (06) ── */
         <ScrollView
           style={styles.scrollView}
           contentContainerStyle={[styles.scrollContent, { paddingBottom: insets.bottom + 30 }]}
@@ -648,37 +912,79 @@ export default function ParkingApiScreen() {
             <RefreshControl
               refreshing={isRefreshing}
               onRefresh={() => loadAllData(true)}
-              tintColor={C.primaryLight}
-              colors={[C.primary]}
+              tintColor={colors.primary}
+              colors={[colors.primary]}
             />
           }
         >
           {lastUpdated ? (
-            <Text style={styles.lastUpdateText}>
+            <Text style={[styles.lastUpdateText, { color: colors.textTertiary }]}>
               Terakhir diperbarui: {lastUpdated} (Tarik layar untuk refresh)
             </Text>
           ) : null}
 
-          {/* ======================================================== */}
-          {/* TAB 1: TODO LIST TUGAS OPERASIONAL (SLIDE 15 PPT)        */}
-          {/* ======================================================== */}
+          {/* INLINE ERROR CARD (Tidak menutupi header atau tab) */}
+          {errorMsg && activeTab === 'todos' && (
+            <View
+              style={[
+                styles.inlineErrorCard,
+                { backgroundColor: colors.dangerBg, borderColor: colors.danger },
+              ]}
+            >
+              <Ionicons name="cloud-offline-outline" size={28} color={colors.danger} />
+              <View style={{ flex: 1 }}>
+                <Text style={[styles.errorTitle, { color: colors.danger }]}>
+                  Gagal Memuat Tugas
+                </Text>
+                <Text style={[styles.errorSubtitle, { color: colors.textSecondary }]}>
+                  {errorMsg}
+                </Text>
+              </View>
+              <TouchableOpacity
+                style={[styles.retryBtnSmall, { backgroundColor: colors.primary }]}
+                onPress={() => loadAllData(false)}
+                activeOpacity={0.8}
+              >
+                <Ionicons name="refresh" size={15} color="#fff" />
+                <Text style={styles.retryBtnTxt}>Coba Lagi</Text>
+              </TouchableOpacity>
+            </View>
+          )}
+
+          {/* TAB 1: TODO LIST TUGAS */}
           {activeTab === 'todos' && (
             <View>
-              {/* 03. FORM INPUT MENAMBAHKAN TODO (POST) */}
-              <View style={styles.addTodoBox}>
-                <Text style={styles.sectionHeaderTitle}>Tambah Tugas Operasional (POST)</Text>
+              <View
+                style={[
+                  styles.addTodoBox,
+                  { backgroundColor: colors.surface, borderColor: colors.border },
+                ]}
+              >
+                <Text style={[styles.sectionHeaderTitle, { color: colors.textPrimary }]}>
+                  Tambah Tugas Operasional
+                </Text>
                 <View style={styles.inputRow}>
                   <TextInput
-                    style={styles.inputField}
-                    placeholder="Contoh: Cek slot parkir gedung A..."
-                    placeholderTextColor={C.textMuted}
+                    style={[
+                      styles.inputField,
+                      {
+                        backgroundColor: colors.background,
+                        borderColor: colors.border,
+                        color: colors.textPrimary,
+                      },
+                    ]}
+                    placeholder="Contoh: Cek slot parkir gedung utama..."
+                    placeholderTextColor={colors.textTertiary}
                     value={newTodoTitle}
                     onChangeText={setNewTodoTitle}
                     onSubmitEditing={handleAddTodo}
                     returnKeyType="done"
                   />
                   <TouchableOpacity
-                    style={[styles.addBtn, isPosting && { opacity: 0.7 }]}
+                    style={[
+                      styles.addBtn,
+                      { backgroundColor: colors.primary, opacity: isPosting ? 0.7 : 1 },
+                    ]}
                     onPress={handleAddTodo}
                     disabled={isPosting}
                     activeOpacity={0.8}
@@ -695,23 +1001,24 @@ export default function ParkingApiScreen() {
                 </View>
               </View>
 
-              {/* DAFTAR TODO ITEM (04: CENTANG / TOGGLE PATCH) */}
               <View style={styles.listHeaderRow}>
-                <Text style={styles.sectionHeaderTitle}>
-                  Daftar Tugas Parkir ({todos.filter(t => t.completed).length}/{todos.length} Selesai)
+                <Text style={[styles.sectionHeaderTitle, { color: colors.textPrimary }]}>
+                  Daftar Tugas Parkir ({todos.filter((t) => t.completed).length}/{todos.length} Selesai)
                 </Text>
-                <Text style={styles.listHeaderSubtitle}>
-                  Klik centang untuk toggle selesai (PATCH)
+                <Text style={[styles.listHeaderSubtitle, { color: colors.textSecondary }]}>
+                  Klik centang untuk tandai selesai
                 </Text>
               </View>
 
               {todos.length === 0 ? (
                 <View style={styles.emptyList}>
-                  <Ionicons name="clipboard-outline" size={40} color={C.textMuted} />
-                  <Text style={styles.emptyListTxt}>Belum ada tugas operasional.</Text>
+                  <Ionicons name="clipboard-outline" size={40} color={colors.textTertiary} />
+                  <Text style={[styles.emptyListTxt, { color: colors.textSecondary }]}>
+                    Belum ada tugas operasional.
+                  </Text>
                 </View>
               ) : (
-                todos.map(todo => (
+                todos.map((todo) => (
                   <TodoItemCard
                     key={todo.id}
                     todo={todo}
@@ -725,25 +1032,25 @@ export default function ParkingApiScreen() {
             </View>
           )}
 
-          {/* ======================================================== */}
-          {/* TAB 2: MONITORING AREA PARKIR                            */}
-          {/* ======================================================== */}
+          {/* TAB 2: AREA PARKIR */}
           {activeTab === 'areas' && (
             <View>
               <View style={styles.listHeaderRow}>
-                <Text style={styles.sectionHeaderTitle}>Status Area Parkir ({areas.length})</Text>
-                <Text style={styles.listHeaderSubtitle}>
-                  Tekan "Ganti Status" untuk transisi logis (PATCH)
+                <Text style={[styles.sectionHeaderTitle, { color: colors.textPrimary }]}>
+                  Status Area Parkir ({areas.length})
+                </Text>
+                <Text style={[styles.listHeaderSubtitle, { color: colors.textSecondary }]}>
+                  Tekan Ganti Status untuk memperbarui kondisi area
                 </Text>
               </View>
 
-              {areas.map(area => (
+              {areas.map((area) => (
                 <AreaCard
                   key={area.id}
                   area={area}
                   isPatching={patchingIds.has(area.id)}
                   onPatch={handlePatchAreaStatus}
-                  onCheckin={a => {
+                  onCheckin={(a) => {
                     setSelectedArea(a);
                     setShowCheckinModal(true);
                   }}
@@ -752,9 +1059,7 @@ export default function ParkingApiScreen() {
             </View>
           )}
 
-          {/* ======================================================== */}
-          {/* MODAL POPUP CHECK-IN PARKIR (POST)                       */}
-          {/* ======================================================== */}
+          {/* MODAL POPUP CHECK-IN PARKIR */}
           <Modal
             visible={showCheckinModal && !!selectedArea}
             transparent
@@ -762,40 +1067,67 @@ export default function ParkingApiScreen() {
             onRequestClose={() => setShowCheckinModal(false)}
           >
             <View style={styles.modalOverlay}>
-              <View style={styles.modalCard}>
+              <View
+                style={[
+                  styles.modalCard,
+                  { backgroundColor: colors.surface, borderColor: colors.border },
+                ]}
+              >
                 <View style={styles.modalHeader}>
-                  <View style={styles.modalHeaderIcon}>
-                    <Ionicons name="car-outline" size={20} color={C.primaryLight} />
+                  <View
+                    style={[
+                      styles.modalHeaderIcon,
+                      { backgroundColor: colors.primary + '1A' },
+                    ]}
+                  >
+                    <Ionicons name="car-outline" size={20} color={colors.primary} />
                   </View>
                   <View style={{ flex: 1 }}>
-                    <Text style={styles.modalTitle}>Check-in Parkir (POST)</Text>
-                    <Text style={styles.modalAreaName}>{selectedArea?.name}</Text>
+                    <Text style={[styles.modalTitle, { color: colors.textPrimary }]}>
+                      Check-in Parkir
+                    </Text>
+                    <Text style={[styles.modalAreaName, { color: colors.primary }]}>
+                      {selectedArea?.name}
+                    </Text>
                   </View>
                   <TouchableOpacity
                     onPress={() => setShowCheckinModal(false)}
                     style={styles.modalCloseBtn}
                   >
-                    <Ionicons name="close" size={20} color={C.textMuted} />
+                    <Ionicons name="close" size={20} color={colors.textSecondary} />
                   </TouchableOpacity>
                 </View>
 
-                <Text style={styles.fieldLabel}>Pilih Jenis Kendaraan:</Text>
+                <Text style={[styles.fieldLabel, { color: colors.textSecondary }]}>
+                  Pilih Jenis Kendaraan:
+                </Text>
                 <View style={styles.toggleRow}>
-                  {(['MOTOR', 'MOBIL'] as const).map(type => (
+                  {(['MOTOR', 'MOBIL'] as const).map((type) => (
                     <TouchableOpacity
                       key={type}
-                      style={[styles.toggleBtn, vehicleType === type && styles.toggleBtnActive]}
+                      style={[
+                        styles.toggleBtn,
+                        {
+                          backgroundColor:
+                            vehicleType === type ? colors.primary : colors.background,
+                          borderColor:
+                            vehicleType === type ? colors.primary : colors.border,
+                        },
+                      ]}
                       onPress={() => setVehicleType(type)}
                     >
                       <Ionicons
                         name={type === 'MOTOR' ? 'bicycle-outline' : 'car-outline'}
                         size={16}
-                        color={vehicleType === type ? '#fff' : C.textSec}
+                        color={vehicleType === type ? '#fff' : colors.textSecondary}
                       />
                       <Text
                         style={[
                           styles.toggleBtnTxt,
-                          vehicleType === type && styles.toggleBtnTxtActive,
+                          {
+                            color: vehicleType === type ? '#fff' : colors.textSecondary,
+                            fontWeight: vehicleType === type ? '700' : '600',
+                          },
                         ]}
                       >
                         {type}
@@ -804,11 +1136,20 @@ export default function ParkingApiScreen() {
                   ))}
                 </View>
 
-                <Text style={styles.fieldLabel}>Nomor Plat Kendaraan:</Text>
+                <Text style={[styles.fieldLabel, { color: colors.textSecondary }]}>
+                  Nomor Plat Kendaraan:
+                </Text>
                 <TextInput
-                  style={styles.modalInput}
+                  style={[
+                    styles.modalInput,
+                    {
+                      backgroundColor: colors.background,
+                      borderColor: colors.border,
+                      color: colors.textPrimary,
+                    },
+                  ]}
                   placeholder="Contoh: B 1234 ABC"
-                  placeholderTextColor={C.textMuted}
+                  placeholderTextColor={colors.textTertiary}
                   value={plateNumber}
                   onChangeText={setPlateNumber}
                   autoCapitalize="characters"
@@ -816,13 +1157,18 @@ export default function ParkingApiScreen() {
 
                 <View style={styles.modalActions}>
                   <TouchableOpacity
-                    style={styles.cancelBtn}
+                    style={[
+                      styles.cancelBtn,
+                      { backgroundColor: colors.background, borderColor: colors.border },
+                    ]}
                     onPress={() => setShowCheckinModal(false)}
                   >
-                    <Text style={styles.cancelBtnTxt}>Batal</Text>
+                    <Text style={[styles.cancelBtnTxt, { color: colors.textSecondary }]}>
+                      Batal
+                    </Text>
                   </TouchableOpacity>
                   <TouchableOpacity
-                    style={styles.confirmBtn}
+                    style={[styles.confirmBtn, { backgroundColor: colors.primary }]}
                     onPress={handleConfirmCheckin}
                     disabled={isPosting}
                   >
@@ -831,7 +1177,7 @@ export default function ParkingApiScreen() {
                     ) : (
                       <>
                         <Ionicons name="checkmark-circle" size={15} color="#fff" />
-                        <Text style={styles.confirmBtnTxt}>Konfirmasi & Ke Todo List</Text>
+                        <Text style={styles.confirmBtnTxt}>Konfirmasi Check-in</Text>
                       </>
                     )}
                   </TouchableOpacity>
@@ -852,28 +1198,22 @@ export default function ParkingApiScreen() {
 const styles = StyleSheet.create({
   root: {
     flex: 1,
-    backgroundColor: C.bg,
   },
-  // Header
   header: {
     flexDirection: 'row',
     alignItems: 'center',
     paddingHorizontal: 16,
     paddingVertical: 12,
-    backgroundColor: C.surface,
     borderBottomWidth: 1,
-    borderBottomColor: C.cardBorder,
     gap: 12,
   },
   headerBtn: {
     width: 38,
     height: 38,
     borderRadius: 10,
-    backgroundColor: C.card,
     alignItems: 'center',
     justifyContent: 'center',
     borderWidth: 1,
-    borderColor: C.cardBorder,
   },
   headerTitleWrap: {
     flex: 1,
@@ -881,37 +1221,17 @@ const styles = StyleSheet.create({
   headerTitle: {
     fontSize: 16,
     fontWeight: '700',
-    color: C.textPrim,
   },
   headerSub: {
     fontSize: 11,
-    color: C.textMuted,
     marginTop: 1,
   },
-  // Banner
-  bannerRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: C.primary + '18',
-    borderBottomWidth: 1,
-    borderBottomColor: C.primary + '33',
-    paddingHorizontal: 14,
-    paddingVertical: 8,
-    gap: 8,
-  },
-  bannerTxt: {
-    flex: 1,
-    fontSize: 11,
-    color: C.primaryLight,
-    fontWeight: '600',
-  },
-  // Tabs
   tabContainer: {
     flexDirection: 'row',
     paddingHorizontal: 16,
     paddingVertical: 10,
     gap: 10,
-    backgroundColor: C.surface,
+    borderBottomWidth: 1,
   },
   tabBtn: {
     flex: 1,
@@ -920,116 +1240,86 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     paddingVertical: 10,
     borderRadius: 10,
-    backgroundColor: C.card,
     borderWidth: 1,
-    borderColor: C.cardBorder,
     gap: 6,
-  },
-  tabBtnActive: {
-    backgroundColor: C.primary,
-    borderColor: C.primaryLight,
   },
   tabBtnTxt: {
     fontSize: 12,
-    fontWeight: '600',
-    color: C.textSec,
-  },
-  tabBtnTxtActive: {
-    color: '#fff',
     fontWeight: '700',
   },
-  // Loading Center
   centerLoadingContainer: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-    padding: 32,
-    gap: 14,
-  },
-  centerLoadingTitle: {
-    fontSize: 15,
-    fontWeight: '700',
-    color: C.textPrim,
-  },
-  centerLoadingSub: {
-    fontSize: 12,
-    color: C.textMuted,
-    fontFamily: Platform.OS === 'ios' ? 'Courier' : 'monospace',
-  },
-  // Error Container
-  errorContainer: {
     flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
     padding: 32,
     gap: 12,
   },
-  errorTitle: {
-    fontSize: 18,
-    fontWeight: '800',
-    color: C.danger,
+  centerLoadingTitle: {
+    fontSize: 15,
+    fontWeight: '700',
   },
-  errorSubtitle: {
-    fontSize: 13,
-    color: C.textSec,
-    textAlign: 'center',
+  centerLoadingSub: {
+    fontSize: 12,
   },
-  errorHint: {
-    fontSize: 11,
-    color: C.textMuted,
-    textAlign: 'center',
-    marginTop: 4,
-  },
-  retryBtn: {
+  inlineErrorCard: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: C.primary,
-    paddingHorizontal: 18,
-    paddingVertical: 11,
-    borderRadius: 10,
-    gap: 8,
-    marginTop: 12,
+    borderRadius: 14,
+    padding: 12,
+    borderWidth: 1,
+    gap: 10,
+  },
+  errorTitle: {
+    fontSize: 13,
+    fontWeight: '700',
+  },
+  errorSubtitle: {
+    fontSize: 11,
+    marginTop: 2,
+  },
+  retryBtnSmall: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 10,
+    paddingVertical: 8,
+    borderRadius: 8,
+    gap: 4,
   },
   retryBtnTxt: {
-    fontSize: 13,
+    fontSize: 12,
     fontWeight: '700',
     color: '#fff',
   },
-  // Scroll
   scrollView: {
     flex: 1,
   },
   scrollContent: {
     padding: 16,
     gap: 14,
+    maxWidth: 720,
+    width: '100%',
+    alignSelf: 'center',
   },
   lastUpdateText: {
     fontSize: 11,
-    color: C.textMuted,
     textAlign: 'center',
-    marginBottom: -4,
   },
-  // Section Headers
   sectionHeaderTitle: {
     fontSize: 13,
     fontWeight: '700',
-    color: C.textPrim,
   },
   listHeaderRow: {
-    marginBottom: 4,
+    marginTop: 6,
+    marginBottom: 8,
   },
   listHeaderSubtitle: {
     fontSize: 11,
-    color: C.textMuted,
     marginTop: 2,
   },
-  // 03. Add Todo Form (POST)
   addTodoBox: {
-    backgroundColor: C.card,
     borderRadius: 14,
     padding: 14,
     borderWidth: 1,
-    borderColor: C.cardBorder,
     gap: 10,
     marginBottom: 4,
   },
@@ -1039,20 +1329,16 @@ const styles = StyleSheet.create({
   },
   inputField: {
     flex: 1,
-    backgroundColor: C.surface,
     borderWidth: 1,
-    borderColor: C.cardBorder,
     borderRadius: 10,
     paddingHorizontal: 12,
     paddingVertical: 10,
     fontSize: 13,
-    color: C.textPrim,
   },
   addBtn: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: C.primary,
     paddingHorizontal: 16,
     borderRadius: 10,
     gap: 4,
@@ -1062,35 +1348,22 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     color: '#fff',
   },
-  // 04. Todo Card & Checkbox (PATCH)
   todoCard: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: C.card,
     borderRadius: 12,
     padding: 12,
     marginBottom: 8,
     borderWidth: 1,
-    borderColor: C.cardBorder,
     gap: 12,
-  },
-  todoCardCompleted: {
-    backgroundColor: '#121626',
-    borderColor: C.success + '33',
-    opacity: 0.85,
   },
   checkboxBtn: {
     width: 28,
     height: 28,
     borderRadius: 8,
     borderWidth: 2,
-    borderColor: C.primaryLight,
     alignItems: 'center',
     justifyContent: 'center',
-  },
-  checkboxBtnChecked: {
-    backgroundColor: C.success,
-    borderColor: C.success,
   },
   checkboxEmpty: {
     width: 8,
@@ -1103,12 +1376,7 @@ const styles = StyleSheet.create({
   todoTitle: {
     fontSize: 13,
     fontWeight: '600',
-    color: C.textPrim,
     lineHeight: 18,
-  },
-  todoTitleCompleted: {
-    color: C.textMuted,
-    textDecorationLine: 'line-through',
   },
   todoMetaRow: {
     flexDirection: 'row',
@@ -1117,7 +1385,6 @@ const styles = StyleSheet.create({
     gap: 6,
   },
   categoryBadge: {
-    backgroundColor: C.primary + '22',
     paddingHorizontal: 6,
     paddingVertical: 2,
     borderRadius: 6,
@@ -1125,11 +1392,9 @@ const styles = StyleSheet.create({
   categoryBadgeTxt: {
     fontSize: 10,
     fontWeight: '700',
-    color: C.primaryLight,
   },
   todoTimeTxt: {
     fontSize: 10,
-    color: C.textMuted,
   },
   statusTag: {
     flexDirection: 'row',
@@ -1152,7 +1417,6 @@ const styles = StyleSheet.create({
     width: 32,
     height: 32,
     borderRadius: 8,
-    backgroundColor: C.danger + '15',
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -1163,16 +1427,12 @@ const styles = StyleSheet.create({
   },
   emptyListTxt: {
     fontSize: 13,
-    color: C.textMuted,
   },
-  // Area Cards
   areaCard: {
-    backgroundColor: C.card,
     borderRadius: 14,
     padding: 14,
     marginBottom: 10,
     borderWidth: 1,
-    borderColor: C.cardBorder,
     gap: 10,
   },
   areaCardHeader: {
@@ -1195,7 +1455,6 @@ const styles = StyleSheet.create({
   areaName: {
     fontSize: 14,
     fontWeight: '700',
-    color: C.textPrim,
   },
   statGrid: {
     flexDirection: 'row',
@@ -1208,17 +1467,14 @@ const styles = StyleSheet.create({
   statNum: {
     fontSize: 15,
     fontWeight: '800',
-    color: C.textPrim,
   },
   statSub: {
     fontSize: 10,
-    color: C.textMuted,
     marginTop: 2,
   },
   progressTrack: {
     height: 5,
     borderRadius: 2.5,
-    backgroundColor: C.surface,
     overflow: 'hidden',
   },
   progressFill: {
@@ -1235,7 +1491,6 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: C.primary,
     paddingVertical: 9,
     borderRadius: 8,
     gap: 5,
@@ -1250,9 +1505,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: C.surface,
     borderWidth: 1,
-    borderColor: C.cardBorder,
     paddingVertical: 9,
     borderRadius: 8,
     gap: 5,
@@ -1260,12 +1513,10 @@ const styles = StyleSheet.create({
   areaBtnSecondaryTxt: {
     fontSize: 11,
     fontWeight: '700',
-    color: C.textSec,
   },
-  // Modal Check-in
   modalOverlay: {
     flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.75)',
+    backgroundColor: 'rgba(0, 0, 0, 0.72)',
     justifyContent: 'center',
     alignItems: 'center',
     padding: 20,
@@ -1273,11 +1524,9 @@ const styles = StyleSheet.create({
   modalCard: {
     width: '100%',
     maxWidth: 440,
-    backgroundColor: C.card,
     borderRadius: 18,
     padding: 20,
     borderWidth: 1,
-    borderColor: C.cardBorder,
     gap: 12,
   },
   modalHeader: {
@@ -1289,7 +1538,6 @@ const styles = StyleSheet.create({
     width: 38,
     height: 38,
     borderRadius: 10,
-    backgroundColor: C.primary + '22',
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -1303,17 +1551,14 @@ const styles = StyleSheet.create({
   modalTitle: {
     fontSize: 15,
     fontWeight: '700',
-    color: C.textPrim,
   },
   modalAreaName: {
     fontSize: 12,
-    color: C.primaryLight,
     marginTop: 1,
   },
   fieldLabel: {
     fontSize: 11,
     fontWeight: '600',
-    color: C.textSec,
     marginBottom: -4,
   },
   toggleRow: {
@@ -1327,33 +1572,18 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     paddingVertical: 8,
     borderRadius: 8,
-    backgroundColor: C.surface,
     borderWidth: 1,
-    borderColor: C.cardBorder,
     gap: 6,
-  },
-  toggleBtnActive: {
-    backgroundColor: C.primary,
-    borderColor: C.primary,
   },
   toggleBtnTxt: {
     fontSize: 12,
-    fontWeight: '600',
-    color: C.textSec,
-  },
-  toggleBtnTxtActive: {
-    color: '#fff',
-    fontWeight: '700',
   },
   modalInput: {
-    backgroundColor: C.surface,
     borderWidth: 1,
-    borderColor: C.cardBorder,
     borderRadius: 8,
     paddingHorizontal: 12,
     paddingVertical: 9,
     fontSize: 13,
-    color: C.textPrim,
   },
   modalActions: {
     flexDirection: 'row',
@@ -1366,22 +1596,20 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     paddingVertical: 10,
     borderRadius: 8,
-    backgroundColor: C.surface,
     borderWidth: 1,
-    borderColor: C.cardBorder,
   },
   cancelBtnTxt: {
     fontSize: 12,
-    color: C.textSec,
     fontWeight: '600',
   },
   confirmBtn: {
     flex: 2,
+    flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
     paddingVertical: 10,
     borderRadius: 8,
-    backgroundColor: C.primary,
+    gap: 6,
   },
   confirmBtnTxt: {
     fontSize: 12,

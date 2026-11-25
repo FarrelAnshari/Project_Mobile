@@ -444,7 +444,7 @@ export default function HomeScreen() {
               </GlowCard>
             </View>
 
-            {/* ── QUICK ACTION: ASYNC API (Week 8) ── */}
+            {/* ── QUICK ACTION: OPERASIONAL PARKIR ── */}
             <View style={styles.section}>
               <GlowCard
                 glowColor="#6366F1"
@@ -480,7 +480,59 @@ export default function HomeScreen() {
                     Async API Parkir
                   </Text>
                   <Text style={{ color: colors.textSecondary, fontSize: 11, marginTop: 2 }}>
-                    GET · POST · PATCH · DELETE — Week 8
+                    Kelola tugas operasional & data parkir real-time
+                  </Text>
+                </View>
+                <View
+                  style={{
+                    backgroundColor: '#6366F1',
+                    paddingHorizontal: 12,
+                    paddingVertical: 7,
+                    borderRadius: 10,
+                  }}
+                >
+                  <Text style={{ color: '#fff', fontSize: 12, fontWeight: '700' }}>Buka</Text>
+                </View>
+              </GlowCard>
+            </View>
+
+            {/* ── QUICK ACTION: PETA & LOKASI GPS ── */}
+            <View style={styles.section}>
+              <GlowCard
+                glowColor="#6366F1"
+                glowIntensity={0.18}
+                glowRadius={20}
+                onPress={() => router.push('/location' as any)}
+                style={{ width: '100%' }}
+                innerStyle={{
+                  backgroundColor: colors.surface,
+                  flexDirection: 'row',
+                  alignItems: 'center',
+                  padding: 14,
+                  borderRadius: 20,
+                  gap: 12,
+                }}
+              >
+                <View
+                  style={{
+                    width: 44,
+                    height: 44,
+                    borderRadius: 14,
+                    backgroundColor: '#6366F11A',
+                    borderWidth: 1,
+                    borderColor: '#6366F140',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                  }}
+                >
+                  <Ionicons name="map-outline" size={24} color="#6366F1" />
+                </View>
+                <View style={{ flex: 1 }}>
+                  <Text style={{ color: colors.textPrimary, fontSize: 14, fontWeight: '700' }}>
+                    Peta & Lokasi GPS
+                  </Text>
+                  <Text style={{ color: colors.textSecondary, fontSize: 11, marginTop: 2 }}>
+                    GPS, Peta Kampus & Geofencing
                   </Text>
                 </View>
                 <View

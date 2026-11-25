@@ -20,6 +20,7 @@ export interface ParkingArea {
 
   // Optional fields for UI enhancement & backward compatibility
   coordinates?: { x: number; y: number };
+  geo?: { latitude: number; longitude: number };
   description?: string;
   lastUpdated?: string;
 }
