@@ -53,6 +53,7 @@ import {
   Spacing,
 } from '../constants/theme';
 import { useAuth } from '../context/AuthContext';
+import { useNotifications } from '../context/NotificationContext';
 import { useTheme } from '../context/ThemeContext';
 import { useThemeColors } from '../hooks/useThemeColors';
 import { useFetch } from '../hooks/useFetch';
@@ -125,6 +126,7 @@ export default function HomeScreen() {
   const router = useRouter();
   const colors = useThemeColors();
   const { isDark } = useTheme();
+  const { unreadCount, notificationHistory } = useNotifications();
   const { isOffline } = useOnlineStatus();
 
   const [lastRefreshed, setLastRefreshed] = useState('Memuat...');
@@ -169,6 +171,7 @@ export default function HomeScreen() {
   const navigateToProfile = () => router.push('/(tabs)/profile' as any);
   const navigateToScanner = () => router.push('/scanner' as any);
   const navigateToPrediction = () => router.push('/(tabs)/prediction' as any);
+  const navigateToNotifications = () => router.push('/notifications' as any);
 
   const handleCardPress = (_area: ParkingArea) => navigateToParking();
   const handleRecommendationPress = () => navigateToParking();
@@ -210,6 +213,29 @@ export default function HomeScreen() {
                 <Text style={styles.headerBrandText}>PARKIN</Text>
               </View>
               <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                <AnimatedPressable
+                  onPress={navigateToNotifications}
+                  style={styles.headerIconBtn}
+                  accessibilityLabel="Pusat Notifikasi PARKIN"
+                  pressScale={0.88}
+                >
+                  <Ionicons name="notifications-outline" size={19} color={Colors.white} />
+                  {(unreadCount > 0 || notificationHistory.length > 0) && (
+                    <View
+                      style={{
+                        position: 'absolute',
+                        top: 7,
+                        right: 7,
+                        width: 8,
+                        height: 8,
+                        borderRadius: 4,
+                        backgroundColor: '#6366F1',
+                        borderWidth: 1.5,
+                        borderColor: '#FFFFFF',
+                      }}
+                    />
+                  )}
+                </AnimatedPressable>
                 <AnimatedPressable
                   onPress={navigateToScanner}
                   style={[styles.headerIconBtn, { backgroundColor: 'rgba(255,255,255,0.22)' }]}

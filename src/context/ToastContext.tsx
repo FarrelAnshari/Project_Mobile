@@ -184,7 +184,17 @@ function ToastItem({
       </View>
 
       {/* Text Content */}
-      <View style={styles.textContent}>
+      <TouchableOpacity
+        style={styles.textContent}
+        disabled={!toast.action}
+        activeOpacity={0.8}
+        onPress={() => {
+          if (toast.action) {
+            toast.action.onPress();
+            dismiss();
+          }
+        }}
+      >
         {toast.title && (
           <Text style={[styles.toastTitle, { color: textColor }]} numberOfLines={1}>
             {toast.title}
@@ -197,13 +207,13 @@ function ToastItem({
           {toast.message}
         </Text>
         {toast.action && (
-          <TouchableOpacity onPress={toast.action.onPress} style={styles.actionBtn}>
+          <View style={styles.actionBtn}>
             <Text style={[styles.actionLabel, { color: config.color }]}>
               {toast.action.label}
             </Text>
-          </TouchableOpacity>
+          </View>
         )}
-      </View>
+      </TouchableOpacity>
 
       {/* Dismiss Button */}
       <TouchableOpacity

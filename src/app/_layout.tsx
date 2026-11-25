@@ -17,6 +17,7 @@ import { ErrorBoundary } from '../components/ErrorBoundary';
 import OfflineBanner from '../components/OfflineBanner';
 import { Colors } from '../constants/theme';
 import { AuthProvider, useAuth } from '../context/AuthContext';
+import { NotificationProvider } from '../context/NotificationContext';
 import { ThemeProvider, useTheme } from '../context/ThemeContext';
 import { ToastProvider } from '../context/ToastContext';
 import { OnlineStatusProvider } from '../hooks/useOnlineStatus';
@@ -303,6 +304,7 @@ export default function RootLayout() {
         <OnlineStatusProvider>
           <ToastProvider>
             <AuthProvider>
+              <NotificationProvider>
               <NavigationGuard>
                 <Stack screenOptions={{ headerShown: false }}>
                   <Stack.Screen name="index" options={{ headerShown: false }} />
@@ -348,10 +350,20 @@ export default function RootLayout() {
                       animation: 'slide_from_right',
                     }}
                   />
+                  {/* Push Notifications */}
+                  <Stack.Screen
+                    name="notifications"
+                    options={{
+                      headerShown: false,
+                      presentation: 'card',
+                      animation: 'slide_from_right',
+                    }}
+                  />
 
                 </Stack>
               </NavigationGuard>
               <OfflineBanner />
+              </NotificationProvider>
             </AuthProvider>
           </ToastProvider>
         </OnlineStatusProvider>

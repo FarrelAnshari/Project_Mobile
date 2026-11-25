@@ -318,8 +318,15 @@ export default function ProfileScreen() {
               label="Lokasi & Peta GPS"
               subtitle="GPS, Peta Kampus, Alamat & Geofencing"
               onPress={() => router.push('/location' as any)}
-              isLast
               accessibilityLabel="Buka fitur Lokasi dan Peta GPS"
+            />
+            <MenuRow
+              icon="notifications-outline"
+              label="Notifikasi"
+              subtitle="Kelola izin, perangkat terdaftar & uji notifikasi"
+              onPress={() => router.push('/notifications' as any)}
+              isLast
+              accessibilityLabel="Buka pusat notifikasi"
             />
           </View>
         </View>

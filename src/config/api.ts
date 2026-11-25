@@ -36,6 +36,9 @@ export const API_CONFIG = {
     TEST_CONNECTIVITY: '/posts/1',
     PARKING_AREAS: '/parking-areas',
     PARKING_AREA_DETAIL: (id: string) => `/parking-areas/${id}`,
+    REGISTER_PUSH_TOKEN: '/notifications/register',
+    LIST_PUSH_TOKENS: '/notifications/tokens',
+    SEND_PUSH_NOTIFICATION: '/notifications/send',
   },
 
   /** Standard headers for JSON requests */

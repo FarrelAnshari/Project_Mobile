@@ -10,6 +10,7 @@
  */
 
 const http = require('http');
+const https = require('https');
 const url = require('url');
 
 const PORT = process.env.PORT || 5000;
@@ -20,7 +21,7 @@ const PORT = process.env.PORT || 5000;
 const USERS = [
   {
     id: 'usr_demo_00',
-    name: 'User PresidentKu',
+    name: 'User PARKIN',
     email: 'user@mail.com',
     password: 'password123',
     role: 'Mahasiswa',
@@ -155,6 +156,54 @@ const PARKING_AREAS = [
 
 // In-memory valid issued tokens set
 const VALID_TOKENS = new Map();
+
+// In-memory registered push notification tokens
+const REGISTERED_TOKENS = [];
+
+/**
+ * Helper: Kirim request HTTP POST nyata ke Expo Push Service
+ */
+function sendToExpoPushService(payload) {
+  return new Promise((resolve) => {
+    const body = JSON.stringify(payload);
+    const req = https.request(
+      'https://exp.host/--/api/v2/push/send',
+      {
+        method: 'POST',
+        headers: {
+          Accept: 'application/json',
+          'Accept-encoding': 'gzip, deflate',
+          'Content-Type': 'application/json',
+          'Content-Length': Buffer.byteLength(body),
+        },
+        timeout: 8000,
+      },
+      (res) => {
+        let data = '';
+        res.on('data', (chunk) => {
+          data += chunk;
+        });
+        res.on('end', () => {
+          try {
+            const parsed = JSON.parse(data);
+            resolve({ ok: res.statusCode >= 200 && res.statusCode < 300, statusCode: res.statusCode, response: parsed });
+          } catch {
+            resolve({ ok: false, statusCode: res.statusCode, response: data });
+          }
+        });
+      }
+    );
+    req.on('error', (err) => {
+      resolve({ ok: false, error: err.message });
+    });
+    req.on('timeout', () => {
+      req.destroy();
+      resolve({ ok: false, error: 'Expo Push Service timeout' });
+    });
+    req.write(body);
+    req.end();
+  });
+}
 
 // Week 8 – Mock Data Todo List Tugas Operasional Petugas Parkir (Sesuai PPT Week 8)
 let PARKING_TODOS = [
@@ -613,6 +662,127 @@ const handleRequest = async (req, res) => {
       success: true,
       message: `Check-in ${checkinId} berhasil dibatalkan (checkout).`,
       data: { id: checkinId, status: 'CANCELLED', checkoutTime: new Date().toISOString() },
+    });
+  }
+
+  // ------------------------------------------------------------
+  // Push Notifications — POST /notifications/register
+  // ------------------------------------------------------------
+  if (pathname === '/notifications/register' && method === 'POST') {
+    const body = await parseBody(req);
+    const token = typeof body.token === 'string' ? body.token.trim() : '';
+    if (!token) {
+      return sendJson(res, 400, {
+        success: false,
+        message: 'Push token tidak boleh kosong.',
+      });
+    }
+
+    const entry = {
+      token,
+      userId: body.userId || 'guest',
+      platform: body.platform || 'unknown',
+      deviceName: body.deviceName || 'Perangkat PARKIN',
+      registeredAt: new Date().toISOString(),
+    };
+
+    const existingIdx = REGISTERED_TOKENS.findIndex((item) => item.token === token);
+    if (existingIdx >= 0) {
+      REGISTERED_TOKENS[existingIdx] = entry;
+    } else {
+      REGISTERED_TOKENS.push(entry);
+    }
+
+    console.log(
+      `[${timestamp}] 🔔 POST /notifications/register -> 200 OK (${entry.platform}: ${token.slice(0, 28)}...)`
+    );
+    return sendJson(res, 200, {
+      success: true,
+      message: 'Perangkat berhasil terdaftar',
+      data: entry,
+      totalDevices: REGISTERED_TOKENS.length,
+    });
+  }
+
+  // ------------------------------------------------------------
+  // Push Notifications — GET /notifications/tokens
+  // ------------------------------------------------------------
+  if (pathname === '/notifications/tokens' && method === 'GET') {
+    console.log(
+      `[${timestamp}] 📋 GET /notifications/tokens -> 200 OK (${REGISTERED_TOKENS.length} perangkat)`
+    );
+    return sendJson(res, 200, {
+      success: true,
+      totalDevices: REGISTERED_TOKENS.length,
+      data: REGISTERED_TOKENS,
+    });
+  }
+
+  // ------------------------------------------------------------
+  // Push Notifications — POST /notifications/send
+  // ------------------------------------------------------------
+  if (pathname === '/notifications/send' && method === 'POST') {
+    const body = await parseBody(req);
+    const title = (body.title || 'Notifikasi PARKIN').trim();
+    const messageBody = (body.body || 'Pembaruan status area parkir kampus.').trim();
+    const payloadData = body.data && typeof body.data === 'object' ? body.data : { screen: 'notifications' };
+    const providedToken = typeof body.token === 'string' ? body.token.trim() : '';
+
+    const targets = providedToken
+      ? [providedToken]
+      : REGISTERED_TOKENS.map((item) => item.token);
+
+    if (targets.length === 0) {
+      return sendJson(res, 400, {
+        success: false,
+        message: 'Belum ada perangkat terdaftar dan token tujuan kosong.',
+      });
+    }
+
+    const results = [];
+    let anySimulated = false;
+
+    for (const targetToken of targets) {
+      const isValidExpoToken =
+        targetToken.startsWith('ExponentPushToken[') ||
+        targetToken.startsWith('ExpoPushToken[');
+
+      if (isValidExpoToken) {
+        const expoResult = await sendToExpoPushService({
+          to: targetToken,
+          sound: 'default',
+          title,
+          body: messageBody,
+          data: payloadData,
+          channelId: 'parkin-default',
+        });
+        results.push({
+          token: targetToken,
+          simulated: false,
+          ...expoResult,
+        });
+      } else {
+        anySimulated = true;
+        results.push({
+          token: targetToken,
+          status: 'ok',
+          simulated: true,
+          message: 'Notifikasi disimulasikan untuk token preview/simulator.',
+        });
+      }
+    }
+
+    console.log(
+      `[${timestamp}] 📨 POST /notifications/send -> 200 OK (${results.length} tujuan, simulated=${anySimulated})`
+    );
+    return sendJson(res, 200, {
+      success: true,
+      message: anySimulated
+        ? 'Notifikasi diproses dalam mode simulasi perangkat preview.'
+        : 'Push notification berhasil dikirim melalui Expo Push Service.',
+      sentCount: results.length,
+      simulated: anySimulated,
+      results,
     });
   }
 
